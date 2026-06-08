@@ -11,6 +11,10 @@
   margin: 0 0 10px;
 }
 
+.route-hint-block {
+  color: #ffb380;
+}
+
 .route-arrow-head {
   fill: #ffffff;
 }

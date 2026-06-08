@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { FIELD_LENGTH, FIELD_WIDTH } from '../../constants/field'
+import type { Block } from '../../types/block'
 import type { Player, PlayerLabel, Position } from '../../types/player'
 import { clampPosition } from '../../types/player'
 import type { PlayerNotes } from '../../types/playerNotes'
 import { playerHasNotes } from '../../types/playerNotes'
 import type { Route } from '../../types/route'
-import { appendRoutePoint } from '../../types/route'
+import { appendPathPoint } from '../../utils/pathUtils'
+import { BlockLine } from '../BlockLine/BlockLine'
+import type { DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
 import { PlayerMarker } from '../PlayerMarker/PlayerMarker'
 import { RouteLine } from '../RouteLine/RouteLine'
 import './Field.css'
@@ -15,41 +18,50 @@ const DRAG_THRESHOLD = 5
 type FieldProps = {
   players: Player[]
   routes: Route[]
+  blocks: Block[]
   playerNotes: PlayerNotes
+  drawingMode: DrawingMode
   selectedPlayerId: PlayerLabel | null
   onSelectPlayer: (playerId: PlayerLabel) => void
   onPlayerMove: (playerId: PlayerLabel, position: Position) => void
   onRouteComplete: (route: Route) => void
+  onBlockComplete: (block: Block) => void
 }
 
-type DraftRoute = {
+type DraftPath = {
   playerId: PlayerLabel
   points: Position[]
 }
 
 /**
- * Renders a top-down football field using SVG.
- * Click a player to select them, then click and drag on the field to draw a route.
+ * Renders the field. Select a player, pick Route or Blocking mode,
+ * then click and drag on the field to draw.
  */
 export function Field({
   players,
   routes,
+  blocks,
   playerNotes,
+  drawingMode,
   selectedPlayerId,
   onSelectPlayer,
   onPlayerMove,
   onRouteComplete,
+  onBlockComplete,
 }: FieldProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const draggingIdRef = useRef<PlayerLabel | null>(null)
-  const draftRouteRef = useRef<DraftRoute | null>(null)
+  const draftPathRef = useRef<DraftPath | null>(null)
+  const drawingModeRef = useRef<DrawingMode>(drawingMode)
   const pointerStartRef = useRef<{
     playerId: PlayerLabel
     x: number
     y: number
   } | null>(null)
 
-  const [draftRoute, setDraftRoute] = useState<DraftRoute | null>(null)
+  const [draftPath, setDraftPath] = useState<DraftPath | null>(null)
+
+  drawingModeRef.current = drawingMode
 
   const END_ZONE_DEPTH = 10
   const yardLines = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110]
@@ -87,11 +99,10 @@ export function Field({
     event.preventDefault()
     const position = getSvgPosition(event.clientX, event.clientY)
     const nextDraft = { playerId: selectedPlayerId, points: [position] }
-    draftRouteRef.current = nextDraft
-    setDraftRoute(nextDraft)
+    draftPathRef.current = nextDraft
+    setDraftPath(nextDraft)
   }
 
-  // One listener for the whole session — refs avoid missing mouseup after state changes
   useEffect(() => {
     function handleMouseMove(event: MouseEvent) {
       const pointerStart = pointerStartRef.current
@@ -112,15 +123,15 @@ export function Field({
         onPlayerMove(draggingIdRef.current, position)
       }
 
-      const currentDraft = draftRouteRef.current
+      const currentDraft = draftPathRef.current
       if (currentDraft) {
         const position = getSvgPosition(event.clientX, event.clientY)
         const updated = {
           ...currentDraft,
-          points: appendRoutePoint(currentDraft.points, position),
+          points: appendPathPoint(currentDraft.points, position),
         }
-        draftRouteRef.current = updated
-        setDraftRoute(updated)
+        draftPathRef.current = updated
+        setDraftPath(updated)
       }
     }
 
@@ -131,11 +142,15 @@ export function Field({
         pointerStartRef.current = null
       }
 
-      const completedRoute = draftRouteRef.current
-      if (completedRoute && completedRoute.points.length > 0) {
-        onRouteComplete(completedRoute)
-        draftRouteRef.current = null
-        setDraftRoute(null)
+      const completed = draftPathRef.current
+      if (completed && completed.points.length > 0) {
+        if (drawingModeRef.current === 'block') {
+          onBlockComplete(completed)
+        } else {
+          onRouteComplete(completed)
+        }
+        draftPathRef.current = null
+        setDraftPath(null)
       }
 
       draggingIdRef.current = null
@@ -148,14 +163,19 @@ export function Field({
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [onPlayerMove, onRouteComplete, onSelectPlayer])
+  }, [onPlayerMove, onRouteComplete, onBlockComplete, onSelectPlayer])
+
+  const hintText =
+    selectedPlayerId &&
+    (drawingMode === 'block'
+      ? `${selectedPlayerId} selected — drag on the field to draw a blocking assignment`
+      : `${selectedPlayerId} selected — drag on the field to draw a route`)
 
   return (
     <div className="field-container">
-      {selectedPlayerId && (
-        <p className="route-hint">
-          <strong>{selectedPlayerId}</strong> selected — click and drag on the field to draw a
-          route
+      {hintText && (
+        <p className={`route-hint ${drawingMode === 'block' ? 'route-hint-block' : ''}`}>
+          {hintText}
         </p>
       )}
 
@@ -177,6 +197,17 @@ export function Field({
             orient="auto"
           >
             <polygon points="0 0, 4 2, 0 4" className="route-arrow-head" />
+          </marker>
+          <marker
+            id="block-t-cap"
+            markerWidth="4"
+            markerHeight="4"
+            refX="2"
+            refY="2"
+            orient="auto"
+            markerUnits="strokeWidth"
+          >
+            <line x1="-1.5" y1="0" x2="1.5" y2="0" className="block-t-cap-line" />
           </marker>
         </defs>
 
@@ -239,18 +270,34 @@ export function Field({
           )
         })}
 
+        {blocks.map((block) => (
+          <BlockLine
+            key={`block-${block.playerId}`}
+            playerPosition={getPlayerPosition(block.playerId)}
+            block={block}
+          />
+        ))}
+
         {routes.map((route) => (
           <RouteLine
-            key={route.playerId}
+            key={`route-${route.playerId}`}
             playerPosition={getPlayerPosition(route.playerId)}
             route={route}
           />
         ))}
 
-        {draftRoute && (
+        {draftPath && drawingMode === 'block' && (
+          <BlockLine
+            playerPosition={getPlayerPosition(draftPath.playerId)}
+            block={draftPath}
+            isDraft
+          />
+        )}
+
+        {draftPath && drawingMode === 'route' && (
           <RouteLine
-            playerPosition={getPlayerPosition(draftRoute.playerId)}
-            route={draftRoute}
+            playerPosition={getPlayerPosition(draftPath.playerId)}
+            route={draftPath}
             isDraft
           />
         )}

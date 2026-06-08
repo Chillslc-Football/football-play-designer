@@ -1,21 +1,30 @@
-import { FIELD_CENTER_X } from '../constants/field'
-import type { Position } from '../types/player'
+import { FIELD_WIDTH } from '../constants/field'
+import type { Player, Position } from '../types/player'
 
 /**
- * Flips a single point horizontally across the center of the field.
+ * Coordinate reminder (bird's-eye view, offense faces right):
+ *   x = downfield toward the end zone — offense always attacks left-to-right (+x)
+ *   y = across the field — left/right of the formation
  *
- * The field runs from x = 0 to x = 120. The center is at x = 60 (midfield).
- * Mirroring keeps the same distance from center, but on the opposite side.
- *
- * Example: a point at x = 48 (12 units left of center) becomes x = 72 (12 units right).
- *
- *   mirroredX = center + (center - x) = 2 * center - x
- *
- * Y is never changed — players and routes only flip left/right, not up/down.
+ * Mirror Play flips y across the Center (C) only.
+ * x is NEVER flipped — that would reverse the play direction.
  */
-export function mirrorPosition(position: Position): Position {
+
+/**
+ * Flips a point left/right across the offensive center line (C's y position).
+ * Downfield depth (x) is preserved so routes still attack left-to-right.
+ *
+ * Formula: mirroredY = centerY - (originalY - centerY)
+ */
+export function mirrorPositionLaterally(position: Position, centerY: number): Position {
   return {
-    x: 2 * FIELD_CENTER_X - position.x,
-    y: position.y,
+    x: position.x,
+    y: centerY - (position.y - centerY),
   }
+}
+
+/** Reads the y position of the Center (C) — the lateral mirror axis. */
+export function getCenterPlayerY(players: Player[]): number {
+  const center = players.find((player) => player.id === 'C')
+  return center?.position.y ?? FIELD_WIDTH / 2
 }

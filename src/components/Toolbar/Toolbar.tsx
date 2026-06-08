@@ -2,29 +2,40 @@ import './Toolbar.css'
 
 type ToolbarProps = {
   onNewPlay: () => void
-  onSavePlay: () => void
+  onSaveChanges: () => void
+  onSaveAsNew: () => void
   onMirrorPlay: () => void
   isMirrored: boolean
 }
 
 /**
- * Action buttons that sit above the field.
- * Each button calls a handler passed down from App.tsx (the parent).
+ * Action buttons above the field.
+ * Save Changes updates the active/linked saved play.
+ * Save As New Play always creates a separate saved entry.
  */
-export function Toolbar({ onNewPlay, onSavePlay, onMirrorPlay, isMirrored }: ToolbarProps) {
+export function Toolbar({
+  onNewPlay,
+  onSaveChanges,
+  onSaveAsNew,
+  onMirrorPlay,
+  isMirrored,
+}: ToolbarProps) {
   return (
     <div className="toolbar">
       <button type="button" className="toolbar-btn" onClick={onNewPlay}>
         New Play
       </button>
-      <button type="button" className="toolbar-btn toolbar-btn-primary" onClick={onSavePlay}>
-        Save Play
+      <button type="button" className="toolbar-btn toolbar-btn-primary" onClick={onSaveChanges}>
+        Save Changes
+      </button>
+      <button type="button" className="toolbar-btn" onClick={onSaveAsNew}>
+        Save As New Play
       </button>
       <button
         type="button"
         className={`toolbar-btn ${isMirrored ? 'toolbar-btn-active' : ''}`}
         onClick={onMirrorPlay}
-        title="Flip all players and routes horizontally across midfield"
+        title="Mirror play side across Center (C) — offense still attacks left-to-right"
       >
         Mirror Play
       </button>

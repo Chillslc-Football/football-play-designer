@@ -1,0 +1,25 @@
+.block-line {
+  fill: none;
+  stroke: #ff8c42;
+  stroke-width: 0.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.block-line-draft {
+  stroke: #ffb380;
+  stroke-dasharray: 1 0.6;
+  opacity: 0.9;
+}
+
+.block-t-cap-line {
+  stroke: #ff8c42;
+  stroke-width: 0.4;
+  stroke-linecap: round;
+}
+
+.block-line-draft + .block-t-cap-line,
+.block-line-draft {
+  stroke: #ffb380;
+}
