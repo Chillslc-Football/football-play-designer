@@ -1,34 +1,39 @@
+import type { PlayType } from '../../types/playType'
 import './DrawingModeSelector.css'
 
 export type DrawingMode = 'route' | 'block'
 
 type DrawingModeSelectorProps = {
   mode: DrawingMode
+  playType?: PlayType
   onChange: (mode: DrawingMode) => void
 }
 
-/**
- * Toggle between Route drawing and Blocking Assignment drawing.
- * Select a player, then click and drag on the field to draw in the active mode.
- */
-export function DrawingModeSelector({ mode, onChange }: DrawingModeSelectorProps) {
+export function DrawingModeSelector({
+  mode,
+  playType = 'offensive',
+  onChange,
+}: DrawingModeSelectorProps) {
+  const routeLabel = playType === 'defensive' ? 'Movement' : 'Route'
+
   return (
-    <div className="drawing-mode-selector">
-      <span className="drawing-mode-label">Draw Mode</span>
+    <div className="drawing-mode-selector btn-row">
       <button
         type="button"
-        className={`drawing-mode-btn ${mode === 'route' ? 'drawing-mode-btn-active' : ''}`}
+        className={`btn ${mode === 'route' ? 'btn-toggle-active' : ''}`}
         onClick={() => onChange('route')}
       >
-        Route
+        {routeLabel}
       </button>
-      <button
-        type="button"
-        className={`drawing-mode-btn ${mode === 'block' ? 'drawing-mode-btn-active' : ''}`}
-        onClick={() => onChange('block')}
-      >
-        Blocking
-      </button>
+      {playType === 'offensive' && (
+        <button
+          type="button"
+          className={`btn btn-toggle-blocking ${mode === 'block' ? 'btn-toggle-active' : ''}`}
+          onClick={() => onChange('block')}
+        >
+          Blocking
+        </button>
+      )}
     </div>
   )
 }

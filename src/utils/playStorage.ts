@@ -1,8 +1,14 @@
+import { createDefault43Defense } from '../data/defaultDefense'
 import { DEFAULT_FORMATION_ID } from '../data/builtinFormations'
 import { createEmptyBlocks } from '../types/block'
+import { resolveDriveStartYardLine } from '../types/driveStart'
 import { createEmptyPlay, type Play } from '../types/play'
 import { createEmptyPlayerNotes } from '../types/playerNotes'
+import { createEmptyDefenderRoutes } from '../types/defenderRoute'
+import { resolvePlayType } from '../types/playType'
 import { createEmptyRoutes } from '../types/route'
+import { migratePlayToFieldView } from './fieldView'
+import { clampPlayPositions } from './losClamp'
 import { getDefaultFormationName, getFormationLabel } from './formationUtils'
 import { getCustomFormations } from './formationStorage'
 
@@ -16,8 +22,13 @@ export function normalizePlayName(name: string): string {
   return name.trim() || 'Untitled Play'
 }
 
-/** Migrates older saves that used `formation` instead of formationId/formationName. */
-function normalizePlay(play: Play & { formation?: string }): Play {
+type LegacyPlay = Play & {
+  formation?: string
+  fieldPosition?: string
+}
+
+/** Migrates older saves (formation, fieldPosition) into the current Play shape. */
+function normalizePlay(play: LegacyPlay): Play {
   const customFormations = getCustomFormations()
   const formationId = play.formationId ?? play.formation ?? DEFAULT_FORMATION_ID
   const formationName =
@@ -25,18 +36,24 @@ function normalizePlay(play: Play & { formation?: string }): Play {
     getFormationLabel(formationId, customFormations) ??
     getDefaultFormationName()
 
-  return {
+  const normalized: Play = {
     ...createEmptyPlay(),
     ...play,
     formationId,
     formationName,
+    driveStartYardLine: resolveDriveStartYardLine(play),
     routes: play.routes ?? createEmptyRoutes(),
     blocks: play.blocks ?? createEmptyBlocks(),
     playerNotes: {
       ...createEmptyPlayerNotes(),
       ...play.playerNotes,
     },
+    defenders: play.defenders ?? createDefault43Defense(),
+    playType: resolvePlayType(play.playType),
+    defenderRoutes: play.defenderRoutes ?? createEmptyDefenderRoutes(),
   }
+
+  return clampPlayPositions(migratePlayToFieldView(normalized))
 }
 
 export function getAllSavedPlays(): Play[] {
@@ -44,7 +61,7 @@ export function getAllSavedPlays(): Play[] {
   if (!raw) return []
 
   try {
-    const parsed = JSON.parse(raw) as (Play & { formation?: string })[]
+    const parsed = JSON.parse(raw) as LegacyPlay[]
     if (!Array.isArray(parsed)) return []
     return parsed.map(normalizePlay)
   } catch {

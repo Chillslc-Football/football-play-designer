@@ -1,9 +1,38 @@
 :root {
-  --grass-dark: #1a4d1a;
+  --grass-dark: #143d14;
   --grass-mid: #2d6a2d;
+  --grass-light: #3d8a3d;
   --gold: #f0c040;
-  --text-light: #e8f5e8;
-  --text-muted: #c8e6c8;
+  --gold-border: #c9a020;
+  --gold-text: #2a2000;
+  --gold-ring: rgba(240, 192, 64, 0.28);
+  --block-orange: #c45c00;
+  --block-orange-dark: #8b4000;
+  --danger: #a83232;
+
+  --surface: #ffffff;
+  --surface-hover: #f0f7f0;
+  --surface-muted: #e8ece8;
+  --surface-card: rgba(255, 255, 255, 0.06);
+  --surface-card-border: rgba(255, 255, 255, 0.14);
+
+  --text-light: #edf5ed;
+  --text-muted: #b8d4b8;
+  --text-on-surface: #143d14;
+  --text-disabled: #7a8f7a;
+
+  --border: rgba(255, 255, 255, 0.12);
+  --border-strong: #2d6a2d;
+
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.22);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
 
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;

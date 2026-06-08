@@ -1,9 +1,13 @@
-import { FIELD_WIDTH } from '../constants/field'
+import { FIELD_WIDTH, LOS_VIEW_Y } from '../constants/field'
 import type { PlayerLabel, Position } from '../types/player'
 
 /**
  * Built-in formation positions live here in `src/data/builtinFormations.ts`.
  * Custom formations are stored separately in localStorage.
+ *
+ * Coordinates use the 50-yard portrait view (1 unit = 1 yard).
+ * x = lateral, y = depth (offense at bottom attacks upward toward y = 0).
+ * The line of scrimmage is at LOS_VIEW_Y.
  */
 
 export type BuiltInFormationId =
@@ -20,39 +24,40 @@ export type FormationDefinition = {
 }
 
 const SPACING = {
-  LOS: 48,
-  CENTER_Y: FIELD_WIDTH / 2,
-  OL_GAP: 4.5,
+  LOS: LOS_VIEW_Y,
+  CENTER_X: FIELD_WIDTH / 2,
+  /** Even splits between adjacent offensive linemen (yards). */
+  OL_GAP: 1.85,
   QB_DEPTH: 2,
-  FB_DEPTH: 5.5,
-  RB_DEPTH: 9.5,
-  SHOTGUN_DEPTH: 5,
-  PRO_SET_DEPTH: 4,
-  PRO_SET_SPLIT: 4.5,
-  SINGLEBACK_DEPTH: 7,
-  HBACK_SPLIT: 4.5,
-  GUN_RB_SPLIT: 4.5,
-  WR_SIDELINE: 4,
-  TE_OUTSIDE_TACKLE: 4.5,
-  TRIPS_GAP: 4.5,
+  FB_DEPTH: 4.5,
+  RB_DEPTH: 7.5,
+  SHOTGUN_DEPTH: 4,
+  PRO_SET_DEPTH: 3,
+  PRO_SET_SPLIT: 2,
+  SINGLEBACK_DEPTH: 5,
+  HBACK_SPLIT: 2.25,
+  GUN_RB_SPLIT: 2.25,
+  WR_SIDELINE: 2.75,
+  TE_OUTSIDE_TACKLE: 1.5,
+  TRIPS_GAP: 1.85,
 } as const
 
 function offensiveLine(): Record<'LT' | 'LG' | 'C' | 'RG' | 'RT', Position> {
-  const { LOS, CENTER_Y, OL_GAP } = SPACING
+  const { LOS, CENTER_X, OL_GAP } = SPACING
   return {
-    C: { x: LOS, y: CENTER_Y },
-    LG: { x: LOS, y: CENTER_Y - OL_GAP },
-    RG: { x: LOS, y: CENTER_Y + OL_GAP },
-    LT: { x: LOS, y: CENTER_Y - OL_GAP * 2 },
-    RT: { x: LOS, y: CENTER_Y + OL_GAP * 2 },
+    C: { x: CENTER_X, y: LOS },
+    LG: { x: CENTER_X - OL_GAP, y: LOS },
+    RG: { x: CENTER_X + OL_GAP, y: LOS },
+    LT: { x: CENTER_X - OL_GAP * 2, y: LOS },
+    RT: { x: CENTER_X + OL_GAP * 2, y: LOS },
   }
 }
 
 function wideReceivers(): Pick<Record<PlayerLabel, Position>, 'X' | 'Z'> {
   const { LOS, WR_SIDELINE } = SPACING
   return {
-    X: { x: LOS, y: WR_SIDELINE },
-    Z: { x: LOS, y: FIELD_WIDTH - WR_SIDELINE },
+    X: { x: WR_SIDELINE, y: LOS },
+    Z: { x: FIELD_WIDTH - WR_SIDELINE, y: LOS },
   }
 }
 
@@ -60,7 +65,7 @@ function tightEndOutsideTackle(): Pick<Record<PlayerLabel, Position>, 'Y'> {
   const ol = offensiveLine()
   const { LOS, TE_OUTSIDE_TACKLE } = SPACING
   return {
-    Y: { x: LOS, y: ol.RT.y + TE_OUTSIDE_TACKLE },
+    Y: { x: ol.RT.x + TE_OUTSIDE_TACKLE, y: LOS },
   }
 }
 
@@ -74,9 +79,9 @@ export const BUILTIN_FORMATIONS: FormationDefinition[] = [
       ...offensiveLine(),
       ...wideReceivers(),
       ...tightEndOutsideTackle(),
-      QB: { x: SPACING.LOS - SPACING.QB_DEPTH, y: SPACING.CENTER_Y },
-      FB: { x: SPACING.LOS - SPACING.FB_DEPTH, y: SPACING.CENTER_Y },
-      RB: { x: SPACING.LOS - SPACING.RB_DEPTH, y: SPACING.CENTER_Y },
+      QB: { x: SPACING.CENTER_X, y: SPACING.LOS + SPACING.QB_DEPTH },
+      FB: { x: SPACING.CENTER_X, y: SPACING.LOS + SPACING.FB_DEPTH },
+      RB: { x: SPACING.CENTER_X, y: SPACING.LOS + SPACING.RB_DEPTH },
     },
   },
   {
@@ -87,14 +92,14 @@ export const BUILTIN_FORMATIONS: FormationDefinition[] = [
       ...offensiveLine(),
       ...wideReceivers(),
       ...tightEndOutsideTackle(),
-      QB: { x: SPACING.LOS - SPACING.QB_DEPTH, y: SPACING.CENTER_Y },
+      QB: { x: SPACING.CENTER_X, y: SPACING.LOS + SPACING.QB_DEPTH },
       FB: {
-        x: SPACING.LOS - SPACING.PRO_SET_DEPTH,
-        y: SPACING.CENTER_Y - SPACING.PRO_SET_SPLIT,
+        x: SPACING.CENTER_X - SPACING.PRO_SET_SPLIT,
+        y: SPACING.LOS + SPACING.PRO_SET_DEPTH,
       },
       RB: {
-        x: SPACING.LOS - SPACING.PRO_SET_DEPTH,
-        y: SPACING.CENTER_Y + SPACING.PRO_SET_SPLIT,
+        x: SPACING.CENTER_X + SPACING.PRO_SET_SPLIT,
+        y: SPACING.LOS + SPACING.PRO_SET_DEPTH,
       },
     },
   },
@@ -104,21 +109,21 @@ export const BUILTIN_FORMATIONS: FormationDefinition[] = [
     isBuiltin: true,
     positions: {
       ...offensiveLine(),
-      QB: { x: SPACING.LOS - SPACING.SHOTGUN_DEPTH, y: SPACING.CENTER_Y },
+      QB: { x: SPACING.CENTER_X, y: SPACING.LOS + SPACING.SHOTGUN_DEPTH },
       RB: {
-        x: SPACING.LOS - SPACING.SHOTGUN_DEPTH,
-        y: SPACING.CENTER_Y - SPACING.GUN_RB_SPLIT,
+        x: SPACING.CENTER_X - SPACING.GUN_RB_SPLIT,
+        y: SPACING.LOS + SPACING.SHOTGUN_DEPTH,
       },
-      X: { x: SPACING.LOS, y: SPACING.WR_SIDELINE },
+      X: { x: SPACING.WR_SIDELINE, y: LOS_VIEW_Y },
       FB: {
-        x: SPACING.LOS,
-        y: offensiveLine().RT.y + SPACING.TE_OUTSIDE_TACKLE,
+        x: offensiveLine().RT.x + SPACING.TE_OUTSIDE_TACKLE,
+        y: LOS_VIEW_Y,
       },
       Y: {
-        x: SPACING.LOS,
-        y: offensiveLine().RT.y + SPACING.TE_OUTSIDE_TACKLE + SPACING.TRIPS_GAP,
+        x: offensiveLine().RT.x + SPACING.TE_OUTSIDE_TACKLE + SPACING.TRIPS_GAP,
+        y: LOS_VIEW_Y,
       },
-      Z: { x: SPACING.LOS, y: FIELD_WIDTH - SPACING.WR_SIDELINE },
+      Z: { x: FIELD_WIDTH - SPACING.WR_SIDELINE, y: LOS_VIEW_Y },
     },
   },
   {
@@ -129,11 +134,11 @@ export const BUILTIN_FORMATIONS: FormationDefinition[] = [
       ...offensiveLine(),
       ...wideReceivers(),
       ...tightEndOutsideTackle(),
-      QB: { x: SPACING.LOS - SPACING.QB_DEPTH, y: SPACING.CENTER_Y },
-      RB: { x: SPACING.LOS - SPACING.SINGLEBACK_DEPTH, y: SPACING.CENTER_Y },
+      QB: { x: SPACING.CENTER_X, y: SPACING.LOS + SPACING.QB_DEPTH },
+      RB: { x: SPACING.CENTER_X, y: SPACING.LOS + SPACING.SINGLEBACK_DEPTH },
       FB: {
-        x: SPACING.LOS - SPACING.QB_DEPTH,
-        y: SPACING.CENTER_Y - SPACING.HBACK_SPLIT,
+        x: SPACING.CENTER_X - SPACING.HBACK_SPLIT,
+        y: SPACING.LOS + SPACING.QB_DEPTH,
       },
     },
   },

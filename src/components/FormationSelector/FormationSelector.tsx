@@ -1,30 +1,32 @@
 import { BUILTIN_FORMATIONS } from '../../data/builtinFormations'
+import type { DriveStartYardLine } from '../../types/driveStart'
 import type { CustomFormation } from '../../utils/formationStorage'
 import {
   getFormationById,
   isCustomFormationId,
   resolveFormationDisplayName,
 } from '../../utils/formationUtils'
+import { DriveStartSelector } from '../DriveStartSelector/DriveStartSelector'
 import './FormationSelector.css'
 
 type FormationSelectorProps = {
   value: string
   formationName: string
+  driveStartYardLine: DriveStartYardLine
   customFormations: CustomFormation[]
   onChange: (formationId: string) => void
+  onDriveStartChange: (driveStart: DriveStartYardLine) => void
   onSaveCurrentFormation: () => void
   onDeleteCustomFormation: () => void
 }
 
-/**
- * Formation dropdown with built-in and custom formations.
- * Coaches can save the current player alignment as a custom formation.
- */
 export function FormationSelector({
   value,
   formationName,
+  driveStartYardLine,
   customFormations,
   onChange,
+  onDriveStartChange,
   onSaveCurrentFormation,
   onDeleteCustomFormation,
 }: FormationSelectorProps) {
@@ -37,13 +39,15 @@ export function FormationSelector({
 
   return (
     <div className="formation-selector">
-      <div className="formation-selector-row">
-        <label htmlFor="formation-select" className="formation-label">
-          Formation
+      <DriveStartSelector value={driveStartYardLine} onChange={onDriveStartChange} />
+
+      <div className="form-group form-group-grow">
+        <label htmlFor="formation-select" className="field-label">
+          Select Formation
         </label>
         <select
           id="formation-select"
-          className="formation-select"
+          className="select-field"
           value={value}
           onChange={(e) => onChange(e.target.value)}
         >
@@ -65,25 +69,19 @@ export function FormationSelector({
             </optgroup>
           )}
 
-          {deletedLabel && (
-            <option value={value}>{deletedLabel}</option>
-          )}
+          {deletedLabel && <option value={value}>{deletedLabel}</option>}
         </select>
       </div>
 
-      <div className="formation-actions">
-        <button
-          type="button"
-          className="formation-action-btn"
-          onClick={onSaveCurrentFormation}
-        >
+      <div className="formation-selector-actions btn-row">
+        <button type="button" className="btn" onClick={onSaveCurrentFormation}>
           Save Current Formation
         </button>
 
         {isCustomSelected && (
           <button
             type="button"
-            className="formation-action-btn formation-action-btn-delete"
+            className="btn btn-danger"
             onClick={onDeleteCustomFormation}
           >
             Delete Custom Formation

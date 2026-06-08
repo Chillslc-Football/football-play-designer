@@ -1,63 +1,18 @@
 .play-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-end;
-  justify-content: center;
   width: 100%;
-  max-width: 1180px;
-  padding: 8px 0 12px;
 }
 
-.play-control-group {
-  display: flex;
+.play-controls .form-row {
   flex-direction: column;
-  gap: 6px;
+  align-items: stretch;
 }
 
-.play-control-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #e8f5e8;
+.play-controls .form-group {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-.play-name-input,
-.load-play-select {
-  padding: 8px 12px;
-  font-size: 15px;
-  font-family: inherit;
-  border: 2px solid #2d6a2d;
-  border-radius: 6px;
-  background: #fff;
-  color: #1a4d1a;
-  min-width: 200px;
-}
-
-.play-name-input:focus,
-.load-play-select:focus {
-  outline: none;
-  border-color: #f0c040;
-  box-shadow: 0 0 0 3px rgba(240, 192, 64, 0.3);
-}
-
-.play-control-btn {
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  border: 2px solid #8b2e2e;
-  border-radius: 6px;
-  background: #fff;
-  color: #8b2e2e;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-}
-
-.play-control-btn:hover:not(:disabled) {
-  background: #8b2e2e;
-  color: #fff;
-}
-
-.play-control-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+.play-controls-delete {
+  width: 100%;
+  align-self: stretch;
 }

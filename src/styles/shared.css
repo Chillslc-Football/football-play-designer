@@ -1,0 +1,154 @@
+/**
+ * Shared coaching-tool UI styles — buttons, inputs, cards, labels.
+ */
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-on-surface);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--surface-muted);
+  color: var(--text-disabled);
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.btn-primary {
+  background: var(--grass-mid);
+  color: #fff;
+  border-color: var(--grass-dark);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--grass-dark);
+  color: #fff;
+}
+
+.btn-danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn-active {
+  background: var(--gold);
+  color: var(--gold-text);
+  border-color: var(--gold-border);
+}
+
+.btn-active:hover:not(:disabled) {
+  background: var(--gold);
+  color: var(--gold-text);
+}
+
+.btn-toggle-active {
+  background: var(--grass-mid);
+  color: #fff;
+  border-color: var(--grass-dark);
+}
+
+.btn-toggle-blocking.btn-toggle-active {
+  background: var(--block-orange);
+  border-color: var(--block-orange-dark);
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* ---- Form fields ---- */
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.input-field,
+.select-field {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-on-surface);
+}
+
+.input-field:focus,
+.select-field:focus,
+.textarea-field:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-ring);
+}
+
+.textarea-field {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.5;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-on-surface);
+  resize: vertical;
+}
+
+.textarea-field::placeholder {
+  color: #888;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 160px;
+  min-width: 140px;
+}
+
+.form-group-grow {
+  flex: 2 1 220px;
+}

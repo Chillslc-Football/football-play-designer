@@ -1,21 +1,23 @@
 import type { Block } from '../types/block'
 import type { Play } from '../types/play'
 import type { Player, PlayerLabel, Position } from '../types/player'
+import { mirrorDefenderRoutes, mirrorDefenders } from './defenseMirror'
+import { clampPlayPositions } from './losClamp'
 import {
   ALL_PLAYER_LABELS,
   createEmptyPlayerNotes,
   type PlayerNotes,
 } from '../types/playerNotes'
 import type { Route } from '../types/route'
-import { getCenterPlayerY, mirrorPositionLaterally } from './mirror'
+import { getCenterPlayerX, mirrorPositionLaterally } from './mirror'
 
 /**
  * Football mirror — swap the play from one side to the other WITHOUT reversing direction.
  *
- * Offense always attacks left-to-right on screen (+x toward the defense).
- * Mirror flips assignments across the Center (C) laterally (y axis only).
+ * Offense always attacks upward/north on screen (-y toward the defense).
+ * Mirror flips assignments across the Center (C) laterally (x axis only).
  *
- * Step 1: Flip y around C for every position and path point (x unchanged).
+ * Step 1: Flip x around C for every position and path point (y unchanged).
  * Step 2: Swap paired player spots so LT stays left of C, RT stays right of C.
  * Step 3: Reassign routes/blocks/notes to the partner player (X→Z, LT→RT).
  * Step 4: Rename play (34↔35, Right↔Left).
@@ -86,12 +88,12 @@ function swapPairedPositions(
  */
 function mirrorAndReassignPaths<T extends { playerId: PlayerLabel; points: Position[] }>(
   paths: T[],
-  centerY: number,
+  centerX: number,
 ): T[] {
   return paths.map((path) => ({
     ...path,
     playerId: getMirrorPartner(path.playerId),
-    points: path.points.map((point) => mirrorPositionLaterally(point, centerY)),
+    points: path.points.map((point) => mirrorPositionLaterally(point, centerX)),
   }))
 }
 
@@ -134,13 +136,13 @@ function swapWord(text: string, wordA: string, wordB: string): string {
  * Overall play notes are left unchanged.
  */
 export function mirrorFootballPlay(play: Play): Play {
-  const centerY = getCenterPlayerY(play.players)
+  const centerX = getCenterPlayerX(play.players)
 
-  // Step 1: flip y across C (x unchanged — offense still attacks left-to-right)
+  // Step 1: flip x across C (y unchanged — offense still attacks north)
   const mirroredPositions = Object.fromEntries(
     play.players.map((player) => [
       player.id,
-      mirrorPositionLaterally(player.position, centerY),
+      mirrorPositionLaterally(player.position, centerX),
     ]),
   ) as Record<PlayerLabel, Position>
 
@@ -152,18 +154,22 @@ export function mirrorFootballPlay(play: Play): Play {
     position: finalPositions[player.id],
   }))
 
-  const routes: Route[] = mirrorAndReassignPaths(play.routes, centerY)
-  const blocks: Block[] = mirrorAndReassignPaths(play.blocks, centerY)
+  const routes: Route[] = mirrorAndReassignPaths(play.routes, centerX)
+  const blocks: Block[] = mirrorAndReassignPaths(play.blocks, centerX)
   const playerNotes = mirrorPlayerNotes(play.playerNotes)
 
-  return {
+  const mirrored: Play = {
     ...play,
     mirrored: !play.mirrored,
     name: mirrorPlayName(play.name),
     players,
+    defenders: mirrorDefenders(play.defenders, players),
     routes,
     blocks,
+    defenderRoutes: mirrorDefenderRoutes(play.defenderRoutes, centerX),
     playerNotes,
     notes: play.notes,
   }
+
+  return clampPlayPositions(mirrored)
 }

@@ -1,0 +1,17 @@
+.play-type-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  padding: 6px var(--space-sm);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.play-type-selector .btn {
+  min-height: 32px;
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}

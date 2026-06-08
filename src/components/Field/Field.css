@@ -1,75 +1,262 @@
 .field-container {
   width: 100%;
-  max-width: 900px;
-  margin: 0 auto;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #1e4d22;
+  padding: 0;
 }
 
 .route-hint {
   text-align: center;
-  font-size: 14px;
-  color: #c8e6c8;
-  margin: 0 0 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
 }
 
-.route-hint-block {
-  color: #ffb380;
+.route-draw-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
 }
 
-.route-arrow-head {
-  fill: #ffffff;
+.route-draw-controls .btn {
+  min-height: 30px;
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.route-draw-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.field-viewport {
+  flex: 1 1 0;
+  width: 100%;
+  min-height: 0;
+  overflow: visible;
 }
 
 .field-svg {
-  width: 100%;
-  height: auto;
   display: block;
-  border: 3px solid #fff;
-  border-radius: 4px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: visible;
 }
 
-.field-grass {
-  fill: #2d6a2d;
+.field-viewbox-bg {
+  fill: #1e4d22;
 }
 
-.end-zone {
-  fill: #1a4d1a;
-  opacity: 0.85;
+.field-turf {
+  fill: #3f9a46;
 }
 
-.end-zone-label {
-  fill: #ffffff;
-  font-size: 3px;
-  font-weight: bold;
-  text-anchor: middle;
-  dominant-baseline: middle;
-  letter-spacing: 0.3px;
-  opacity: 0.7;
+.turf-stripe {
+  pointer-events: none;
+}
+
+.turf-stripe-light {
+  fill: #48a84f;
+  opacity: 0.55;
+}
+
+.turf-stripe-dark {
+  fill: #358a3c;
+  opacity: 0.45;
+}
+
+.field-boundary {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 0.35;
+  pointer-events: none;
 }
 
 .yard-line {
   stroke: #ffffff;
-  stroke-width: 0.15;
-  opacity: 0.6;
+  pointer-events: none;
 }
 
-.yard-line.midfield {
-  stroke-width: 0.4;
+.yard-line-minor {
+  stroke-width: 0.14;
+  opacity: 0.9;
+}
+
+.yard-line-major {
+  stroke-width: 0.32;
   opacity: 1;
 }
 
-.midfield-label {
-  fill: #ffffff;
-  font-size: 4px;
-  font-weight: bold;
-  text-anchor: middle;
-  dominant-baseline: middle;
+.hash-mark {
+  stroke: #ffffff;
+  stroke-width: 0.1;
+  opacity: 0.85;
+  pointer-events: none;
 }
 
-.yard-number {
+.yard-numbers-sideline {
+  pointer-events: none;
+}
+
+.yard-number-sideline {
   fill: #ffffff;
-  font-size: 3px;
-  font-weight: bold;
+  font-size: 3.6px;
+  font-weight: 700;
+  font-family: Arial, Helvetica, sans-serif;
   text-anchor: middle;
-  opacity: 0.75;
+  dominant-baseline: middle;
+  paint-order: stroke fill;
+  stroke: rgba(0, 0, 0, 0.2);
+  stroke-width: 0.08px;
+}
+
+.yard-number-arrow {
+  fill: #ffffff;
+  pointer-events: none;
+}
+
+.los-line {
+  stroke: rgba(255, 255, 255, 0.7);
+  stroke-width: 0.18;
+  stroke-dasharray: 0.5 0.45;
+  pointer-events: none;
+}
+
+.field-side-locked {
+  fill: rgba(0, 0, 0, 0.14);
+  pointer-events: none;
+}
+
+/* ---- Offense markers ---- */
+.player-marker {
+  cursor: grab;
+}
+
+.player-marker:active {
+  cursor: grabbing;
+}
+
+.player-marker-locked {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.player-hit-area,
+.defender-hit-area {
+  fill: transparent;
+}
+
+.player-symbol {
+  fill: #ffffff;
+  stroke: #1a1a1a;
+  stroke-width: 0.12px;
+  paint-order: stroke fill;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 900;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+  user-select: none;
+}
+
+.player-marker-selected .player-symbol {
+  stroke-width: 0.18px;
+}
+
+.player-label,
+.defender-label {
+  fill: #ffffff;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.85px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: hanging;
+  paint-order: stroke fill;
+  stroke: #1a1a1a;
+  stroke-width: 0.1px;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0;
+}
+
+.player-marker:hover .player-label,
+.player-marker-selected .player-label,
+.defender-marker:hover .defender-label {
+  opacity: 1;
+}
+
+/* ---- Defense markers (rendered in Field.tsx) ---- */
+.defender-marker {
+  cursor: grab;
+}
+
+.defender-marker:active {
+  cursor: grabbing;
+}
+
+.defender-marker-locked {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.defender-marker-selected .defender-symbol {
+  stroke-width: 0.18px;
+}
+
+.defender-marker:hover .defender-label,
+.defender-marker-selected .defender-label {
+  opacity: 1;
+}
+
+.defender-symbol {
+  fill: #ffffff;
+  stroke: #1a1a1a;
+  stroke-width: 0.12px;
+  paint-order: stroke fill;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 900;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ---- Routes & blocks (child components inside the SVG) ---- */
+.field-svg .route-arrow-head-filled {
+  fill: #ffffff;
+  stroke: none;
+}
+
+.field-svg .block-line {
+  fill: none;
+  stroke: #e87820;
+  stroke-width: 0.24;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.field-svg .block-line-draft {
+  stroke: #e87820;
+  stroke-dasharray: 0.7 0.45;
+  opacity: 0.7;
+}
+
+.field-svg .block-t-cap-line {
+  stroke: #e87820;
+  stroke-width: 0.24;
+  stroke-linecap: round;
 }

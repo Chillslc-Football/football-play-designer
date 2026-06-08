@@ -1,4 +1,5 @@
 import type { PlayerLabel, Position } from '../types/player'
+import { migrateFormationPositions } from './fieldView'
 
 /**
  * Custom formations are stored here in localStorage.
@@ -18,7 +19,15 @@ export function getCustomFormations(): CustomFormation[] {
 
   try {
     const parsed = JSON.parse(raw) as CustomFormation[]
-    return Array.isArray(parsed) ? parsed : []
+    if (!Array.isArray(parsed)) return []
+
+    return parsed.map((formation) => ({
+      ...formation,
+      positions: migrateFormationPositions(formation.positions) as Record<
+        PlayerLabel,
+        Position
+      >,
+    }))
   } catch {
     return []
   }

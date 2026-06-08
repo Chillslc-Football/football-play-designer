@@ -1,32 +1,43 @@
 .header {
+  background: linear-gradient(180deg, #1a4d1a 0%, var(--grass-dark) 100%);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-md) var(--space-lg);
   text-align: center;
-  padding: 32px 20px 16px;
+  box-shadow: var(--shadow-md);
+}
+
+.header-inner {
+  max-width: 1240px;
+  margin: 0 auto;
 }
 
 .header-icon {
-  font-size: 48px;
+  font-size: 36px;
   line-height: 1;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .header-title {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  color: #f0c040;
-  margin: 0 0 8px;
-  letter-spacing: -0.5px;
+  color: var(--gold);
+  margin: 0 0 4px;
+  letter-spacing: -0.3px;
 }
 
 .header-subtitle {
-  font-size: 1rem;
-  color: #c8e6c8;
-  margin: 0;
-  max-width: 480px;
-  margin-inline: auto;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin: 0 auto;
+  max-width: 520px;
 }
 
 @media (max-width: 600px) {
   .header-title {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
+  }
+
+  .header-subtitle {
+    font-size: 0.875rem;
   }
 }

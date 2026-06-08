@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FormationSelector } from './components/FormationSelector/FormationSelector'
 import { Header } from './components/Header/Header'
-import { Toolbar } from './components/Toolbar/Toolbar'
 import { Field } from './components/Field/Field'
 import { Notes } from './components/Notes/Notes'
-import { PlayControls } from './components/PlayControls/PlayControls'
+import { PlaySetupPanel } from './components/PlaySetupPanel/PlaySetupPanel'
 import { PlayerAssignmentPanel } from './components/PlayerAssignmentPanel/PlayerAssignmentPanel'
-import {
-  DrawingModeSelector,
-  type DrawingMode,
-} from './components/DrawingModeSelector/DrawingModeSelector'
+import { PlayTypeSelector } from './components/PlayTypeSelector/PlayTypeSelector'
+import { type DrawingMode } from './components/DrawingModeSelector/DrawingModeSelector'
+import type { DefenderLabel } from './types/defender'
+import type { DefenderRoute } from './types/defenderRoute'
+import { createEmptyDefenderRoutes } from './types/defenderRoute'
+import type { PlayType } from './types/playType'
+import type { DriveStartYardLine } from './types/driveStart'
 import { createEmptyBlocks, type Block } from './types/block'
 import { createEmptyPlay, type Play } from './types/play'
 import { type PlayerLabel, type Position } from './types/player'
@@ -41,7 +42,9 @@ import {
   getPlayById,
   upsertPlayById,
 } from './utils/playStorage'
+import { getDefenderMirrorPartner } from './utils/defenseMirror'
 import { getMirrorPartner, mirrorFootballPlay } from './utils/footballMirror'
+import { clampDefensePosition, clampOffensePosition } from './utils/losClamp'
 import './App.css'
 
 function App() {
@@ -53,7 +56,9 @@ function App() {
   const [activeSavedPlayId, setActiveSavedPlayId] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState('')
   const [selectedPlayerId, setSelectedPlayerId] = useState<PlayerLabel | null>(null)
+  const [selectedDefenderId, setSelectedDefenderId] = useState<DefenderLabel | null>(null)
   const [drawingMode, setDrawingMode] = useState<DrawingMode>('route')
+  const [setupPanelOpen, setSetupPanelOpen] = useState(true)
 
   useEffect(() => {
     setSavedPlays(getAllSavedPlays())
@@ -83,7 +88,6 @@ function App() {
     setTimeout(() => setSaveMessage(''), 2500)
   }
 
-  /** Attach current formationId and formationName before writing to localStorage. */
   function preparePlayForSave(current: Play): Play {
     const snapshot = withFormationSnapshot(current, customFormations)
     return { ...current, ...snapshot }
@@ -94,6 +98,7 @@ function App() {
     setSelectedLoadId('')
     setActiveSavedPlayId(null)
     setSelectedPlayerId(null)
+    setSelectedDefenderId(null)
     setSaveMessage('')
   }
 
@@ -176,12 +181,15 @@ function App() {
       return
     }
 
-    // Load saved positions and formation — do not reset to formation preset.
     setPlay(loaded)
     setSelectedLoadId(playId)
     setActiveSavedPlayId(playId)
     setPlayFilterId(loaded.formationId)
     setSelectedPlayerId(null)
+    setSelectedDefenderId(null)
+    if (loaded.playType === 'defensive') {
+      setDrawingMode('route')
+    }
     showSaveMessage(`Loaded "${loaded.name}"`)
   }
 
@@ -205,6 +213,7 @@ function App() {
     if (play.id === deletedId) {
       setPlay(createEmptyPlay())
       setSelectedPlayerId(null)
+      setSelectedDefenderId(null)
     }
 
     showSaveMessage(`Deleted "${playName}"`)
@@ -213,28 +222,47 @@ function App() {
   function handleMirrorPlay() {
     setPlay((current) => mirrorFootballPlay(current))
     setSelectedPlayerId((current) => (current ? getMirrorPartner(current) : null))
+    setSelectedDefenderId((current) => (current ? getDefenderMirrorPartner(current) : null))
   }
 
-  /** Selecting a formation loads its preset positions (built-in or custom). */
+  function handlePlayTypeChange(playType: PlayType) {
+    setPlay((current) => ({ ...current, playType }))
+    setSelectedPlayerId(null)
+    setSelectedDefenderId(null)
+    if (playType === 'defensive' && drawingMode === 'block') {
+      setDrawingMode('route')
+    }
+  }
+
+  function handleDriveStartChange(driveStartYardLine: DriveStartYardLine) {
+    setPlay((current) => ({ ...current, driveStartYardLine }))
+  }
+
   function handleFormationChange(formationId: string) {
     const formation = getFormationById(formationId, customFormations)
     if (!formation) return
+
+    const players = createPlayersForFormation(formationId, customFormations).map((player) => ({
+      ...player,
+      position: clampOffensePosition(player.position),
+    }))
 
     setPlay((current) => ({
       ...current,
       formationId,
       formationName: formation.label,
-      players: createPlayersForFormation(formationId, customFormations),
+      players,
       routes: createEmptyRoutes(),
       blocks: createEmptyBlocks(),
+      defenderRoutes: createEmptyDefenderRoutes(),
       notes: current.notes,
       playerNotes: current.playerNotes,
       mirrored: false,
     }))
     setSelectedPlayerId(null)
+    setSelectedDefenderId(null)
   }
 
-  /** Saves the current player alignment as a new custom formation. */
   function handleSaveCurrentFormation() {
     const name = window.prompt('Enter a name for this formation:')
     if (!name || !name.trim()) {
@@ -250,7 +278,12 @@ function App() {
     const newFormation: CustomFormation = {
       id: createCustomFormationId(),
       label: name.trim(),
-      positions: positionsFromPlayers(play.players),
+      positions: positionsFromPlayers(
+        play.players.map((player) => ({
+          ...player,
+          position: clampOffensePosition(player.position),
+        })),
+      ),
     }
 
     addCustomFormation(newFormation)
@@ -295,28 +328,69 @@ function App() {
 
   function handleSelectPlayer(playerId: PlayerLabel) {
     setSelectedPlayerId(playerId)
+    setSelectedDefenderId(null)
+  }
+
+  function handleSelectDefender(defenderId: DefenderLabel) {
+    setSelectedDefenderId(defenderId)
+    setSelectedPlayerId(null)
   }
 
   function handlePlayerMove(playerId: PlayerLabel, position: Position) {
+    if (play.playType !== 'offensive') return
+
+    const clamped = clampOffensePosition(position)
     setPlay((current) => ({
       ...current,
       players: current.players.map((player) =>
-        player.id === playerId ? { ...player, position } : player,
+        player.id === playerId ? { ...player, position: clamped } : player,
+      ),
+    }))
+  }
+
+  function handleDefenderMove(defenderId: DefenderLabel, position: Position) {
+    if (play.playType !== 'defensive') return
+
+    const clamped = clampDefensePosition(position)
+    setPlay((current) => ({
+      ...current,
+      defenders: current.defenders.map((defender) =>
+        defender.id === defenderId ? { ...defender, position: clamped } : defender,
       ),
     }))
   }
 
   function handleRouteComplete(route: Route) {
+    if (play.playType !== 'offensive') return
+
     setPlay((current) => {
       const otherRoutes = current.routes.filter((r) => r.playerId !== route.playerId)
       return {
         ...current,
-        routes: [...otherRoutes, route],
+        routes:
+          route.points.length === 0 ? otherRoutes : [...otherRoutes, route],
+      }
+    })
+  }
+
+  function handleDefenderRouteComplete(route: DefenderRoute) {
+    if (play.playType !== 'defensive') return
+
+    setPlay((current) => {
+      const otherRoutes = current.defenderRoutes.filter(
+        (entry) => entry.defenderId !== route.defenderId,
+      )
+      return {
+        ...current,
+        defenderRoutes:
+          route.points.length === 0 ? otherRoutes : [...otherRoutes, route],
       }
     })
   }
 
   function handleBlockComplete(block: Block) {
+    if (play.playType !== 'offensive') return
+
     setPlay((current) => {
       const otherBlocks = current.blocks.filter((b) => b.playerId !== block.playerId)
       return {
@@ -330,27 +404,18 @@ function App() {
     <div className="app">
       <Header />
 
-      <main className="main">
-        <Toolbar
-          onNewPlay={handleNewPlay}
-          onSaveChanges={handleSaveChanges}
-          onSaveAsNew={handleSaveAsNew}
-          onMirrorPlay={handleMirrorPlay}
-          isMirrored={play.mirrored}
-        />
-
-        {saveMessage && <p className="save-message">{saveMessage}</p>}
-
-        <FormationSelector
-          value={play.formationId}
+      <div className={`app-body ${setupPanelOpen ? '' : 'setup-collapsed'}`}>
+        <PlaySetupPanel
+          isOpen={setupPanelOpen}
+          onToggle={() => setSetupPanelOpen((open) => !open)}
+          formationId={play.formationId}
           formationName={play.formationName}
+          driveStartYardLine={play.driveStartYardLine}
           customFormations={customFormations}
-          onChange={handleFormationChange}
+          onFormationChange={handleFormationChange}
+          onDriveStartChange={handleDriveStartChange}
           onSaveCurrentFormation={handleSaveCurrentFormation}
           onDeleteCustomFormation={handleDeleteCustomFormation}
-        />
-
-        <PlayControls
           playName={play.name}
           onPlayNameChange={handlePlayNameChange}
           playFilterId={playFilterId}
@@ -360,33 +425,59 @@ function App() {
           selectedLoadId={selectedLoadId}
           onLoadPlay={handleLoadPlay}
           onDeletePlay={handleDeletePlay}
+          playType={play.playType}
+          drawingMode={drawingMode}
+          onDrawingModeChange={setDrawingMode}
+          onNewPlay={handleNewPlay}
+          onSaveChanges={handleSaveChanges}
+          onSaveAsNew={handleSaveAsNew}
+          onMirrorPlay={handleMirrorPlay}
+          isMirrored={play.mirrored}
         />
 
-        <DrawingModeSelector mode={drawingMode} onChange={setDrawingMode} />
+        <main className="canvas-area">
+          <PlayTypeSelector playType={play.playType} onChange={handlePlayTypeChange} />
 
-        <div className="field-workspace">
-          <Field
-            players={play.players}
-            routes={play.routes}
-            blocks={play.blocks}
-            playerNotes={play.playerNotes}
-            drawingMode={drawingMode}
-            selectedPlayerId={selectedPlayerId}
-            onSelectPlayer={handleSelectPlayer}
-            onPlayerMove={handlePlayerMove}
-            onRouteComplete={handleRouteComplete}
-            onBlockComplete={handleBlockComplete}
-          />
+          {saveMessage && <p className="save-message">{saveMessage}</p>}
 
-          <PlayerAssignmentPanel
-            selectedPlayerId={selectedPlayerId}
-            playerNotes={play.playerNotes}
-            onPlayerNotesChange={handlePlayerNotesChange}
-          />
-        </div>
+          <div className="field-stage">
+            <div className="field-stage-main">
+              <div className="field-column">
+                <Field
+                  playType={play.playType}
+                  players={play.players}
+                  defenders={play.defenders}
+                  routes={play.routes}
+                  defenderRoutes={play.defenderRoutes}
+                  blocks={play.blocks}
+                  playerNotes={play.playerNotes}
+                  drawingMode={drawingMode}
+                  driveStartYardLine={play.driveStartYardLine}
+                  selectedPlayerId={selectedPlayerId}
+                  selectedDefenderId={selectedDefenderId}
+                  onSelectPlayer={handleSelectPlayer}
+                  onSelectDefender={handleSelectDefender}
+                  onPlayerMove={handlePlayerMove}
+                  onDefenderMove={handleDefenderMove}
+                  onRouteComplete={handleRouteComplete}
+                  onDefenderRouteComplete={handleDefenderRouteComplete}
+                  onBlockComplete={handleBlockComplete}
+                />
+              </div>
 
-        <Notes value={play.notes} onChange={handleNotesChange} />
-      </main>
+              <PlayerAssignmentPanel
+                selectedPlayerId={selectedPlayerId}
+                playerNotes={play.playerNotes}
+                onPlayerNotesChange={handlePlayerNotesChange}
+              />
+            </div>
+
+            <div className="notes-wrapper">
+              <Notes value={play.notes} onChange={handleNotesChange} />
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   )
 }

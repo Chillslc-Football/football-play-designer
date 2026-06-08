@@ -1,6 +1,6 @@
-import { FIELD_LENGTH, FIELD_WIDTH } from '../constants/field'
+import { clampViewPosition } from '../utils/fieldView'
 
-/** A point on the field in SVG coordinates (x = length, y = width). */
+/** A point on the field in SVG coordinates (x = lateral, y = depth; offense attacks upward). */
 export type Position = {
   x: number
   y: number
@@ -26,10 +26,7 @@ export type Player = {
   position: Position
 }
 
-/** Keeps a player inside the field boundaries. */
+/** Keeps a player inside the 50-yard view boundaries. */
 export function clampPosition(position: Position): Position {
-  return {
-    x: Math.min(FIELD_LENGTH - 1, Math.max(1, position.x)),
-    y: Math.min(FIELD_WIDTH - 1, Math.max(1, position.y)),
-  }
+  return clampViewPosition(position)
 }
