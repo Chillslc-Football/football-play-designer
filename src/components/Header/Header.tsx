@@ -10,7 +10,7 @@ export function Header() {
       <div className="header-icon" aria-hidden="true">
         🏈
       </div>
-      <h1 className="header-title">Football Play Designer</h1>
+      <h1 className="header-title">Football Play Designer MVP</h1>
       <p className="header-subtitle">
         Draw, save, and mirror your plays — built for coaches and players.
       </p>
