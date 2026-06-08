@@ -26,6 +26,7 @@ import {
   createPlayersForFormation,
   filterPlaysByFormation,
   getFormationById,
+  getFormationLabel,
   getPlayFilterOptions,
   isCustomFormationId,
   isFormationNameTaken,
