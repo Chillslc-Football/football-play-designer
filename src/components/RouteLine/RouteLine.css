@@ -1,0 +1,14 @@
+.route-line {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 0.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.route-line-draft {
+  stroke: #f0c040;
+  stroke-dasharray: 1 0.6;
+  opacity: 0.9;
+}

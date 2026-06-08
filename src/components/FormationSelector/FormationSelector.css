@@ -1,0 +1,33 @@
+.formation-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  padding: 8px 0 12px;
+  width: 100%;
+  max-width: 900px;
+}
+
+.formation-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e8f5e8;
+}
+
+.formation-select {
+  padding: 8px 12px;
+  font-size: 15px;
+  font-family: inherit;
+  border: 2px solid #2d6a2d;
+  border-radius: 6px;
+  background: #fff;
+  color: #1a4d1a;
+  cursor: pointer;
+  min-width: 200px;
+}
+
+.formation-select:focus {
+  outline: none;
+  border-color: #f0c040;
+  box-shadow: 0 0 0 3px rgba(240, 192, 64, 0.3);
+}

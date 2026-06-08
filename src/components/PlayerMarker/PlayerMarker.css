@@ -1,0 +1,47 @@
+.player-marker {
+  cursor: grab;
+}
+
+.player-marker:active {
+  cursor: grabbing;
+}
+
+.player-selection-ring {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 0.35;
+  pointer-events: none;
+}
+
+.player-marker-selected .player-circle {
+  stroke: #ffffff;
+  stroke-width: 0.45;
+}
+
+.player-marker-has-notes .player-circle {
+  stroke: #ffffff;
+  stroke-width: 0.4;
+}
+
+.player-note-dot {
+  fill: #ffffff;
+  stroke: #1a4d1a;
+  stroke-width: 0.15;
+  pointer-events: none;
+}
+
+.player-circle {
+  fill: #f0c040;
+  stroke: #1a4d1a;
+  stroke-width: 0.3;
+}
+
+.player-label {
+  fill: #1a4d1a;
+  font-size: 1.6px;
+  font-weight: bold;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+  user-select: none;
+}

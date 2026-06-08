@@ -1,0 +1,71 @@
+.field-container {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.route-hint {
+  text-align: center;
+  font-size: 14px;
+  color: #c8e6c8;
+  margin: 0 0 10px;
+}
+
+.route-arrow-head {
+  fill: #ffffff;
+}
+
+.field-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 3px solid #fff;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.field-grass {
+  fill: #2d6a2d;
+}
+
+.end-zone {
+  fill: #1a4d1a;
+  opacity: 0.85;
+}
+
+.end-zone-label {
+  fill: #ffffff;
+  font-size: 3px;
+  font-weight: bold;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  letter-spacing: 0.3px;
+  opacity: 0.7;
+}
+
+.yard-line {
+  stroke: #ffffff;
+  stroke-width: 0.15;
+  opacity: 0.6;
+}
+
+.yard-line.midfield {
+  stroke-width: 0.4;
+  opacity: 1;
+}
+
+.midfield-label {
+  fill: #ffffff;
+  font-size: 4px;
+  font-weight: bold;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.yard-number {
+  fill: #ffffff;
+  font-size: 3px;
+  font-weight: bold;
+  text-anchor: middle;
+  opacity: 0.75;
+}
