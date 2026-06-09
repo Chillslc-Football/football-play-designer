@@ -1,4 +1,5 @@
 import { useAuth } from '../../hooks/useAuth'
+import { useTeam } from '../../hooks/useTeam'
 import './Header.css'
 
 /**
@@ -7,6 +8,7 @@ import './Header.css'
  */
 export function Header() {
   const { user, signOut } = useAuth()
+  const { team } = useTeam()
   const email = user?.email ?? ''
 
   return (
@@ -28,6 +30,7 @@ export function Header() {
             🏈
           </div>
           <h1 className="header-title">Football Play Designer MVP</h1>
+          {team && <p className="header-team-name">{team.name}</p>}
           <p className="header-subtitle">
             Design, save, and mirror offensive plays — built for coaches.
           </p>

@@ -55,6 +55,13 @@
   letter-spacing: -0.3px;
 }
 
+.header-team-name {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-light);
+}
+
 .header-subtitle {
   font-size: 0.95rem;
   color: var(--text-muted);

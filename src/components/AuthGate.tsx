@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import App from '../App'
+import { TeamProvider } from '../context/TeamProvider'
 import { useAuth } from '../hooks/useAuth'
 import { LoginPage } from '../pages/LoginPage'
 import { SignupPage } from '../pages/SignupPage'
+import { TeamGate } from './TeamGate'
 import '../pages/AuthPages.css'
 
 export function AuthGate() {
@@ -14,7 +15,11 @@ export function AuthGate() {
   }
 
   if (session) {
-    return <App />
+    return (
+      <TeamProvider>
+        <TeamGate />
+      </TeamProvider>
+    )
   }
 
   if (authView === 'signup') {
