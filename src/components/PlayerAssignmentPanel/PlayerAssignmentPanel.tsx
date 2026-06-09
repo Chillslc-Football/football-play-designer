@@ -6,12 +6,14 @@ import './PlayerAssignmentPanel.css'
 type PlayerAssignmentPanelProps = {
   selectedPlayerId: PlayerLabel | null
   playerNotes: PlayerNotes
+  canEdit?: boolean
   onPlayerNotesChange: (playerId: PlayerLabel, notes: string) => void
 }
 
 export function PlayerAssignmentPanel({
   selectedPlayerId,
   playerNotes,
+  canEdit = true,
   onPlayerNotesChange,
 }: PlayerAssignmentPanelProps) {
   const [isOpen, setIsOpen] = useState(true)
@@ -52,6 +54,7 @@ export function PlayerAssignmentPanel({
                 onChange={(e) => onPlayerNotesChange(selectedPlayerId, e.target.value)}
                 placeholder={`e.g. "${selectedPlayerId} — route, read, or blocking assignment..."`}
                 rows={4}
+                readOnly={!canEdit}
               />
             </>
           )}

@@ -8,6 +8,7 @@ type FilterOption = {
 }
 
 type PlayControlsProps = {
+  canEdit: boolean
   playName: string
   onPlayNameChange: (name: string) => void
   playFilterId: PlayFilterId
@@ -20,6 +21,7 @@ type PlayControlsProps = {
 }
 
 export function PlayControls({
+  canEdit,
   playName,
   onPlayNameChange,
   playFilterId,
@@ -47,6 +49,7 @@ export function PlayControls({
             value={playName}
             onChange={(e) => onPlayNameChange(e.target.value)}
             placeholder="Enter play name..."
+            disabled={!canEdit}
           />
         </div>
 
@@ -91,7 +94,7 @@ export function PlayControls({
           type="button"
           className="btn btn-danger play-controls-delete"
           onClick={onDeletePlay}
-          disabled={!canDelete}
+          disabled={!canDelete || !canEdit}
         >
           Delete Saved Play
         </button>

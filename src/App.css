@@ -43,6 +43,11 @@
   flex-shrink: 0;
 }
 
+.save-message-readonly {
+  color: #edf5ed;
+  background: rgba(0, 0, 0, 0.35);
+}
+
 .field-stage {
   flex: 1;
   min-height: 0;

@@ -16,6 +16,7 @@ type FilterOption = {
 }
 
 type PlaySetupPanelProps = {
+  canEdit: boolean
   isOpen: boolean
   onToggle: () => void
   formationId: string
@@ -46,6 +47,7 @@ type PlaySetupPanelProps = {
 }
 
 export function PlaySetupPanel({
+  canEdit,
   isOpen,
   onToggle,
   formationId,
@@ -104,6 +106,7 @@ export function PlaySetupPanel({
       <div className="play-setup-sections">
         <CollapsibleSection step="1" title="Formation" defaultOpen>
           <FormationSelector
+            canEdit={canEdit}
             value={formationId}
             formationName={formationName}
             driveStartYardLine={driveStartYardLine}
@@ -117,6 +120,7 @@ export function PlaySetupPanel({
 
         <CollapsibleSection step="2" title="Plays" defaultOpen>
           <PlayControls
+            canEdit={canEdit}
             playName={playName}
             onPlayNameChange={onPlayNameChange}
             playFilterId={playFilterId}
@@ -133,12 +137,14 @@ export function PlaySetupPanel({
           <DrawingModeSelector
             mode={drawingMode}
             playType={playType}
+            canEdit={canEdit}
             onChange={onDrawingModeChange}
           />
         </CollapsibleSection>
 
         <CollapsibleSection step="4" title="Actions" defaultOpen>
           <Toolbar
+            canEdit={canEdit}
             onNewPlay={onNewPlay}
             onSaveChanges={onSaveChanges}
             onSaveAsNew={onSaveAsNew}

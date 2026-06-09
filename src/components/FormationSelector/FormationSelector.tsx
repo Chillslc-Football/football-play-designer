@@ -10,6 +10,7 @@ import { DriveStartSelector } from '../DriveStartSelector/DriveStartSelector'
 import './FormationSelector.css'
 
 type FormationSelectorProps = {
+  canEdit: boolean
   value: string
   formationName: string
   driveStartYardLine: DriveStartYardLine
@@ -21,6 +22,7 @@ type FormationSelectorProps = {
 }
 
 export function FormationSelector({
+  canEdit,
   value,
   formationName,
   driveStartYardLine,
@@ -39,7 +41,11 @@ export function FormationSelector({
 
   return (
     <div className="formation-selector">
-      <DriveStartSelector value={driveStartYardLine} onChange={onDriveStartChange} />
+      <DriveStartSelector
+        value={driveStartYardLine}
+        onChange={onDriveStartChange}
+        disabled={!canEdit}
+      />
 
       <div className="form-group form-group-grow">
         <label htmlFor="formation-select" className="field-label">
@@ -50,6 +56,7 @@ export function FormationSelector({
           className="select-field"
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          disabled={!canEdit}
         >
           <optgroup label="Built-in Formations">
             {BUILTIN_FORMATIONS.map((formation) => (
@@ -74,7 +81,12 @@ export function FormationSelector({
       </div>
 
       <div className="formation-selector-actions btn-row">
-        <button type="button" className="btn" onClick={onSaveCurrentFormation}>
+        <button
+          type="button"
+          className="btn"
+          onClick={onSaveCurrentFormation}
+          disabled={!canEdit}
+        >
           Save Current Formation
         </button>
 
@@ -83,6 +95,7 @@ export function FormationSelector({
             type="button"
             className="btn btn-danger"
             onClick={onDeleteCustomFormation}
+            disabled={!canEdit}
           >
             Delete Custom Formation
           </button>

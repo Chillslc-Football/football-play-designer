@@ -1,16 +1,6 @@
-import { createDefault43Defense } from '../data/defaultDefense'
-import { DEFAULT_FORMATION_ID } from '../data/builtinFormations'
-import { createEmptyBlocks } from '../types/block'
-import { resolveDriveStartYardLine } from '../types/driveStart'
-import { createEmptyPlay, type Play } from '../types/play'
-import { createEmptyPlayerNotes } from '../types/playerNotes'
-import { createEmptyDefenderRoutes } from '../types/defenderRoute'
-import { resolvePlayType } from '../types/playType'
-import { createEmptyRoutes } from '../types/route'
-import { migratePlayToFieldView } from './fieldView'
-import { clampPlayPositions } from './losClamp'
-import { getDefaultFormationName, getFormationLabel } from './formationUtils'
+import type { Play } from '../types/play'
 import { getCustomFormations } from './formationStorage'
+import { normalizePlayRecord, type LegacyPlay } from './playNormalize'
 
 /**
  * localStorage key for all saved plays.
@@ -22,38 +12,9 @@ export function normalizePlayName(name: string): string {
   return name.trim() || 'Untitled Play'
 }
 
-type LegacyPlay = Play & {
-  formation?: string
-  fieldPosition?: string
-}
-
 /** Migrates older saves (formation, fieldPosition) into the current Play shape. */
 function normalizePlay(play: LegacyPlay): Play {
-  const customFormations = getCustomFormations()
-  const formationId = play.formationId ?? play.formation ?? DEFAULT_FORMATION_ID
-  const formationName =
-    play.formationName ??
-    getFormationLabel(formationId, customFormations) ??
-    getDefaultFormationName()
-
-  const normalized: Play = {
-    ...createEmptyPlay(),
-    ...play,
-    formationId,
-    formationName,
-    driveStartYardLine: resolveDriveStartYardLine(play),
-    routes: play.routes ?? createEmptyRoutes(),
-    blocks: play.blocks ?? createEmptyBlocks(),
-    playerNotes: {
-      ...createEmptyPlayerNotes(),
-      ...play.playerNotes,
-    },
-    defenders: play.defenders ?? createDefault43Defense(),
-    playType: resolvePlayType(play.playType),
-    defenderRoutes: play.defenderRoutes ?? createEmptyDefenderRoutes(),
-  }
-
-  return clampPlayPositions(migratePlayToFieldView(normalized))
+  return normalizePlayRecord(play, getCustomFormations())
 }
 
 export function getAllSavedPlays(): Play[] {

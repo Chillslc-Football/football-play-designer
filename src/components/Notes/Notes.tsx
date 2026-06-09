@@ -3,10 +3,11 @@ import './Notes.css'
 
 type NotesProps = {
   value: string
+  canEdit?: boolean
   onChange: (notes: string) => void
 }
 
-export function Notes({ value, onChange }: NotesProps) {
+export function Notes({ value, canEdit = true, onChange }: NotesProps) {
   const [isOpen, setIsOpen] = useState(true)
 
   return (
@@ -33,6 +34,7 @@ export function Notes({ value, onChange }: NotesProps) {
             onChange={(e) => onChange(e.target.value)}
             placeholder="Write your play notes here — reads, assignments, coaching points..."
             rows={3}
+            readOnly={!canEdit}
           />
         </div>
       )}

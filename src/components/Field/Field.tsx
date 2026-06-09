@@ -56,6 +56,7 @@ type DragTarget =
 
 type FieldProps = {
   playType: PlayType
+  viewOnly?: boolean
   players: Player[]
   defenders: Defender[]
   routes: Route[]
@@ -112,6 +113,7 @@ type DefenderFreehandDraft = {
 
 export function Field({
   playType,
+  viewOnly = false,
   players,
   defenders,
   routes,
@@ -130,8 +132,8 @@ export function Field({
   onDefenderRouteComplete,
   onBlockComplete,
 }: FieldProps) {
-  const offenseEditable = playType === 'offensive'
-  const defenseEditable = playType === 'defensive'
+  const offenseEditable = !viewOnly && playType === 'offensive'
+  const defenseEditable = !viewOnly && playType === 'defensive'
   const routesEditable = offenseEditable
   const defenderRoutesEditable = defenseEditable
   const svgRef = useRef<SVGSVGElement>(null)
