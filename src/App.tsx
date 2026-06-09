@@ -10,7 +10,6 @@ import { Field } from './components/Field/Field'
 import { Notes } from './components/Notes/Notes'
 import { PlaySetupPanel } from './components/PlaySetupPanel/PlaySetupPanel'
 import { PlayerAssignmentPanel } from './components/PlayerAssignmentPanel/PlayerAssignmentPanel'
-import { PlayTypeSelector } from './components/PlayTypeSelector/PlayTypeSelector'
 import { type DrawingMode } from './components/DrawingModeSelector/DrawingModeSelector'
 import type { DefenderLabel } from './types/defender'
 import type { DefenderRoute } from './types/defenderRoute'
@@ -29,9 +28,13 @@ import {
   updateCustomFormation,
   type CustomFormation,
 } from './utils/formationStorage'
+import { DEFAULT_FORMATION_ID } from './data/builtinFormations'
+import { DEFAULT_FRONT_ID } from './data/builtinFronts'
 import {
   ALL_CATEGORIES_FILTER,
-  filterPlaysByFormationAndCategory,
+  filterCategoriesForPlayType,
+  filterPlaysByCategory,
+  filterPlaysByPlayType,
   getAvailableCategories,
   getCategoryFilterOptions,
   isDefaultCategory,
@@ -39,6 +42,13 @@ import {
   removeCategoryFromPlay,
   type CategoryFilterId,
 } from './utils/categoryUtils'
+import {
+  createDefendersForFront,
+  filterPlaysByFront,
+  getFrontById,
+  getFrontFilterOptions,
+  withFrontSnapshot,
+} from './utils/frontUtils'
 import {
   addCustomCategory,
   deleteCustomCategory,
@@ -77,6 +87,7 @@ type PendingAction =
   | { type: 'loadPlay'; playId: string }
   | { type: 'switchTeam'; teamId: string }
   | { type: 'switchFormation'; formationId: string }
+  | { type: 'switchFront'; frontId: string }
   | { type: 'logout' }
   | { type: 'saveAsNew' }
   | { type: 'deletePlay' }
@@ -122,11 +133,20 @@ function App() {
 
   const preparePlayForSave = useCallback(
     (current: Play): Play => {
-      const snapshot = withFormationSnapshot(current, customFormations)
+      const categories = normalizeCategories(current.categories)
+
+      if (current.playType === 'defensive') {
+        return {
+          ...current,
+          ...withFrontSnapshot(current),
+          categories,
+        }
+      }
+
       return {
         ...current,
-        ...snapshot,
-        categories: normalizeCategories(current.categories),
+        ...withFormationSnapshot(current, customFormations),
+        categories,
       }
     },
     [customFormations],
@@ -198,31 +218,38 @@ function App() {
     void loadTeamData()
   }, [activeTeamId, userId])
 
+  const playsForMode = useMemo(
+    () => filterPlaysByPlayType(savedPlays, play.playType),
+    [savedPlays, play.playType],
+  )
+
   const formationFilterOptions = useMemo(
-    () => getPlayFilterOptions(customFormations),
-    [customFormations],
+    () =>
+      play.playType === 'defensive'
+        ? getFrontFilterOptions()
+        : getPlayFilterOptions(customFormations),
+    [play.playType, customFormations],
   )
 
   const categoryFilterOptions = useMemo(
-    () => getCategoryFilterOptions(customCategories, savedPlays),
-    [customCategories, savedPlays],
+    () => getCategoryFilterOptions(play.playType, customCategories, playsForMode),
+    [play.playType, customCategories, playsForMode],
   )
 
   const availableCategories = useMemo(
-    () => getAvailableCategories(customCategories, savedPlays),
-    [customCategories, savedPlays],
+    () => getAvailableCategories(play.playType, customCategories, playsForMode),
+    [play.playType, customCategories, playsForMode],
   )
 
-  const filteredPlays = useMemo(
-    () =>
-      filterPlaysByFormationAndCategory(
-        savedPlays,
-        playFilterId,
-        categoryFilterId,
-        filterPlaysByFormation,
-      ),
-    [savedPlays, playFilterId, categoryFilterId],
-  )
+  const filteredPlays = useMemo((): Play[] => {
+    const byCategory = filterPlaysByCategory(playsForMode, categoryFilterId)
+
+    if (play.playType === 'defensive') {
+      return filterPlaysByFront(byCategory, playFilterId)
+    }
+
+    return filterPlaysByFormation(byCategory, playFilterId)
+  }, [playsForMode, play.playType, playFilterId, categoryFilterId])
 
   const hasUnsavedPlayChanges = useMemo(() => {
     if (!canEdit) return false
@@ -252,6 +279,7 @@ function App() {
       action.type === 'loadPlay' ||
       action.type === 'switchTeam' ||
       action.type === 'switchFormation' ||
+      action.type === 'switchFront' ||
       action.type === 'logout' ||
       action.type === 'saveAsNew' ||
       action.type === 'deletePlay'
@@ -277,7 +305,7 @@ function App() {
   }
 
   function executeNewPlay() {
-    const empty = createEmptyPlay()
+    const empty = createEmptyPlay(play.playType)
     setPlay(empty)
     setSelectedLoadId('')
     setActiveSavedPlayId(null)
@@ -308,7 +336,7 @@ function App() {
   }
 
   async function handleDeletePlayCategory(categoryName: string) {
-    if (!canEdit || isDefaultCategory(categoryName)) return
+    if (!canEdit || isDefaultCategory(categoryName, play.playType)) return
 
     setDeletingCategory(true)
 
@@ -502,7 +530,9 @@ function App() {
       setPlay(loaded)
       setSelectedLoadId(playId)
       setActiveSavedPlayId(playId)
-      setPlayFilterId(loaded.formationId)
+      setPlayFilterId(
+        loaded.playType === 'defensive' ? loaded.frontId : loaded.formationId,
+      )
       setSelectedPlayerId(null)
       setSelectedDefenderId(null)
       updatePlayBaseline(loaded)
@@ -552,7 +582,7 @@ function App() {
       setActiveSavedPlayId(null)
 
       if (play.id === deletedId || activeSavedPlayId === deletedId) {
-        const empty = createEmptyPlay()
+        const empty = createEmptyPlay(play.playType)
         setPlay(empty)
         setSelectedPlayerId(null)
         setSelectedDefenderId(null)
@@ -590,12 +620,46 @@ function App() {
 
   function handlePlayTypeChange(playType: PlayType) {
     if (!canEdit) return
-    setPlay((current) => ({ ...current, playType }))
+
+    setPlayFilterId(ALL_PLAYS_FILTER)
+    setCategoryFilterId(ALL_CATEGORIES_FILTER)
+    setSelectedLoadId('')
+    setActiveSavedPlayId(null)
     setSelectedPlayerId(null)
     setSelectedDefenderId(null)
+
     if (playType === 'defensive' && drawingMode === 'block') {
       setDrawingMode('route')
     }
+
+    setPlay((current) => {
+      if (playType === 'defensive') {
+        const front = getFrontById(current.frontId) ?? getFrontById(DEFAULT_FRONT_ID)
+        if (!front) return { ...current, playType }
+
+        return {
+          ...current,
+          playType,
+          frontId: front.id,
+          frontName: front.label,
+          defenders: createDefendersForFront(front.id),
+          defenderRoutes: createEmptyDefenderRoutes(),
+          categories: filterCategoriesForPlayType(current.categories, 'defensive'),
+        }
+      }
+
+      const formation =
+        getFormationById(current.formationId, customFormations) ??
+        getFormationById(DEFAULT_FORMATION_ID, customFormations)
+
+      return {
+        ...current,
+        playType,
+        formationId: formation?.id ?? current.formationId,
+        formationName: formation?.label ?? current.formationName,
+        categories: filterCategoriesForPlayType(current.categories, 'offensive'),
+      }
+    })
   }
 
   function handleDriveStartChange(driveStartYardLine: DriveStartYardLine) {
@@ -636,6 +700,32 @@ function App() {
     if (formationId === play.formationId) return
 
     requestAction({ type: 'switchFormation', formationId })
+  }
+
+  function executeFrontChange(frontId: string) {
+    const front = getFrontById(frontId)
+    if (!front) return
+
+    const defenders = createDefendersForFront(frontId).map((defender) => ({
+      ...defender,
+      position: clampDefensePosition(defender.position),
+    }))
+
+    setPlay((current) => ({
+      ...current,
+      frontId,
+      frontName: front.label,
+      defenders,
+      defenderRoutes: createEmptyDefenderRoutes(),
+    }))
+    setSelectedDefenderId(null)
+  }
+
+  function handleFrontChange(frontId: string) {
+    if (!canEdit) return
+    if (frontId === play.frontId) return
+
+    requestAction({ type: 'switchFront', frontId })
   }
 
   async function executeSaveFormationPositions(): Promise<boolean> {
@@ -776,6 +866,9 @@ function App() {
       }
       case 'switchFormation':
         executeFormationChange(action.formationId)
+        break
+      case 'switchFront':
+        executeFrontChange(action.frontId)
         break
       case 'logout':
         await signOut()
@@ -994,7 +1087,13 @@ function App() {
         onDiscard={() => void handleUnsavedDiscard()}
       />
 
-      <Header onTeamChange={handleTeamSwitchRequest} onLogout={handleLogoutRequest} />
+      <Header
+        playType={play.playType}
+        canEdit={canEdit}
+        onPlayTypeChange={handlePlayTypeChange}
+        onTeamChange={handleTeamSwitchRequest}
+        onLogout={handleLogoutRequest}
+      />
 
       <div className={`app-body ${setupPanelOpen ? '' : 'setup-collapsed'}`}>
         <PlaySetupPanel
@@ -1003,9 +1102,12 @@ function App() {
           onToggle={() => setSetupPanelOpen((open) => !open)}
           formationId={play.formationId}
           formationName={play.formationName}
+          frontId={play.frontId}
+          frontName={play.frontName}
           driveStartYardLine={play.driveStartYardLine}
           customFormations={customFormations}
           onFormationChange={handleFormationChange}
+          onFrontChange={handleFrontChange}
           onDriveStartChange={handleDriveStartChange}
           onSaveCurrentFormation={handleSaveCurrentFormation}
           onDeleteCustomFormation={handleDeleteCustomFormation}
@@ -1039,12 +1141,6 @@ function App() {
         />
 
         <main className="canvas-area">
-          <PlayTypeSelector
-            playType={play.playType}
-            canEdit={canEdit}
-            onChange={handlePlayTypeChange}
-          />
-
           {(saveMessage || dataLoading) && (
             <p className="save-message">
               {dataLoading ? 'Loading team plays and formations…' : saveMessage}

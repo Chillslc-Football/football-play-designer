@@ -1,5 +1,5 @@
-import { createDefault43Defense } from '../data/defaultDefense'
 import { DEFAULT_FORMATION_ID } from '../data/builtinFormations'
+import { DEFAULT_FRONT_ID } from '../data/builtinFronts'
 import { createEmptyBlocks, type Block } from './block'
 import type { Defender } from './defender'
 import type { DriveStartYardLine } from './driveStart'
@@ -13,6 +13,7 @@ import {
   createPlayersForFormation,
   getDefaultFormationName,
 } from '../utils/formationUtils'
+import { createDefendersForFront, getDefaultFrontName } from '../utils/frontUtils'
 import { clampPlayPositions } from '../utils/losClamp'
 
 /**
@@ -26,6 +27,14 @@ export type Play = {
   formationId: string
   /** Formation name at save time — kept if custom formation is later deleted. */
   formationName: string
+  /** Built-in defensive front id (e.g. 4-3, nickel). */
+  frontId: string
+  /** Defensive front name at save time. */
+  frontName: string
+  /** Future: opposing offensive formation id for defensive plays. */
+  opponentFormationId: string | null
+  /** Future: opposing offensive formation label for defensive plays. */
+  opponentFormationName: string | null
   /** Line of scrimmage — drive start yard line for this play. */
   driveStartYardLine: DriveStartYardLine
   mirrored: boolean
@@ -42,19 +51,23 @@ export type Play = {
   createdAt: string
 }
 
-/** Creates a fresh play with the default I Formation and 4-3 defense. */
-export function createEmptyPlay(): Play {
+/** Creates a fresh play for the given mode. */
+export function createEmptyPlay(playType: PlayType = DEFAULT_PLAY_TYPE): Play {
   return clampPlayPositions({
     id: crypto.randomUUID(),
     name: 'Untitled Play',
     notes: '',
     formationId: DEFAULT_FORMATION_ID,
     formationName: getDefaultFormationName(),
+    frontId: DEFAULT_FRONT_ID,
+    frontName: getDefaultFrontName(),
+    opponentFormationId: null,
+    opponentFormationName: null,
     driveStartYardLine: DEFAULT_DRIVE_START,
     mirrored: false,
-    playType: DEFAULT_PLAY_TYPE,
+    playType,
     players: createPlayersForFormation(DEFAULT_FORMATION_ID, []),
-    defenders: createDefault43Defense(),
+    defenders: createDefendersForFront(DEFAULT_FRONT_ID),
     routes: createEmptyRoutes(),
     blocks: createEmptyBlocks(),
     defenderRoutes: createEmptyDefenderRoutes(),

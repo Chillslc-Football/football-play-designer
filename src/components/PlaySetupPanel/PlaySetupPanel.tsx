@@ -27,9 +27,12 @@ type PlaySetupPanelProps = {
   onToggle: () => void
   formationId: string
   formationName: string
+  frontId: string
+  frontName: string
   driveStartYardLine: DriveStartYardLine
   customFormations: CustomFormation[]
   onFormationChange: (formationId: string) => void
+  onFrontChange: (frontId: string) => void
   onDriveStartChange: (driveStart: DriveStartYardLine) => void
   onSaveCurrentFormation: () => void
   onDeleteCustomFormation: () => void
@@ -68,9 +71,12 @@ export function PlaySetupPanel({
   onToggle,
   formationId,
   formationName,
+  frontId,
+  frontName,
   driveStartYardLine,
   customFormations,
   onFormationChange,
+  onFrontChange,
   onDriveStartChange,
   onSaveCurrentFormation,
   onDeleteCustomFormation,
@@ -102,6 +108,8 @@ export function PlaySetupPanel({
   onMirrorPlay,
   isMirrored,
 }: PlaySetupPanelProps) {
+  const schemeSectionTitle = playType === 'defensive' ? 'Front' : 'Formation'
+
   if (!isOpen) {
     return (
       <button
@@ -131,14 +139,18 @@ export function PlaySetupPanel({
 
       <div className="play-setup-sections">
         <section className="sidebar-section">
-          <h3 className="sidebar-section-title">Formation</h3>
+          <h3 className="sidebar-section-title">{schemeSectionTitle}</h3>
           <FormationSelector
+            playType={playType}
             canEdit={canEdit}
-            value={formationId}
+            formationId={formationId}
             formationName={formationName}
+            frontId={frontId}
+            frontName={frontName}
             driveStartYardLine={driveStartYardLine}
             customFormations={customFormations}
-            onChange={onFormationChange}
+            onFormationChange={onFormationChange}
+            onFrontChange={onFrontChange}
             onDriveStartChange={onDriveStartChange}
             onSaveCurrentFormation={onSaveCurrentFormation}
             onDeleteCustomFormation={onDeleteCustomFormation}
@@ -148,6 +160,7 @@ export function PlaySetupPanel({
         <section className="sidebar-section">
           <h3 className="sidebar-section-title">Play</h3>
           <PlayControls
+            playType={playType}
             canEdit={canEdit}
             playName={playName}
             onPlayNameChange={onPlayNameChange}

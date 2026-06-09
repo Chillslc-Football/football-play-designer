@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import type { PlayType } from '../../types/playType'
 import { isCategoryNameTaken } from '../../utils/categoryUtils'
 import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog'
 import '../ConfirmDialog/ConfirmDialog.css'
 import './ManageCategoriesDialog.css'
 
 type ManageCategoriesDialogProps = {
+  playType: PlayType
   open: boolean
   customCategories: string[]
   deleting?: boolean
@@ -14,6 +16,7 @@ type ManageCategoriesDialogProps = {
 }
 
 export function ManageCategoriesDialog({
+  playType,
   open,
   customCategories,
   deleting = false,
@@ -42,7 +45,7 @@ export function ManageCategoriesDialog({
       return
     }
 
-    if (isCategoryNameTaken(trimmed, customCategories)) {
+    if (isCategoryNameTaken(trimmed, playType, customCategories)) {
       setAddError('That category already exists.')
       return
     }

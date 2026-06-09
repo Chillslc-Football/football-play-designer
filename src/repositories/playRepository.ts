@@ -16,6 +16,10 @@ type PlayRow = {
   play_type: DbPlayType
   formation_id: string
   formation_name: string
+  front_id: string | null
+  front_name: string | null
+  opponent_formation_id: string | null
+  opponent_formation_name: string | null
   categories: string[] | null
   data: Play
   created_by?: string | null
@@ -25,7 +29,7 @@ type PlayRow = {
 }
 
 const PLAY_COLUMNS =
-  'id, team_id, name, play_type, formation_id, formation_name, categories, data, created_by, updated_by, created_at, updated_at'
+  'id, team_id, name, play_type, formation_id, formation_name, front_id, front_name, opponent_formation_id, opponent_formation_name, categories, data, created_by, updated_by, created_at, updated_at'
 
 function logPlayError(context: string, error: { message: string; code?: string }): void {
   console.error(`[playRepository] ${context}`, error)
@@ -56,6 +60,19 @@ function playCategories(play: Play, rowCategories?: string[] | null): string[] {
   return normalizeCategories(play.categories)
 }
 
+function playSchemeColumns(play: Play) {
+  const isDefensive = play.playType === 'defensive'
+
+  return {
+    formation_id: play.formationId,
+    formation_name: play.formationName,
+    front_id: isDefensive ? play.frontId : null,
+    front_name: isDefensive ? play.frontName : null,
+    opponent_formation_id: play.opponentFormationId,
+    opponent_formation_name: play.opponentFormationName,
+  }
+}
+
 function playToInsertRow(play: Play, teamId: string, userId?: string) {
   const id = play.id
 
@@ -64,8 +81,7 @@ function playToInsertRow(play: Play, teamId: string, userId?: string) {
     team_id: teamId,
     name: normalizePlayName(play.name),
     play_type: toDbPlayType(play.playType),
-    formation_id: play.formationId,
-    formation_name: play.formationName,
+    ...playSchemeColumns(play),
     categories: playCategories(play),
     data: playToData(play, id),
     ...(userId ? { created_by: userId, updated_by: userId } : {}),
@@ -76,8 +92,7 @@ function playToUpdateRow(play: Play, userId?: string) {
   return {
     name: normalizePlayName(play.name),
     play_type: toDbPlayType(play.playType),
-    formation_id: play.formationId,
-    formation_name: play.formationName,
+    ...playSchemeColumns(play),
     categories: playCategories(play),
     data: playToData(play, play.id),
     ...(userId ? { updated_by: userId } : {}),
@@ -93,6 +108,10 @@ function rowToPlay(row: PlayRow, customFormations: CustomFormation[]): Play {
     notes: stored.notes ?? '',
     formationId: row.formation_id ?? stored.formationId ?? '',
     formationName: row.formation_name ?? stored.formationName ?? '',
+    frontId: row.front_id ?? stored.frontId,
+    frontName: row.front_name ?? stored.frontName,
+    opponentFormationId: row.opponent_formation_id ?? stored.opponentFormationId ?? null,
+    opponentFormationName: row.opponent_formation_name ?? stored.opponentFormationName ?? null,
     driveStartYardLine: stored.driveStartYardLine,
     mirrored: stored.mirrored ?? false,
     playType: fromDbPlayType(row.play_type ?? stored.playType),

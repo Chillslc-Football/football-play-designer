@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { PlayType } from '../../types/playType'
 import { isDefaultCategory } from '../../utils/categoryUtils'
 import './CategorySelector.css'
 
 type CategorySelectorProps = {
+  playType: PlayType
   canEdit: boolean
   selectedCategories: string[]
   availableCategories: string[]
@@ -10,6 +12,7 @@ type CategorySelectorProps = {
 }
 
 export function CategorySelector({
+  playType,
   canEdit,
   selectedCategories,
   availableCategories,
@@ -19,13 +22,13 @@ export function CategorySelector({
   const containerRef = useRef<HTMLDivElement>(null)
 
   const defaultOptions = useMemo(
-    () => availableCategories.filter((category) => isDefaultCategory(category)),
-    [availableCategories],
+    () => availableCategories.filter((category) => isDefaultCategory(category, playType)),
+    [availableCategories, playType],
   )
 
   const customOptions = useMemo(
-    () => availableCategories.filter((category) => !isDefaultCategory(category)),
-    [availableCategories],
+    () => availableCategories.filter((category) => !isDefaultCategory(category, playType)),
+    [availableCategories, playType],
   )
 
   useEffect(() => {

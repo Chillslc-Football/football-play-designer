@@ -1,20 +1,27 @@
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useTeam } from '../../hooks/useTeam'
+import type { PlayType } from '../../types/playType'
 import { DeleteTeamDialog } from '../DeleteTeamDialog/DeleteTeamDialog'
 import { FeedbackDialog } from '../FeedbackDialog/FeedbackDialog'
+import { PlayTypeSelector } from '../PlayTypeSelector/PlayTypeSelector'
 import './Header.css'
 
 type HeaderProps = {
+  playType: PlayType
+  canEdit?: boolean
+  onPlayTypeChange: (playType: PlayType) => void
   onTeamChange?: (teamId: string) => void
   onLogout?: () => void
 }
 
-/**
- * The landing-page hero at the top of the app.
- * Sets the football theme and tells the user what the app does.
- */
-export function Header({ onTeamChange, onLogout }: HeaderProps) {
+export function Header({
+  playType,
+  canEdit = true,
+  onPlayTypeChange,
+  onTeamChange,
+  onLogout,
+}: HeaderProps) {
   const { user, signOut } = useAuth()
   const { team, activeTeamId, memberships, role, deleteTeam } = useTeam()
   const email = user?.email ?? ''
@@ -30,7 +37,6 @@ export function Header({ onTeamChange, onLogout }: HeaderProps) {
   function handleTeamChange(teamId: string) {
     if (onTeamChange) {
       onTeamChange(teamId)
-      return
     }
   }
 
@@ -92,10 +98,20 @@ export function Header({ onTeamChange, onLogout }: HeaderProps) {
       )}
 
       <div className="header-inner">
+        <div className="header-brand">
+          <h1 className="header-title">Football Play Designer MVP</h1>
+        </div>
+
+        <PlayTypeSelector
+          playType={playType}
+          canEdit={canEdit}
+          onChange={onPlayTypeChange}
+        />
+
         {email && (
-          <div className="header-user">
-            <div className="header-team-row">
-              <span className="header-user-label">Team:</span>
+          <div className="header-actions">
+            <div className="header-team-group">
+              <span className="header-user-label">Team</span>
               {memberships.length > 1 ? (
                 <select
                   className="select-field header-team-select"
@@ -115,7 +131,7 @@ export function Header({ onTeamChange, onLogout }: HeaderProps) {
               {isTeamOwner && team && (
                 <button
                   type="button"
-                  className="btn btn-danger header-delete-team-btn"
+                  className="btn btn-danger header-action-btn"
                   onClick={handleDeleteTeamClick}
                 >
                   Delete Team
@@ -123,36 +139,24 @@ export function Header({ onTeamChange, onLogout }: HeaderProps) {
               )}
             </div>
 
-            <div className="header-account-row">
-              <span className="header-signed-in">
-                Signed in as:{' '}
-                <span className="header-user-email" title={email}>
-                  {email}
-                </span>
+            <button
+              type="button"
+              className="btn header-action-btn"
+              onClick={() => setFeedbackOpen(true)}
+            >
+              Report Issue / Enhancement
+            </button>
+
+            <div className="header-account-group">
+              <span className="header-user-email" title={email}>
+                {email}
               </span>
-              <button
-                type="button"
-                className="btn header-feedback-btn"
-                onClick={() => setFeedbackOpen(true)}
-              >
-                Report Issue / Enhancement
-              </button>
-              <button type="button" className="btn header-logout-btn" onClick={handleLogout}>
+              <button type="button" className="btn header-action-btn" onClick={handleLogout}>
                 Logout
               </button>
             </div>
           </div>
         )}
-
-        <div className="header-brand">
-          <div className="header-icon" aria-hidden="true">
-            🏈
-          </div>
-          <h1 className="header-title">Football Play Designer MVP</h1>
-          <p className="header-subtitle">
-            Design, save, and mirror offensive plays — built for coaches.
-          </p>
-        </div>
       </div>
     </header>
   )

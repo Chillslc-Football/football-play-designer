@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CategorySelector } from '../CategorySelector/CategorySelector'
 import { ManageCategoriesDialog } from '../ManageCategoriesDialog/ManageCategoriesDialog'
 import type { Play } from '../../types/play'
+import type { PlayType } from '../../types/playType'
 import type { CategoryFilterId } from '../../utils/categoryUtils'
 import type { PlayFilterId } from '../../utils/formationUtils'
 import './PlayControls.css'
@@ -18,6 +19,7 @@ type CategoryFilterOption = {
 }
 
 type PlayControlsProps = {
+  playType: PlayType
   canEdit: boolean
   playName: string
   onPlayNameChange: (name: string) => void
@@ -40,6 +42,7 @@ type PlayControlsProps = {
 }
 
 export function PlayControls({
+  playType,
   canEdit,
   playName,
   onPlayNameChange,
@@ -107,6 +110,7 @@ export function PlayControls({
       </div>
 
       <CategorySelector
+        playType={playType}
         canEdit={canEdit}
         selectedCategories={playCategories}
         availableCategories={availableCategories}
@@ -123,6 +127,7 @@ export function PlayControls({
       </button>
 
       <ManageCategoriesDialog
+        playType={playType}
         open={manageOpen}
         customCategories={customCategories}
         deleting={deletingCategory}
@@ -136,7 +141,7 @@ export function PlayControls({
         <div className="play-controls-filters-row">
           <div className="form-group">
             <label htmlFor="formation-filter" className="field-label sidebar-field-label">
-              Formation Filter
+              {playType === 'defensive' ? 'Front Filter' : 'Formation Filter'}
             </label>
             <select
               id="formation-filter"
