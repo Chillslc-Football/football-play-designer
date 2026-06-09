@@ -144,7 +144,16 @@ export function filterPlaysByFormation<T extends { formationId: string }>(
   return plays.filter((play) => play.formationId === filterId)
 }
 
-export function isCustomFormationId(formationId: string): boolean {
+export function isBuiltinFormationId(formationId: string): boolean {
+  return BUILTIN_FORMATIONS.some((formation) => formation.id === formationId)
+}
+
+export function isCustomFormationId(
+  formationId: string,
+  customFormations: CustomFormation[] = [],
+): boolean {
+  if (isBuiltinFormationId(formationId)) return false
+  if (customFormations.some((formation) => formation.id === formationId)) return true
   return formationId.startsWith('custom-')
 }
 

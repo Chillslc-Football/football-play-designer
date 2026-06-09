@@ -145,6 +145,56 @@ export function TeamProvider({ children }: TeamProviderProps) {
     [user, memberships, activeTeamId],
   )
 
+  const deleteTeam = useCallback(
+    async (teamId: string): Promise<TeamResult> => {
+      if (!user) {
+        return { error: 'Not signed in' }
+      }
+
+      if (role !== 'team_owner') {
+        return { error: 'Only team owners can delete teams' }
+      }
+
+      if (teamId !== activeTeamId) {
+        return { error: 'You can only delete the active team' }
+      }
+
+      setLoading(true)
+
+      try {
+        await teamRepository.deleteTeam(teamId)
+
+        const remaining = memberships.filter((entry) => entry.team.id !== teamId)
+
+        if (remaining.length > 0) {
+          const next = remaining[0]
+          await teamRepository.updateLastTeamId(user.id, next.team.id)
+          setActiveTeamId(next.team.id)
+          setTeam(next.team)
+          setRole(next.role)
+          setMemberships(remaining)
+          setNeedsOnboarding(false)
+        } else {
+          await teamRepository.clearLastTeamId(user.id)
+          setActiveTeamId(null)
+          setTeam(null)
+          setRole(null)
+          setMemberships([])
+          setNeedsOnboarding(true)
+        }
+
+        return { error: null }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not delete team'
+        return { error: message }
+      } finally {
+        setProfileLoaded(true)
+        setLoading(false)
+      }
+    },
+    [user, role, activeTeamId, memberships],
+  )
+
   const value = useMemo(
     () => ({
       activeTeamId,
@@ -156,6 +206,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
       needsOnboarding,
       createTeam,
       switchTeam,
+      deleteTeam,
       refreshTeam,
     }),
     [
@@ -168,6 +219,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
       needsOnboarding,
       createTeam,
       switchTeam,
+      deleteTeam,
       refreshTeam,
     ],
   )

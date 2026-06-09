@@ -3,7 +3,6 @@ import type { DriveStartYardLine } from '../../types/driveStart'
 import type { CustomFormation } from '../../utils/formationStorage'
 import {
   getFormationById,
-  isCustomFormationId,
   resolveFormationDisplayName,
 } from '../../utils/formationUtils'
 import { DriveStartSelector } from '../DriveStartSelector/DriveStartSelector'
@@ -33,7 +32,8 @@ export function FormationSelector({
   onDeleteCustomFormation,
 }: FormationSelectorProps) {
   const formationExists = getFormationById(value, customFormations) !== null
-  const isCustomSelected = isCustomFormationId(value) && formationExists
+  const isCustomSelected =
+    formationExists && customFormations.some((formation) => formation.id === value)
 
   const deletedLabel = !formationExists
     ? resolveFormationDisplayName(value, formationName, customFormations)
@@ -41,19 +41,13 @@ export function FormationSelector({
 
   return (
     <div className="formation-selector">
-      <DriveStartSelector
-        value={driveStartYardLine}
-        onChange={onDriveStartChange}
-        disabled={!canEdit}
-      />
-
-      <div className="form-group form-group-grow">
-        <label htmlFor="formation-select" className="field-label">
-          Select Formation
+      <div className="form-group">
+        <label htmlFor="formation-select" className="field-label sidebar-field-label">
+          Formation
         </label>
         <select
           id="formation-select"
-          className="select-field"
+          className="select-field sidebar-control"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={!canEdit}
@@ -80,24 +74,31 @@ export function FormationSelector({
         </select>
       </div>
 
+      <DriveStartSelector
+        value={driveStartYardLine}
+        onChange={onDriveStartChange}
+        disabled={!canEdit}
+        compact
+      />
+
       <div className="formation-selector-actions btn-row">
         <button
           type="button"
-          className="btn"
+          className="btn sidebar-btn"
           onClick={onSaveCurrentFormation}
           disabled={!canEdit}
         >
-          Save Current Formation
+          Save Formation
         </button>
 
         {isCustomSelected && (
           <button
             type="button"
-            className="btn btn-danger"
+            className="btn btn-danger sidebar-btn"
             onClick={onDeleteCustomFormation}
             disabled={!canEdit}
           >
-            Delete Custom Formation
+            Delete Formation
           </button>
         )}
       </div>

@@ -1,10 +1,11 @@
 import { supabase } from '../lib/supabaseClient'
 import type { Play } from '../types/play'
 import type { PlayType } from '../types/playType'
+import { normalizeCategories } from '../utils/categoryUtils'
+import type { CustomFormation } from '../utils/formationStorage'
 
 /** Supabase `play_type` enum values. */
 type DbPlayType = 'offense' | 'defense'
-import type { CustomFormation } from '../utils/formationStorage'
 import { normalizePlayName } from '../utils/playStorage'
 import { normalizePlayRecord, type LegacyPlay } from '../utils/playNormalize'
 
@@ -15,6 +16,7 @@ type PlayRow = {
   play_type: DbPlayType
   formation_id: string
   formation_name: string
+  categories: string[] | null
   data: Play
   created_by?: string | null
   updated_by?: string | null
@@ -23,7 +25,7 @@ type PlayRow = {
 }
 
 const PLAY_COLUMNS =
-  'id, team_id, name, play_type, formation_id, formation_name, data, created_by, updated_by, created_at, updated_at'
+  'id, team_id, name, play_type, formation_id, formation_name, categories, data, created_by, updated_by, created_at, updated_at'
 
 function logPlayError(context: string, error: { message: string; code?: string }): void {
   console.error(`[playRepository] ${context}`, error)
@@ -43,7 +45,15 @@ function playToData(play: Play, id: string): Play {
     ...play,
     id,
     name: normalizePlayName(play.name),
+    categories: normalizeCategories(play.categories),
   }
+}
+
+function playCategories(play: Play, rowCategories?: string[] | null): string[] {
+  if (rowCategories != null) {
+    return normalizeCategories(rowCategories)
+  }
+  return normalizeCategories(play.categories)
 }
 
 function playToInsertRow(play: Play, teamId: string, userId?: string) {
@@ -56,6 +66,7 @@ function playToInsertRow(play: Play, teamId: string, userId?: string) {
     play_type: toDbPlayType(play.playType),
     formation_id: play.formationId,
     formation_name: play.formationName,
+    categories: playCategories(play),
     data: playToData(play, id),
     ...(userId ? { created_by: userId, updated_by: userId } : {}),
   }
@@ -67,6 +78,7 @@ function playToUpdateRow(play: Play, userId?: string) {
     play_type: toDbPlayType(play.playType),
     formation_id: play.formationId,
     formation_name: play.formationName,
+    categories: playCategories(play),
     data: playToData(play, play.id),
     ...(userId ? { updated_by: userId } : {}),
   }
@@ -90,6 +102,7 @@ function rowToPlay(row: PlayRow, customFormations: CustomFormation[]): Play {
     blocks: stored.blocks ?? [],
     defenderRoutes: stored.defenderRoutes ?? [],
     playerNotes: stored.playerNotes ?? {},
+    categories: playCategories(stored as Play, row.categories),
     createdAt: stored.createdAt ?? row.created_at ?? new Date().toISOString(),
   }
 

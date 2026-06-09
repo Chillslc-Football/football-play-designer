@@ -82,3 +82,12 @@ export function deletePlayFromStorage(playId: string): void {
   const plays = getAllSavedPlays().filter((saved) => saved.id !== playId)
   writePlays(plays)
 }
+
+export function removeCategoryFromAllPlays(categoryName: string): Play[] {
+  const plays = getAllSavedPlays().map((saved) => ({
+    ...saved,
+    categories: saved.categories.filter((category) => category !== categoryName),
+  }))
+  writePlays(plays)
+  return plays
+}

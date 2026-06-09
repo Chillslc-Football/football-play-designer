@@ -44,6 +44,14 @@ export function addCustomFormation(formation: CustomFormation): void {
   writeCustomFormations(formations)
 }
 
+/** Updates an existing custom formation by id. */
+export function updateCustomFormation(formation: CustomFormation): void {
+  const formations = getCustomFormations().map((entry) =>
+    entry.id === formation.id ? formation : entry,
+  )
+  writeCustomFormations(formations)
+}
+
 /** Removes one custom formation by id. Saved plays are not deleted. */
 export function deleteCustomFormation(formationId: string): void {
   const formations = getCustomFormations().filter((f) => f.id !== formationId)

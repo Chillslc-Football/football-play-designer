@@ -10,6 +10,7 @@ import { createEmptyRoutes } from '../types/route'
 import type { CustomFormation } from './formationStorage'
 import { migratePlayToFieldView } from './fieldView'
 import { clampPlayPositions } from './losClamp'
+import { normalizeCategories } from './categoryUtils'
 import { getDefaultFormationName, getFormationLabel } from './formationUtils'
 
 export type LegacyPlay = Play & {
@@ -42,6 +43,7 @@ export function normalizePlayRecord(
     defenders: play.defenders ?? createDefault43Defense(),
     playType: resolvePlayType(play.playType),
     defenderRoutes: play.defenderRoutes ?? createEmptyDefenderRoutes(),
+    categories: normalizeCategories(play.categories),
   }
 
   return clampPlayPositions(migratePlayToFieldView(normalized))

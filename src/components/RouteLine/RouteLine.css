@@ -6,11 +6,12 @@
   pointer-events: auto;
 }
 
-.route-segment-hit {
+.route-path-hit {
   fill: none;
   stroke: transparent;
-  stroke-width: 1.4;
+  stroke-width: 2.8;
   stroke-linecap: round;
+  stroke-linejoin: round;
   cursor: pointer;
   pointer-events: stroke;
 }

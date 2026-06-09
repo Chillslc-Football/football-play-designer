@@ -62,7 +62,9 @@
   font-size: 13px;
 }
 
-.header-logout-btn {
+.header-logout-btn,
+.header-delete-team-btn,
+.header-feedback-btn {
   min-height: 32px;
   padding: 4px 12px;
   font-size: 13px;

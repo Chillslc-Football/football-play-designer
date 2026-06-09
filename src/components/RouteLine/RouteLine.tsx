@@ -1,6 +1,12 @@
 import type { Position } from '../../types/player'
 import type { Route } from '../../types/route'
-import { getRouteVertices } from '../../utils/routeEdit'
+import {
+  findNearestSegmentIndex,
+  getRouteVertices,
+  getSvgPointFromMouseEvent,
+  isDenseRoute,
+  isRouteVertexInteractive,
+} from '../../utils/routeEdit'
 import './RouteLine.css'
 
 type RouteLineProps = {
@@ -45,9 +51,32 @@ export function RouteLine({
 
   const vertices = getRouteVertices(playerPosition, route)
   const segmentCount = vertices.length - 1
+  const denseRoute = isDenseRoute(vertices)
+  const polylinePoints = vertices.map((vertex) => `${vertex.x},${vertex.y}`).join(' ')
+
+  function handlePathSelect(event: React.MouseEvent<SVGPolylineElement>) {
+    event.stopPropagation()
+
+    const svg = event.currentTarget.ownerSVGElement
+    if (!svg) return
+
+    const clickPoint = getSvgPointFromMouseEvent(svg, event.clientX, event.clientY)
+    const segmentIndex = findNearestSegmentIndex(vertices, clickPoint)
+    if (segmentIndex !== null) {
+      onSegmentSelect?.(segmentIndex)
+    }
+  }
 
   return (
     <g className="route-path">
+      {!readOnly && (
+        <polyline
+          points={polylinePoints}
+          className="route-path-hit"
+          onMouseDown={handlePathSelect}
+        />
+      )}
+
       {Array.from({ length: segmentCount }, (_, index) => {
         const start = vertices[index]
         const end = vertices[index + 1]
@@ -56,19 +85,6 @@ export function RouteLine({
 
         return (
           <g key={`segment-${index}`} className="route-segment-group">
-            {!readOnly && (
-              <line
-                x1={start.x}
-                y1={start.y}
-                x2={end.x}
-                y2={end.y}
-                className="route-segment-hit"
-                onMouseDown={(event) => {
-                  event.stopPropagation()
-                  onSegmentSelect?.(index)
-                }}
-              />
-            )}
             <line
               x1={start.x}
               y1={start.y}
@@ -88,22 +104,34 @@ export function RouteLine({
           const isSegmentEnd =
             selectedSegmentIndex !== null && selectedSegmentIndex + 1 === index
           const isHighlighted = isVertexSelected || isSegmentStart || isSegmentEnd
+          const interactive = isRouteVertexInteractive(
+            index,
+            vertices.length,
+            denseRoute,
+            selectedSegmentIndex,
+          )
 
           return (
             <circle
               key={`vertex-${index}`}
               cx={vertex.x}
               cy={vertex.y}
-              r={isHighlighted ? 0.42 : 0.3}
+              r={isHighlighted ? 0.42 : denseRoute ? 0.18 : 0.3}
               className={
-                isHighlighted
-                  ? 'route-vertex-handle route-vertex-handle-selected route-vertex-handle-hit'
-                  : 'route-vertex-handle route-vertex-handle-hit'
+                interactive
+                  ? isHighlighted
+                    ? 'route-vertex-handle route-vertex-handle-selected route-vertex-handle-hit'
+                    : 'route-vertex-handle route-vertex-handle-hit'
+                  : 'route-vertex-handle'
               }
-              onMouseDown={(event) => {
-                event.stopPropagation()
-                onVertexSelect?.(index)
-              }}
+              onMouseDown={
+                interactive
+                  ? (event) => {
+                      event.stopPropagation()
+                      onVertexSelect?.(index)
+                    }
+                  : undefined
+              }
             />
           )
         })}

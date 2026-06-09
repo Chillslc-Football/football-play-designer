@@ -1,3 +1,7 @@
 .drive-start-selector {
   margin-bottom: var(--space-sm);
 }
+
+.drive-start-selector-compact {
+  margin-bottom: 0;
+}

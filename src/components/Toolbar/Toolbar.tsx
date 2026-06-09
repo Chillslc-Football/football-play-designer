@@ -2,40 +2,54 @@ import './Toolbar.css'
 
 type ToolbarProps = {
   canEdit: boolean
+  selectedLoadId: string
   onNewPlay: () => void
   onSaveChanges: () => void
   onSaveAsNew: () => void
+  onDeletePlay: () => void
   onMirrorPlay: () => void
   isMirrored: boolean
 }
 
 export function Toolbar({
   canEdit,
+  selectedLoadId,
   onNewPlay,
   onSaveChanges,
   onSaveAsNew,
+  onDeletePlay,
   onMirrorPlay,
   isMirrored,
 }: ToolbarProps) {
+  const canDelete = selectedLoadId !== ''
+
   return (
-    <div className="toolbar btn-row">
-      <button type="button" className="btn" onClick={onNewPlay} disabled={!canEdit}>
+    <div className="toolbar play-actions-grid">
+      <button type="button" className="btn sidebar-btn" onClick={onNewPlay} disabled={!canEdit}>
         New Play
       </button>
       <button
         type="button"
-        className="btn btn-primary"
+        className="btn btn-primary sidebar-btn"
         onClick={onSaveChanges}
         disabled={!canEdit}
       >
         Save Changes
       </button>
-      <button type="button" className="btn" onClick={onSaveAsNew} disabled={!canEdit}>
+      <button type="button" className="btn sidebar-btn" onClick={onSaveAsNew} disabled={!canEdit}>
         Save As New Play
       </button>
       <button
         type="button"
-        className={`btn ${isMirrored ? 'btn-active' : ''}`}
+        className="btn btn-danger sidebar-btn"
+        onClick={onDeletePlay}
+        disabled={!canDelete || !canEdit}
+      >
+        Delete Saved Play
+      </button>
+      <button
+        type="button"
+        className={`btn sidebar-btn toolbar-mirror-btn ${isMirrored ? 'btn-active' : ''}`}
         onClick={onMirrorPlay}
         disabled={!canEdit}
         title="Mirror play side across Center (C) — offense still attacks left-to-right"

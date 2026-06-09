@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { useCanEdit } from './hooks/useCanEdit'
 import { useTeam } from './hooks/useTeam'
 import * as formationRepository from './repositories/formationRepository'
 import * as cloudPlayRepository from './repositories/playRepository'
+import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog'
 import { Header } from './components/Header/Header'
 import { Field } from './components/Field/Field'
 import { Notes } from './components/Notes/Notes'
@@ -25,8 +26,26 @@ import {
   createCustomFormationId,
   deleteCustomFormation,
   getCustomFormations,
+  updateCustomFormation,
   type CustomFormation,
 } from './utils/formationStorage'
+import {
+  ALL_CATEGORIES_FILTER,
+  filterPlaysByFormationAndCategory,
+  getAvailableCategories,
+  getCategoryFilterOptions,
+  isDefaultCategory,
+  normalizeCategories,
+  removeCategoryFromPlay,
+  type CategoryFilterId,
+} from './utils/categoryUtils'
+import {
+  addCustomCategory,
+  deleteCustomCategory,
+  getCustomCategories,
+} from './utils/categoryStorage'
+import { hasFormationPositionChanges } from './utils/formationDirty'
+import { playToComparable } from './utils/playDirty'
 import {
   ALL_PLAYS_FILTER,
   createPlayersForFormation,
@@ -45,6 +64,7 @@ import {
   findSavedPlayByName,
   getAllSavedPlays,
   getPlayById,
+  removeCategoryFromAllPlays,
   upsertPlayById,
 } from './utils/playStorage'
 import { getDefenderMirrorPartner } from './utils/defenseMirror'
@@ -52,16 +72,37 @@ import { getMirrorPartner, mirrorFootballPlay } from './utils/footballMirror'
 import { clampDefensePosition, clampOffensePosition } from './utils/losClamp'
 import './App.css'
 
+type PendingAction =
+  | { type: 'newPlay' }
+  | { type: 'loadPlay'; playId: string }
+  | { type: 'switchTeam'; teamId: string }
+  | { type: 'switchFormation'; formationId: string }
+  | { type: 'logout' }
+  | { type: 'saveAsNew' }
+  | { type: 'deletePlay' }
+  | { type: 'saveFormation' }
+
+type DialogState =
+  | { kind: 'delete-play' }
+  | { kind: 'delete-formation' }
+  | { kind: 'unsaved-play'; action: PendingAction }
+  | { kind: 'unsaved-formation'; action: PendingAction }
+  | null
+
+const UNSAVED_MESSAGE = 'You have unsaved changes. Save before continuing?'
+
 function App() {
-  const { user } = useAuth()
-  const { activeTeamId } = useTeam()
+  const { user, signOut } = useAuth()
+  const { activeTeamId, switchTeam } = useTeam()
   const canEdit = useCanEdit()
   const useCloud = Boolean(user?.id && activeTeamId)
 
   const [play, setPlay] = useState<Play>(createEmptyPlay)
   const [savedPlays, setSavedPlays] = useState<Play[]>([])
   const [customFormations, setCustomFormations] = useState<CustomFormation[]>([])
+  const [customCategories, setCustomCategories] = useState<string[]>([])
   const [playFilterId, setPlayFilterId] = useState<PlayFilterId>(ALL_PLAYS_FILTER)
+  const [categoryFilterId, setCategoryFilterId] = useState<CategoryFilterId>(ALL_CATEGORIES_FILTER)
   const [selectedLoadId, setSelectedLoadId] = useState('')
   const [activeSavedPlayId, setActiveSavedPlayId] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState('')
@@ -70,80 +111,258 @@ function App() {
   const [drawingMode, setDrawingMode] = useState<DrawingMode>('route')
   const [setupPanelOpen, setSetupPanelOpen] = useState(true)
   const [dataLoading, setDataLoading] = useState(false)
+  const [playBaseline, setPlayBaseline] = useState(() => playToComparable(createEmptyPlay()))
+  const [dialog, setDialog] = useState<DialogState>(null)
+  const [deletingCategory, setDeletingCategory] = useState(false)
 
   const showSaveMessage = useCallback((message: string) => {
     setSaveMessage(message)
     setTimeout(() => setSaveMessage(''), 3500)
   }, [])
 
+  const preparePlayForSave = useCallback(
+    (current: Play): Play => {
+      const snapshot = withFormationSnapshot(current, customFormations)
+      return {
+        ...current,
+        ...snapshot,
+        categories: normalizeCategories(current.categories),
+      }
+    },
+    [customFormations],
+  )
+
+  const updatePlayBaseline = useCallback(
+    (nextPlay: Play) => {
+      setPlayBaseline(playToComparable(preparePlayForSave(nextPlay)))
+    },
+    [preparePlayForSave],
+  )
+
+  const userId = user?.id ?? null
+  const loadRequestRef = useRef(0)
+
   const resetEditor = useCallback(() => {
-    setPlay(createEmptyPlay())
+    const empty = createEmptyPlay()
+    setPlay(empty)
     setSelectedLoadId('')
     setActiveSavedPlayId(null)
     setSelectedPlayerId(null)
     setSelectedDefenderId(null)
     setPlayFilterId(ALL_PLAYS_FILTER)
-  }, [])
+    setCategoryFilterId(ALL_CATEGORIES_FILTER)
+    setCustomCategories(getCustomCategories(activeTeamId ?? null))
+    setPlayBaseline(playToComparable(empty))
+  }, [activeTeamId])
 
   const loadTeamData = useCallback(async () => {
-    if (!useCloud || !activeTeamId) {
+    const requestId = ++loadRequestRef.current
+
+    if (!userId || !activeTeamId) {
+      setDataLoading(false)
       setSavedPlays(getAllSavedPlays())
       setCustomFormations(getCustomFormations())
+      setCustomCategories(getCustomCategories(null))
       return
     }
 
     setDataLoading(true)
     try {
       const formations = await formationRepository.getFormationsByTeam(activeTeamId)
+      if (requestId !== loadRequestRef.current) return
+
       setCustomFormations(formations)
       const plays = await cloudPlayRepository.getPlaysByTeam(activeTeamId, formations)
+      if (requestId !== loadRequestRef.current) return
+
       setSavedPlays(plays)
+      setCustomCategories(getCustomCategories(activeTeamId))
     } catch (error) {
+      if (requestId !== loadRequestRef.current) return
+
       const message =
         error instanceof Error ? error.message : 'Failed to load team plays and formations.'
       showSaveMessage(message)
       setSavedPlays([])
       setCustomFormations([])
+      setCustomCategories(getCustomCategories(activeTeamId))
     } finally {
-      setDataLoading(false)
+      if (requestId === loadRequestRef.current) {
+        setDataLoading(false)
+      }
     }
-  }, [activeTeamId, showSaveMessage, useCloud])
+  }, [activeTeamId, showSaveMessage, userId])
 
   useEffect(() => {
     resetEditor()
     void loadTeamData()
-  }, [activeTeamId, loadTeamData, resetEditor, useCloud])
+  }, [activeTeamId, userId])
 
-  const filterOptions = useMemo(
+  const formationFilterOptions = useMemo(
     () => getPlayFilterOptions(customFormations),
     [customFormations],
   )
 
-  const filteredPlays = useMemo(
-    () => filterPlaysByFormation(savedPlays, playFilterId),
-    [savedPlays, playFilterId],
+  const categoryFilterOptions = useMemo(
+    () => getCategoryFilterOptions(customCategories, savedPlays),
+    [customCategories, savedPlays],
   )
 
-  function preparePlayForSave(current: Play): Play {
-    const snapshot = withFormationSnapshot(current, customFormations)
-    return { ...current, ...snapshot }
+  const availableCategories = useMemo(
+    () => getAvailableCategories(customCategories, savedPlays),
+    [customCategories, savedPlays],
+  )
+
+  const filteredPlays = useMemo(
+    () =>
+      filterPlaysByFormationAndCategory(
+        savedPlays,
+        playFilterId,
+        categoryFilterId,
+        filterPlaysByFormation,
+      ),
+    [savedPlays, playFilterId, categoryFilterId],
+  )
+
+  const hasUnsavedPlayChanges = useMemo(() => {
+    if (!canEdit) return false
+    return playToComparable(preparePlayForSave(play)) !== playBaseline
+  }, [canEdit, play, playBaseline, preparePlayForSave])
+
+  const formationHasUnsavedChanges = useMemo(
+    () => hasFormationPositionChanges(play.formationId, play.players, customFormations),
+    [play.formationId, play.players, customFormations],
+  )
+
+  useEffect(() => {
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      if (hasUnsavedPlayChanges || formationHasUnsavedChanges) {
+        event.preventDefault()
+        event.returnValue = ''
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [formationHasUnsavedChanges, hasUnsavedPlayChanges])
+
+  function needsPlayGuard(action: PendingAction): boolean {
+    return (
+      action.type === 'newPlay' ||
+      action.type === 'loadPlay' ||
+      action.type === 'switchTeam' ||
+      action.type === 'switchFormation' ||
+      action.type === 'logout' ||
+      action.type === 'saveAsNew' ||
+      action.type === 'deletePlay'
+    )
   }
 
-  function handleNewPlay() {
-    setPlay(createEmptyPlay())
+  function needsFormationGuard(action: PendingAction): boolean {
+    return action.type === 'switchFormation' || action.type === 'saveFormation'
+  }
+
+  function requestAction(action: PendingAction) {
+    if (needsPlayGuard(action) && hasUnsavedPlayChanges) {
+      setDialog({ kind: 'unsaved-play', action })
+      return
+    }
+
+    if (needsFormationGuard(action) && formationHasUnsavedChanges) {
+      setDialog({ kind: 'unsaved-formation', action })
+      return
+    }
+
+    void executeAction(action)
+  }
+
+  function executeNewPlay() {
+    const empty = createEmptyPlay()
+    setPlay(empty)
     setSelectedLoadId('')
     setActiveSavedPlayId(null)
     setSelectedPlayerId(null)
     setSelectedDefenderId(null)
     setSaveMessage('')
+    updatePlayBaseline(empty)
+  }
+
+  function handleNewPlay() {
+    if (!canEdit) return
+    requestAction({ type: 'newPlay' })
   }
 
   function handlePlayNameChange(name: string) {
     setPlay((current) => ({ ...current, name }))
   }
 
-  async function handleSaveChanges() {
+  function handlePlayCategoriesChange(categories: string[]) {
     if (!canEdit) return
+    setPlay((current) => ({ ...current, categories: normalizeCategories(categories) }))
+  }
+
+  function handleAddCustomCategory(name: string): boolean {
+    const updated = addCustomCategory(activeTeamId ?? null, name)
+    setCustomCategories(updated)
+    return updated.some((entry) => entry.toLowerCase() === name.trim().toLowerCase())
+  }
+
+  async function handleDeletePlayCategory(categoryName: string) {
+    if (!canEdit || isDefaultCategory(categoryName)) return
+
+    setDeletingCategory(true)
+
+    try {
+      const affectedPlays = savedPlays.filter((saved) => saved.categories.includes(categoryName))
+
+      if (useCloud && activeTeamId) {
+        for (const saved of affectedPlays) {
+          const updatedPlay = preparePlayForSave(removeCategoryFromPlay(saved, categoryName))
+          await cloudPlayRepository.updatePlay(
+            activeTeamId,
+            updatedPlay,
+            customFormations,
+            user?.id,
+          )
+        }
+      } else if (affectedPlays.length > 0) {
+        removeCategoryFromAllPlays(categoryName)
+      }
+
+      setCustomCategories(deleteCustomCategory(activeTeamId ?? null, categoryName))
+
+      const updatedCurrentPlay = removeCategoryFromPlay(play, categoryName)
+      setPlay(updatedCurrentPlay)
+      if (activeSavedPlayId) {
+        updatePlayBaseline(updatedCurrentPlay)
+      }
+
+      if (categoryFilterId === categoryName) {
+        setCategoryFilterId(ALL_CATEGORIES_FILTER)
+      }
+
+      if (useCloud && activeTeamId) {
+        await loadTeamData()
+      } else {
+        setSavedPlays(getAllSavedPlays())
+      }
+
+      showSaveMessage(`Category "${categoryName}" deleted.`)
+    } catch (error) {
+      showSaveMessage(error instanceof Error ? error.message : 'Failed to delete category.')
+    } finally {
+      setDeletingCategory(false)
+    }
+  }
+
+  function handleCategoryFilterChange(filterId: CategoryFilterId) {
+    setCategoryFilterId(filterId)
+    setSelectedLoadId('')
+    setActiveSavedPlayId(null)
+  }
+
+  async function executeSaveChanges(): Promise<boolean> {
+    if (!canEdit) return false
 
     const playToSave = preparePlayForSave(play)
 
@@ -162,18 +381,20 @@ function App() {
         setPlay(saved)
         setActiveSavedPlayId(saved.id)
         setSelectedLoadId(saved.id)
+        updatePlayBaseline(saved)
         await loadTeamData()
         showSaveMessage('Play saved.')
-        return
+        return true
       }
 
       if (activeSavedPlayId) {
         const saved = upsertPlayById(playToSave, activeSavedPlayId)
         setPlay(saved)
         setSelectedLoadId(saved.id)
+        updatePlayBaseline(saved)
         setSavedPlays(getAllSavedPlays())
         showSaveMessage('Play saved.')
-        return
+        return true
       }
 
       const existingByName = findSavedPlayByName(play.name, savedPlays)
@@ -182,25 +403,31 @@ function App() {
         setPlay(saved)
         setActiveSavedPlayId(saved.id)
         setSelectedLoadId(saved.id)
+        updatePlayBaseline(saved)
         setSavedPlays(getAllSavedPlays())
         showSaveMessage('Play saved.')
-        return
+        return true
       }
 
       const saved = upsertPlayById(playToSave, play.id)
       setPlay(saved)
       setActiveSavedPlayId(saved.id)
       setSelectedLoadId(saved.id)
+      updatePlayBaseline(saved)
       setSavedPlays(getAllSavedPlays())
       showSaveMessage('Play saved.')
+      return true
     } catch (error) {
       showSaveMessage(error instanceof Error ? error.message : 'Failed to save play.')
+      return false
     }
   }
 
-  async function handleSaveAsNew() {
-    if (!canEdit) return
+  async function handleSaveChanges() {
+    await executeSaveChanges()
+  }
 
+  async function executeSaveAsNew() {
     let nameToUse = play.name
     const findByName = useCloud
       ? (name: string, plays: Play[]) => cloudPlayRepository.findSavedPlayByName(name, plays)
@@ -236,6 +463,7 @@ function App() {
         setPlay(saved)
         setActiveSavedPlayId(saved.id)
         setSelectedLoadId(saved.id)
+        updatePlayBaseline(saved)
         await loadTeamData()
         showSaveMessage('Play saved.')
         return
@@ -245,6 +473,7 @@ function App() {
       setPlay(saved)
       setActiveSavedPlayId(saved.id)
       setSelectedLoadId(saved.id)
+      updatePlayBaseline(saved)
       setSavedPlays(getAllSavedPlays())
       showSaveMessage('Play saved.')
     } catch (error) {
@@ -252,13 +481,12 @@ function App() {
     }
   }
 
-  async function handleLoadPlay(playId: string) {
-    if (!playId) {
-      setSelectedLoadId('')
-      setActiveSavedPlayId(null)
-      return
-    }
+  function handleSaveAsNew() {
+    if (!canEdit) return
+    requestAction({ type: 'saveAsNew' })
+  }
 
+  async function executeLoadPlay(playId: string) {
     try {
       const loaded =
         useCloud && activeTeamId
@@ -277,6 +505,7 @@ function App() {
       setPlayFilterId(loaded.formationId)
       setSelectedPlayerId(null)
       setSelectedDefenderId(null)
+      updatePlayBaseline(loaded)
       if (loaded.playType === 'defensive') {
         setDrawingMode('route')
       }
@@ -286,13 +515,25 @@ function App() {
     }
   }
 
+  function handleLoadPlay(playId: string) {
+    if (!playId) {
+      setSelectedLoadId('')
+      setActiveSavedPlayId(null)
+      return
+    }
+
+    if (playId === activeSavedPlayId) return
+
+    requestAction({ type: 'loadPlay', playId })
+  }
+
   function handlePlayFilterChange(filterId: PlayFilterId) {
     setPlayFilterId(filterId)
     setSelectedLoadId('')
     setActiveSavedPlayId(null)
   }
 
-  async function handleDeletePlay() {
+  async function executeDeletePlay() {
     if (!selectedLoadId || !canEdit) return
 
     const deletedId = selectedLoadId
@@ -310,16 +551,34 @@ function App() {
       setSelectedLoadId('')
       setActiveSavedPlayId(null)
 
-      if (play.id === deletedId) {
-        setPlay(createEmptyPlay())
+      if (play.id === deletedId || activeSavedPlayId === deletedId) {
+        const empty = createEmptyPlay()
+        setPlay(empty)
         setSelectedPlayerId(null)
         setSelectedDefenderId(null)
+        updatePlayBaseline(empty)
       }
 
       showSaveMessage(`Deleted "${playName}"`)
     } catch (error) {
       showSaveMessage(error instanceof Error ? error.message : 'Failed to delete play.')
     }
+  }
+
+  function handleDeletePlay() {
+    if (!selectedLoadId || !canEdit) return
+
+    const isOpenPlay =
+      selectedLoadId === activeSavedPlayId ||
+      selectedLoadId === play.id ||
+      activeSavedPlayId === selectedLoadId
+
+    if (isOpenPlay && hasUnsavedPlayChanges) {
+      requestAction({ type: 'deletePlay' })
+      return
+    }
+
+    setDialog({ kind: 'delete-play' })
   }
 
   function handleMirrorPlay() {
@@ -344,8 +603,7 @@ function App() {
     setPlay((current) => ({ ...current, driveStartYardLine }))
   }
 
-  function handleFormationChange(formationId: string) {
-    if (!canEdit) return
+  function executeFormationChange(formationId: string) {
     const formation = getFormationById(formationId, customFormations)
     if (!formation) return
 
@@ -354,23 +612,66 @@ function App() {
       position: clampOffensePosition(player.position),
     }))
 
-    setPlay((current) => ({
-      ...current,
-      formationId,
-      formationName: formation.label,
-      players,
-      routes: createEmptyRoutes(),
-      blocks: createEmptyBlocks(),
-      defenderRoutes: createEmptyDefenderRoutes(),
-      notes: current.notes,
-      playerNotes: current.playerNotes,
-      mirrored: false,
-    }))
+    setPlay((current) => {
+      const next = {
+        ...current,
+        formationId,
+        formationName: formation.label,
+        players,
+        routes: createEmptyRoutes(),
+        blocks: createEmptyBlocks(),
+        defenderRoutes: createEmptyDefenderRoutes(),
+        notes: current.notes,
+        playerNotes: current.playerNotes,
+        mirrored: false,
+      }
+      return next
+    })
     setSelectedPlayerId(null)
     setSelectedDefenderId(null)
   }
 
-  async function handleSaveCurrentFormation() {
+  function handleFormationChange(formationId: string) {
+    if (!canEdit) return
+    if (formationId === play.formationId) return
+
+    requestAction({ type: 'switchFormation', formationId })
+  }
+
+  async function executeSaveFormationPositions(): Promise<boolean> {
+    if (!canEdit || !isCustomFormationId(play.formationId, customFormations)) return false
+
+    const formation = customFormations.find((entry) => entry.id === play.formationId)
+    if (!formation) return false
+
+    const updatedFormation: CustomFormation = {
+      ...formation,
+      positions: positionsFromPlayers(
+        play.players.map((player) => ({
+          ...player,
+          position: clampOffensePosition(player.position),
+        })),
+      ),
+    }
+
+    try {
+      if (useCloud && activeTeamId) {
+        await formationRepository.updateFormation(activeTeamId, updatedFormation, user?.id)
+        await loadTeamData()
+      } else {
+        updateCustomFormation(updatedFormation)
+        setCustomFormations(getCustomFormations())
+      }
+
+      showSaveMessage(`Formation "${updatedFormation.label}" saved.`)
+      return true
+    } catch (error) {
+      showSaveMessage(error instanceof Error ? error.message : 'Failed to save formation.')
+      return false
+    }
+  }
+
+  async function executeSaveNewFormation() {
     if (!canEdit) return
 
     const name = window.prompt('Enter a name for this formation:')
@@ -423,14 +724,21 @@ function App() {
     }
   }
 
-  async function handleDeleteCustomFormation() {
-    if (!canEdit || !isCustomFormationId(play.formationId)) return
+  function handleSaveCurrentFormation() {
+    if (!canEdit) return
+
+    if (isCustomFormationId(play.formationId, customFormations) && formationHasUnsavedChanges) {
+      requestAction({ type: 'saveFormation' })
+      return
+    }
+
+    void executeSaveNewFormation()
+  }
+
+  async function executeDeleteCustomFormation() {
+    if (!canEdit || !isCustomFormationId(play.formationId, customFormations)) return
 
     const label = play.formationName
-    const confirmed = window.confirm(
-      `Delete custom formation "${label}"?\n\nSaved plays using this formation will keep their saved positions.`,
-    )
-    if (!confirmed) return
 
     try {
       if (useCloud && activeTeamId) {
@@ -444,6 +752,117 @@ function App() {
     } catch (error) {
       showSaveMessage(error instanceof Error ? error.message : 'Failed to delete formation.')
     }
+  }
+
+  function handleDeleteCustomFormation() {
+    if (!canEdit || !isCustomFormationId(play.formationId, customFormations)) return
+    setDialog({ kind: 'delete-formation' })
+  }
+
+  async function executeAction(action: PendingAction) {
+    switch (action.type) {
+      case 'newPlay':
+        executeNewPlay()
+        break
+      case 'loadPlay':
+        await executeLoadPlay(action.playId)
+        break
+      case 'switchTeam': {
+        const result = await switchTeam(action.teamId)
+        if (result.error) {
+          showSaveMessage('Failed to switch team.')
+        }
+        break
+      }
+      case 'switchFormation':
+        executeFormationChange(action.formationId)
+        break
+      case 'logout':
+        await signOut()
+        break
+      case 'saveAsNew':
+        await executeSaveAsNew()
+        break
+      case 'deletePlay':
+        setDialog({ kind: 'delete-play' })
+        break
+      case 'saveFormation':
+        showSaveMessage('Formation saved.')
+        break
+      default:
+        break
+    }
+  }
+
+  function handleTeamSwitchRequest(teamId: string) {
+    if (!teamId || teamId === activeTeamId) return
+    requestAction({ type: 'switchTeam', teamId })
+  }
+
+  function handleLogoutRequest() {
+    requestAction({ type: 'logout' })
+  }
+
+  function closeDialog() {
+    setDialog(null)
+  }
+
+  async function continuePendingAction(action: PendingAction) {
+    if (needsFormationGuard(action) && formationHasUnsavedChanges) {
+      setDialog({ kind: 'unsaved-formation', action })
+      return
+    }
+
+    if (action.type === 'deletePlay') {
+      setDialog({ kind: 'delete-play' })
+      return
+    }
+
+    await executeAction(action)
+  }
+
+  async function handleUnsavedSave() {
+    if (!dialog) return
+
+    if (dialog.kind === 'unsaved-play') {
+      const action = dialog.action
+      const saved = await executeSaveChanges()
+      if (!saved) return
+      setDialog(null)
+      await continuePendingAction(action)
+      return
+    }
+
+    if (dialog.kind === 'unsaved-formation') {
+      const action = dialog.action
+      const saved = await executeSaveFormationPositions()
+      if (!saved) return
+      setDialog(null)
+      if (action.type === 'saveFormation') {
+        return
+      }
+      await executeAction(action)
+    }
+  }
+
+  async function handleUnsavedDiscard() {
+    if (!dialog) return
+
+    const action =
+      dialog.kind === 'unsaved-play' || dialog.kind === 'unsaved-formation'
+        ? dialog.action
+        : null
+
+    setDialog(null)
+
+    if (!action) return
+
+    if (action.type === 'saveFormation') {
+      await executeSaveNewFormation()
+      return
+    }
+
+    await continuePendingAction(action)
   }
 
   function handleNotesChange(notes: string) {
@@ -536,9 +955,46 @@ function App() {
     })
   }
 
+  const dialogMessage =
+    dialog?.kind === 'delete-play'
+      ? 'Delete this play? This cannot be undone.'
+      : dialog?.kind === 'delete-formation'
+        ? 'Delete this formation? This cannot be undone.'
+        : UNSAVED_MESSAGE
+
+  const dialogVariant =
+    dialog?.kind === 'delete-play' || dialog?.kind === 'delete-formation' ? 'delete' : 'unsaved'
+
+  const dialogConfirmLabel =
+    dialog?.kind === 'delete-formation' ? 'Delete Formation' : 'Delete Play'
+
+  function handleDialogConfirm() {
+    if (dialog?.kind === 'delete-play') {
+      closeDialog()
+      void executeDeletePlay()
+      return
+    }
+
+    if (dialog?.kind === 'delete-formation') {
+      closeDialog()
+      void executeDeleteCustomFormation()
+    }
+  }
+
   return (
     <div className="app">
-      <Header />
+      <ConfirmDialog
+        open={dialog !== null}
+        message={dialogMessage}
+        variant={dialogVariant}
+        confirmLabel={dialogConfirmLabel}
+        onConfirm={handleDialogConfirm}
+        onCancel={closeDialog}
+        onSave={() => void handleUnsavedSave()}
+        onDiscard={() => void handleUnsavedDiscard()}
+      />
+
+      <Header onTeamChange={handleTeamSwitchRequest} onLogout={handleLogoutRequest} />
 
       <div className={`app-body ${setupPanelOpen ? '' : 'setup-collapsed'}`}>
         <PlaySetupPanel
@@ -555,9 +1011,19 @@ function App() {
           onDeleteCustomFormation={handleDeleteCustomFormation}
           playName={play.name}
           onPlayNameChange={handlePlayNameChange}
+          playCategories={play.categories}
+          availableCategories={availableCategories}
+          customCategories={customCategories}
+          onPlayCategoriesChange={handlePlayCategoriesChange}
+          onAddCustomCategory={handleAddCustomCategory}
+          onDeleteCustomCategory={(category) => void handleDeletePlayCategory(category)}
+          deletingCategory={deletingCategory}
           playFilterId={playFilterId}
-          filterOptions={filterOptions}
+          formationFilterOptions={formationFilterOptions}
           onPlayFilterChange={handlePlayFilterChange}
+          categoryFilterId={categoryFilterId}
+          categoryFilterOptions={categoryFilterOptions}
+          onCategoryFilterChange={handleCategoryFilterChange}
           filteredPlays={filteredPlays}
           selectedLoadId={selectedLoadId}
           onLoadPlay={handleLoadPlay}

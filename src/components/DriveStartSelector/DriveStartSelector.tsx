@@ -8,21 +8,23 @@ type DriveStartSelectorProps = {
   value: DriveStartYardLine
   onChange: (driveStart: DriveStartYardLine) => void
   disabled?: boolean
+  compact?: boolean
 }
 
 export function DriveStartSelector({
   value,
   onChange,
   disabled = false,
+  compact = false,
 }: DriveStartSelectorProps) {
   return (
-    <div className="drive-start-selector">
-      <label htmlFor="drive-start" className="field-label">
+    <div className={`drive-start-selector ${compact ? 'drive-start-selector-compact' : ''}`}>
+      <label htmlFor="drive-start" className={`field-label ${compact ? 'sidebar-field-label' : ''}`}>
         Drive Start Yard Line
       </label>
       <select
         id="drive-start"
-        className="select-field"
+        className={`select-field ${compact ? 'sidebar-control' : ''}`}
         value={value}
         onChange={(e) => onChange(e.target.value as DriveStartYardLine)}
         disabled={disabled}

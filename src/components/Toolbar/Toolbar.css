@@ -1,9 +1,17 @@
-.toolbar {
+.play-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
   width: 100%;
-  flex-direction: column;
-  align-items: stretch;
 }
 
-.toolbar .btn {
+.play-actions-grid .sidebar-btn {
   width: 100%;
+  min-height: 32px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.toolbar-mirror-btn {
+  grid-column: 1 / -1;
 }

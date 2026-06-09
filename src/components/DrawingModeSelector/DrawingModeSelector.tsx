@@ -19,10 +19,16 @@ export function DrawingModeSelector({
   const routeLabel = playType === 'defensive' ? 'Movement' : 'Route'
 
   return (
-    <div className="drawing-mode-selector btn-row">
+    <div
+      className="drawing-mode-toggle"
+      role="radiogroup"
+      aria-label="Drawing mode"
+    >
       <button
         type="button"
-        className={`btn ${mode === 'route' ? 'btn-toggle-active' : ''}`}
+        role="radio"
+        aria-checked={mode === 'route'}
+        className={`drawing-mode-toggle-btn ${mode === 'route' ? 'drawing-mode-toggle-btn-active' : ''}`}
         onClick={() => onChange('route')}
         disabled={!canEdit}
       >
@@ -31,7 +37,11 @@ export function DrawingModeSelector({
       {playType === 'offensive' && (
         <button
           type="button"
-          className={`btn btn-toggle-blocking ${mode === 'block' ? 'btn-toggle-active' : ''}`}
+          role="radio"
+          aria-checked={mode === 'block'}
+          className={`drawing-mode-toggle-btn drawing-mode-toggle-btn-block ${
+            mode === 'block' ? 'drawing-mode-toggle-btn-active' : ''
+          }`}
           onClick={() => onChange('block')}
           disabled={!canEdit}
         >

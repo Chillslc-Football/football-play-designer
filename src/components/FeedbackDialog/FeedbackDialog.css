@@ -1,0 +1,43 @@
+.feedback-dialog {
+  width: min(100%, 480px);
+}
+
+.feedback-dialog-title {
+  margin: 0 0 var(--space-md);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-on-surface);
+}
+
+.feedback-dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.feedback-dialog-message {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.feedback-dialog-message-success {
+  color: var(--grass-dark);
+}
+
+.feedback-dialog-message-error {
+  color: var(--danger);
+}
+
+.feedback-dialog-textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.feedback-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: var(--space-sm);
+}

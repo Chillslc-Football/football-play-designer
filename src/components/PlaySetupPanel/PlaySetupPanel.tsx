@@ -2,17 +2,23 @@ import { FormationSelector } from '../FormationSelector/FormationSelector'
 import { PlayControls } from '../PlayControls/PlayControls'
 import { Toolbar } from '../Toolbar/Toolbar'
 import { DrawingModeSelector, type DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
-import { CollapsibleSection } from '../CollapsibleSection/CollapsibleSection'
 import type { DriveStartYardLine } from '../../types/driveStart'
 import type { Play } from '../../types/play'
 import type { PlayType } from '../../types/playType'
 import type { CustomFormation } from '../../utils/formationStorage'
+import type { CategoryFilterId } from '../../utils/categoryUtils'
 import type { PlayFilterId } from '../../utils/formationUtils'
 import './PlaySetupPanel.css'
 
-type FilterOption = {
+type FormationFilterOption = {
   id: PlayFilterId
   label: string
+}
+
+type CategoryFilterOption = {
+  id: CategoryFilterId
+  label: string
+  group: 'all' | 'default' | 'custom'
 }
 
 type PlaySetupPanelProps = {
@@ -29,9 +35,19 @@ type PlaySetupPanelProps = {
   onDeleteCustomFormation: () => void
   playName: string
   onPlayNameChange: (name: string) => void
+  playCategories: string[]
+  availableCategories: string[]
+  customCategories: string[]
+  onPlayCategoriesChange: (categories: string[]) => void
+  onAddCustomCategory: (name: string) => boolean
+  onDeleteCustomCategory: (category: string) => void
+  deletingCategory?: boolean
   playFilterId: PlayFilterId
-  filterOptions: FilterOption[]
+  formationFilterOptions: FormationFilterOption[]
   onPlayFilterChange: (filterId: PlayFilterId) => void
+  categoryFilterId: CategoryFilterId
+  categoryFilterOptions: CategoryFilterOption[]
+  onCategoryFilterChange: (filterId: CategoryFilterId) => void
   filteredPlays: Play[]
   selectedLoadId: string
   onLoadPlay: (playId: string) => void
@@ -60,9 +76,19 @@ export function PlaySetupPanel({
   onDeleteCustomFormation,
   playName,
   onPlayNameChange,
+  playCategories,
+  availableCategories,
+  customCategories,
+  onPlayCategoriesChange,
+  onAddCustomCategory,
+  onDeleteCustomCategory,
+  deletingCategory = false,
   playFilterId,
-  filterOptions,
+  formationFilterOptions,
   onPlayFilterChange,
+  categoryFilterId,
+  categoryFilterOptions,
+  onCategoryFilterChange,
   filteredPlays,
   selectedLoadId,
   onLoadPlay,
@@ -104,7 +130,8 @@ export function PlaySetupPanel({
       </div>
 
       <div className="play-setup-sections">
-        <CollapsibleSection step="1" title="Formation" defaultOpen>
+        <section className="sidebar-section">
+          <h3 className="sidebar-section-title">Formation</h3>
           <FormationSelector
             canEdit={canEdit}
             value={formationId}
@@ -116,42 +143,56 @@ export function PlaySetupPanel({
             onSaveCurrentFormation={onSaveCurrentFormation}
             onDeleteCustomFormation={onDeleteCustomFormation}
           />
-        </CollapsibleSection>
+        </section>
 
-        <CollapsibleSection step="2" title="Plays" defaultOpen>
+        <section className="sidebar-section">
+          <h3 className="sidebar-section-title">Play</h3>
           <PlayControls
             canEdit={canEdit}
             playName={playName}
             onPlayNameChange={onPlayNameChange}
+            playCategories={playCategories}
+            availableCategories={availableCategories}
+            customCategories={customCategories}
+            onPlayCategoriesChange={onPlayCategoriesChange}
+            onAddCustomCategory={onAddCustomCategory}
+            onDeleteCustomCategory={onDeleteCustomCategory}
+            deletingCategory={deletingCategory}
             playFilterId={playFilterId}
-            filterOptions={filterOptions}
+            formationFilterOptions={formationFilterOptions}
             onPlayFilterChange={onPlayFilterChange}
+            categoryFilterId={categoryFilterId}
+            categoryFilterOptions={categoryFilterOptions}
+            onCategoryFilterChange={onCategoryFilterChange}
             filteredPlays={filteredPlays}
             selectedLoadId={selectedLoadId}
             onLoadPlay={onLoadPlay}
-            onDeletePlay={onDeletePlay}
           />
-        </CollapsibleSection>
+        </section>
 
-        <CollapsibleSection step="3" title="Drawing Tools" defaultOpen>
+        <section className="sidebar-section">
+          <h3 className="sidebar-section-title">Play Actions</h3>
+          <Toolbar
+            canEdit={canEdit}
+            selectedLoadId={selectedLoadId}
+            onNewPlay={onNewPlay}
+            onSaveChanges={onSaveChanges}
+            onSaveAsNew={onSaveAsNew}
+            onDeletePlay={onDeletePlay}
+            onMirrorPlay={onMirrorPlay}
+            isMirrored={isMirrored}
+          />
+        </section>
+
+        <section className="sidebar-section sidebar-section-last">
+          <h3 className="sidebar-section-title">Drawing Mode</h3>
           <DrawingModeSelector
             mode={drawingMode}
             playType={playType}
             canEdit={canEdit}
             onChange={onDrawingModeChange}
           />
-        </CollapsibleSection>
-
-        <CollapsibleSection step="4" title="Actions" defaultOpen>
-          <Toolbar
-            canEdit={canEdit}
-            onNewPlay={onNewPlay}
-            onSaveChanges={onSaveChanges}
-            onSaveAsNew={onSaveAsNew}
-            onMirrorPlay={onMirrorPlay}
-            isMirrored={isMirrored}
-          />
-        </CollapsibleSection>
+        </section>
       </div>
     </aside>
   )

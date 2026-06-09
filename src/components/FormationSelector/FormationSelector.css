@@ -1,15 +1,23 @@
 .formation-selector {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: 8px;
 }
 
 .formation-selector-actions {
-  padding-top: 2px;
-  flex-direction: column;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding-top: 0;
+}
+
+.formation-selector-actions .btn:only-child {
+  grid-column: 1 / -1;
 }
 
 .formation-selector-actions .btn {
   width: 100%;
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 13px;
 }

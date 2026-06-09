@@ -37,6 +37,8 @@ export type Play = {
   blocks: Block[]
   defenderRoutes: DefenderRoute[]
   playerNotes: PlayerNotes
+  /** Category tags for filtering (Run, Pass, custom labels, etc.). */
+  categories: string[]
   createdAt: string
 }
 
@@ -57,6 +59,7 @@ export function createEmptyPlay(): Play {
     blocks: createEmptyBlocks(),
     defenderRoutes: createEmptyDefenderRoutes(),
     playerNotes: createEmptyPlayerNotes(),
+    categories: [],
     createdAt: new Date().toISOString(),
   })
 }

@@ -15,6 +15,7 @@ export type TeamContextValue = {
   needsOnboarding: boolean
   createTeam: (name: string) => Promise<TeamResult>
   switchTeam: (teamId: string) => Promise<TeamResult>
+  deleteTeam: (teamId: string) => Promise<TeamResult>
   refreshTeam: () => Promise<void>
 }
 

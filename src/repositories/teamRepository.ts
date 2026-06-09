@@ -186,6 +186,25 @@ export async function loadActiveTeamForUser(userId: string): Promise<ActiveTeamL
 }
 
 /** Loads team state immediately after create_team using the returned team id. */
+export async function clearLastTeamId(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ last_team_id: null })
+    .eq('id', userId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
+
+export async function deleteTeam(teamId: string): Promise<void> {
+  const { error } = await supabase.from('teams').delete().eq('id', teamId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
+
 export async function loadActiveTeamAfterCreate(
   userId: string,
   teamId: string,

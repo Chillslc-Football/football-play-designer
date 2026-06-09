@@ -1,0 +1,28 @@
+.delete-team-dialog-warning {
+  margin: 0 0 var(--space-md);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--danger);
+  background: rgba(180, 40, 40, 0.12);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+}
+
+.delete-team-dialog-label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.delete-team-dialog-input {
+  width: 100%;
+  margin-bottom: var(--space-md);
+}
+
+.delete-team-dialog-error {
+  margin: 0 0 var(--space-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--danger);
+}

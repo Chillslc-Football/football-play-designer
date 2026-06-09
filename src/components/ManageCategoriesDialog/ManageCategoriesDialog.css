@@ -1,0 +1,49 @@
+.manage-categories-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 var(--space-lg);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.manage-categories-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.manage-categories-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-on-surface);
+}
+
+.manage-categories-empty {
+  margin: 0 0 var(--space-md);
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.manage-categories-add {
+  display: flex;
+  gap: 8px;
+  margin-bottom: var(--space-md);
+}
+
+.manage-categories-add .input-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.manage-categories-error {
+  margin: 0 0 var(--space-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--danger);
+}

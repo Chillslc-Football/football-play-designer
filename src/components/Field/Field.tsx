@@ -36,12 +36,14 @@ import {
 } from '../../utils/fieldView'
 import { appendPathPoint } from '../../utils/pathUtils'
 import {
+  deleteEntireRoute,
   deleteRouteSegment,
   extendRouteFromAnchor,
   getAnchorVertexIndex,
   type RouteEditSelection,
 } from '../../utils/routeEdit'
 import { BlockLine } from '../BlockLine/BlockLine'
+import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog'
 import type { DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
 import { PlayerMarker } from '../PlayerMarker/PlayerMarker'
 import { RouteLine } from '../RouteLine/RouteLine'
@@ -154,6 +156,7 @@ export function Field({
   )
   const [defenderRouteEditSelection, setDefenderRouteEditSelection] =
     useState<DefenderRouteEditSelection | null>(null)
+  const [deleteEntireRouteOpen, setDeleteEntireRouteOpen] = useState(false)
 
   routeEditSelectionRef.current = routeEditSelection
   defenderRouteEditSelectionRef.current = defenderRouteEditSelection
@@ -341,8 +344,41 @@ export function Field({
 
     const updated = deleteRouteSegment(route, selected.segmentIndex)
     onRouteComplete(updated)
-    clearRouteEditSelection()
+
+    if (updated.points.length === 0) {
+      clearRouteEditSelection()
+      return
+    }
+
+    const nextSegmentIndex = Math.min(selected.segmentIndex, updated.points.length - 1)
+    setRouteEditSelection({
+      playerId: selected.playerId,
+      kind: 'segment',
+      segmentIndex: nextSegmentIndex,
+    })
   }, [routes, onRouteComplete, clearRouteEditSelection])
+
+  const executeDeleteEntireRoute = useCallback(() => {
+    const playerId = routeEditSelectionRef.current?.playerId ?? selectedPlayerId
+    if (!playerId || !routesEditable) return
+
+    const route = routes.find((entry) => entry.playerId === playerId)
+    if (!route || route.points.length === 0) return
+
+    onRouteComplete(deleteEntireRoute(route))
+    clearRouteEditSelection()
+    setDeleteEntireRouteOpen(false)
+  }, [selectedPlayerId, routes, routesEditable, onRouteComplete, clearRouteEditSelection])
+
+  const requestDeleteEntireRoute = useCallback(() => {
+    const playerId = routeEditSelectionRef.current?.playerId ?? selectedPlayerId
+    if (!playerId || !routesEditable) return
+
+    const route = routes.find((entry) => entry.playerId === playerId)
+    if (!route || route.points.length === 0) return
+
+    setDeleteEntireRouteOpen(true)
+  }, [selectedPlayerId, routes, routesEditable])
 
   const deleteSelectedDefenderRouteSegment = useCallback(() => {
     const selected = defenderRouteEditSelectionRef.current
@@ -356,7 +392,18 @@ export function Field({
 
     const updated = deleteDefenderRouteSegment(route, selected.segmentIndex)
     onDefenderRouteComplete(updated)
-    clearDefenderRouteEditSelection()
+
+    if (updated.points.length === 0) {
+      clearDefenderRouteEditSelection()
+      return
+    }
+
+    const nextSegmentIndex = Math.min(selected.segmentIndex, updated.points.length - 1)
+    setDefenderRouteEditSelection({
+      defenderId: selected.defenderId,
+      kind: 'segment',
+      segmentIndex: nextSegmentIndex,
+    })
   }, [defenderRoutes, onDefenderRouteComplete, clearDefenderRouteEditSelection])
 
   const toggleSegmentSelection = useCallback(
@@ -437,7 +484,13 @@ export function Field({
   function handleFieldMouseDown(event: React.MouseEvent) {
     const target = event.target as Element
     if (target.closest('.player-marker') || target.closest('.defender-marker')) return
-    if (target.closest('.route-segment-group') || target.closest('.route-vertex-handle-hit')) return
+    if (
+      target.closest('.route-segment-group') ||
+      target.closest('.route-vertex-handle-hit') ||
+      target.closest('.route-path-hit')
+    ) {
+      return
+    }
 
     if (drawingMode === 'route' && playType === 'offensive') {
       const anchor = resolveDrawAnchor()
@@ -690,6 +743,21 @@ export function Field({
       }
 
       if (event.key === 'Delete' || event.key === 'Backspace') {
+        if (event.shiftKey) {
+          if (playType === 'offensive' && routesEditable && !routeDragRef.current) {
+            const playerId = routeEditSelectionRef.current?.playerId ?? selectedPlayerId
+            const route = playerId
+              ? routes.find((entry) => entry.playerId === playerId)
+              : undefined
+
+            if (route && route.points.length > 0) {
+              event.preventDefault()
+              setDeleteEntireRouteOpen(true)
+            }
+          }
+          return
+        }
+
         if (
           playType === 'offensive' &&
           routeEditSelectionRef.current?.kind === 'segment' &&
@@ -728,6 +796,8 @@ export function Field({
     onSelectPlayer,
     onSelectDefender,
     routes,
+    selectedPlayerId,
+    routesEditable,
     deleteSelectedRouteSegment,
     deleteSelectedDefenderRouteSegment,
     clearRouteDrag,
@@ -768,13 +838,26 @@ export function Field({
     }
   }, [defenderFreehandDraft, getDefenderRouteForDefender, defenders])
 
+  const selectedPlayerHasRoute = Boolean(
+    selectedPlayerId &&
+      routes.find((entry) => entry.playerId === selectedPlayerId && entry.points.length > 0),
+  )
+
+  const canDeleteEntireRoute = routesEditable && selectedPlayerHasRoute
+
   const hintText = (() => {
     if (playType === 'offensive' && selectedPlayerId) {
       if (drawingMode === 'block') {
         return `${selectedPlayerId} selected — drag on the field to draw a blocking assignment`
       }
+      if (routeEditSelection?.kind === 'segment') {
+        return 'Segment selected — Delete removes segment, Shift+Delete removes entire route'
+      }
       if (routeEditSelection) {
         return 'Extend route from selected point — click or drag on the field'
+      }
+      if (selectedPlayerHasRoute) {
+        return `${selectedPlayerId} selected — click route to select a segment`
       }
       return `${selectedPlayerId} selected — click the field to start a route`
     }
@@ -794,7 +877,29 @@ export function Field({
 
   return (
     <div className="field-container">
-      {hintText && <p className="route-hint">{hintText}</p>}
+      <ConfirmDialog
+        open={deleteEntireRouteOpen}
+        message="Delete this entire route?"
+        variant="delete"
+        confirmLabel="Delete Route"
+        onConfirm={executeDeleteEntireRoute}
+        onCancel={() => setDeleteEntireRouteOpen(false)}
+      />
+
+      {(hintText || canDeleteEntireRoute) && (
+        <div className="route-draw-controls">
+          {hintText && <span className="route-draw-hint">{hintText}</span>}
+          {canDeleteEntireRoute && (
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={requestDeleteEntireRoute}
+            >
+              Delete Entire Route
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="field-viewport">
         <svg
@@ -827,17 +932,6 @@ export function Field({
               markerUnits="userSpaceOnUse"
             >
               <polygon points="0 0, 0.76 0.38, 0 0.76" className="route-arrow-head-filled" />
-            </marker>
-            <marker
-              id="block-t-cap"
-              markerWidth="3"
-              markerHeight="3"
-              refX="1.5"
-              refY="1.5"
-              orient="auto"
-              markerUnits="userSpaceOnUse"
-            >
-              <line x1="-1.2" y1="0" x2="1.2" y2="0" className="block-t-cap-line" />
             </marker>
           </defs>
 

@@ -17,6 +17,13 @@ export function getDefenderAnchorVertexIndex(selection: DefenderRouteEditSelecti
   return selection.kind === 'vertex' ? selection.vertexIndex : selection.segmentIndex + 1
 }
 
+export function deleteEntireDefenderRoute(route: DefenderRoute): DefenderRoute {
+  return {
+    ...route,
+    points: [],
+  }
+}
+
 export function deleteDefenderRouteSegment(
   route: DefenderRoute,
   segmentIndex: number,

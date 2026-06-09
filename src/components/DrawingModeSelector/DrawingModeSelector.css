@@ -1,7 +1,54 @@
-.drawing-mode-selector {
+.drawing-mode-toggle {
+  display: flex;
   width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface);
 }
 
-.drawing-mode-selector .btn {
+.drawing-mode-toggle-btn {
   flex: 1;
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-right: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-on-surface);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.drawing-mode-toggle-btn:last-child {
+  border-right: none;
+}
+
+.drawing-mode-toggle-btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.drawing-mode-toggle-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.drawing-mode-toggle-btn-active {
+  background: var(--grass-mid);
+  color: #fff;
+}
+
+.drawing-mode-toggle-btn-active:hover:not(:disabled) {
+  background: var(--grass-dark);
+  color: #fff;
+}
+
+.drawing-mode-toggle-btn-block.drawing-mode-toggle-btn-active {
+  background: var(--block-orange);
+}
+
+.drawing-mode-toggle-btn-block.drawing-mode-toggle-btn-active:hover:not(:disabled) {
+  background: var(--block-orange-dark);
 }
