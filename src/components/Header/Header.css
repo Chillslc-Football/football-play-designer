@@ -7,8 +7,38 @@
 }
 
 .header-inner {
+  position: relative;
   max-width: 1240px;
   margin: 0 auto;
+}
+
+.header-user {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+}
+
+.header-user-email {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-logout-btn {
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+.header-brand {
+  text-align: center;
 }
 
 .header-icon {
@@ -33,6 +63,16 @@
 }
 
 @media (max-width: 600px) {
+  .header-user {
+    position: static;
+    justify-content: center;
+    margin-bottom: var(--space-sm);
+  }
+
+  .header-user-email {
+    max-width: 160px;
+  }
+
   .header-title {
     font-size: 1.25rem;
   }

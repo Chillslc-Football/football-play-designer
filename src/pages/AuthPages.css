@@ -1,0 +1,88 @@
+@import '../styles/shared.css';
+
+.auth-page {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  background: linear-gradient(180deg, var(--grass-dark) 0%, #0f2f0f 100%);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-lg);
+  background: var(--surface);
+  color: var(--text-on-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.auth-card h1 {
+  margin: 0 0 var(--space-xs);
+  font-size: 1.5rem;
+}
+
+.auth-card-subtitle {
+  margin: 0 0 var(--space-lg);
+  font-size: 14px;
+  color: #4a5f4a;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.auth-form .field-label {
+  color: #4a5f4a;
+}
+
+.auth-error {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--danger);
+  background: rgba(168, 50, 50, 0.08);
+  border: 1px solid rgba(168, 50, 50, 0.25);
+  border-radius: var(--radius-sm);
+}
+
+.auth-success {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--grass-dark);
+  background: rgba(45, 106, 45, 0.1);
+  border: 1px solid rgba(45, 106, 45, 0.25);
+  border-radius: var(--radius-sm);
+}
+
+.auth-switch {
+  margin: var(--space-md) 0 0;
+  font-size: 14px;
+  text-align: center;
+  color: #4a5f4a;
+}
+
+.auth-switch button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--grass-mid);
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.auth-loading {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 15px;
+}
