@@ -80,6 +80,7 @@ import {
 import { getDefenderMirrorPartner } from './utils/defenseMirror'
 import { getMirrorPartner, mirrorFootballPlay } from './utils/footballMirror'
 import { clampDefensePosition, clampOffensePosition } from './utils/losClamp'
+import { COORDINATE_SPACE_RENDER } from './utils/positionCoordinates'
 import './App.css'
 
 type PendingAction =
@@ -125,6 +126,8 @@ function App() {
   const [playBaseline, setPlayBaseline] = useState(() => playToComparable(createEmptyPlay()))
   const [dialog, setDialog] = useState<DialogState>(null)
   const [deletingCategory, setDeletingCategory] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const isSavingRef = useRef(false)
 
   const showSaveMessage = useCallback((message: string) => {
     setSaveMessage(message)
@@ -134,23 +137,38 @@ function App() {
   const preparePlayForSave = useCallback(
     (current: Play): Play => {
       const categories = normalizeCategories(current.categories)
+      const renderPlay: Play = {
+        ...current,
+        positionFormat: COORDINATE_SPACE_RENDER,
+        categories,
+      }
 
       if (current.playType === 'defensive') {
         return {
-          ...current,
+          ...renderPlay,
           ...withFrontSnapshot(current),
-          categories,
         }
       }
 
       return {
-        ...current,
+        ...renderPlay,
         ...withFormationSnapshot(current, customFormations),
-        categories,
       }
     },
     [customFormations],
   )
+
+  function syncEditorAfterSave(editorPlay: Play, savedId: string) {
+    const nextPlay: Play = {
+      ...editorPlay,
+      id: savedId,
+      positionFormat: COORDINATE_SPACE_RENDER,
+    }
+    setPlay(nextPlay)
+    updatePlayBaseline(nextPlay)
+    setActiveSavedPlayId(savedId)
+    setSelectedLoadId(savedId)
+  }
 
   const updatePlayBaseline = useCallback(
     (nextPlay: Play) => {
@@ -306,6 +324,10 @@ function App() {
 
   function executeNewPlay() {
     const empty = createEmptyPlay(play.playType)
+    console.log('CREATE NEW PLAY players', {
+      players: empty.players.map((player) => ({ id: player.id, ...player.position })),
+      defenders: empty.defenders.map((defender) => ({ id: defender.id, ...defender.position })),
+    })
     setPlay(empty)
     setSelectedLoadId('')
     setActiveSavedPlayId(null)
@@ -390,7 +412,10 @@ function App() {
   }
 
   async function executeSaveChanges(): Promise<boolean> {
-    if (!canEdit) return false
+    if (!canEdit || isSavingRef.current) return false
+
+    isSavingRef.current = true
+    setIsSaving(true)
 
     const playToSave = preparePlayForSave(play)
 
@@ -399,27 +424,22 @@ function App() {
         const existingByName = cloudPlayRepository.findSavedPlayByName(play.name, savedPlays)
         const saveId = activeSavedPlayId ?? existingByName?.id ?? play.id
 
-        const saved = await cloudPlayRepository.upsertPlay(
+        await cloudPlayRepository.upsertPlay(
           activeTeamId,
           { ...playToSave, id: saveId },
           saveId,
           customFormations,
           user?.id,
         )
-        setPlay(saved)
-        setActiveSavedPlayId(saved.id)
-        setSelectedLoadId(saved.id)
-        updatePlayBaseline(saved)
+        syncEditorAfterSave(play, saveId)
         await loadTeamData()
         showSaveMessage('Play saved.')
         return true
       }
 
       if (activeSavedPlayId) {
-        const saved = upsertPlayById(playToSave, activeSavedPlayId)
-        setPlay(saved)
-        setSelectedLoadId(saved.id)
-        updatePlayBaseline(saved)
+        upsertPlayById(playToSave, activeSavedPlayId)
+        syncEditorAfterSave(play, activeSavedPlayId)
         setSavedPlays(getAllSavedPlays())
         showSaveMessage('Play saved.')
         return true
@@ -427,27 +447,24 @@ function App() {
 
       const existingByName = findSavedPlayByName(play.name, savedPlays)
       if (existingByName) {
-        const saved = upsertPlayById(playToSave, existingByName.id)
-        setPlay(saved)
-        setActiveSavedPlayId(saved.id)
-        setSelectedLoadId(saved.id)
-        updatePlayBaseline(saved)
+        upsertPlayById(playToSave, existingByName.id)
+        syncEditorAfterSave(play, existingByName.id)
         setSavedPlays(getAllSavedPlays())
         showSaveMessage('Play saved.')
         return true
       }
 
-      const saved = upsertPlayById(playToSave, play.id)
-      setPlay(saved)
-      setActiveSavedPlayId(saved.id)
-      setSelectedLoadId(saved.id)
-      updatePlayBaseline(saved)
+      upsertPlayById(playToSave, play.id)
+      syncEditorAfterSave(play, play.id)
       setSavedPlays(getAllSavedPlays())
       showSaveMessage('Play saved.')
       return true
     } catch (error) {
       showSaveMessage(error instanceof Error ? error.message : 'Failed to save play.')
       return false
+    } finally {
+      isSavingRef.current = false
+      setIsSaving(false)
     }
   }
 
@@ -456,31 +473,35 @@ function App() {
   }
 
   async function executeSaveAsNew() {
-    let nameToUse = play.name
-    const findByName = useCloud
-      ? (name: string, plays: Play[]) => cloudPlayRepository.findSavedPlayByName(name, plays)
-      : findSavedPlayByName
+    if (!canEdit || isSavingRef.current) return
 
-    if (findByName(nameToUse, savedPlays)) {
-      const prompted = window.prompt(
-        'That play name already exists. Enter a different name:',
-        nameToUse,
-      )
-
-      if (!prompted || !prompted.trim()) {
-        showSaveMessage('Save cancelled — name must be unique.')
-        return
-      }
-
-      if (findByName(prompted, savedPlays)) {
-        showSaveMessage('That name also exists. Please choose a unique name.')
-        return
-      }
-
-      nameToUse = prompted.trim()
-    }
+    isSavingRef.current = true
+    setIsSaving(true)
 
     try {
+      let nameToUse = play.name
+      const findByName = useCloud
+        ? (name: string, plays: Play[]) => cloudPlayRepository.findSavedPlayByName(name, plays)
+        : findSavedPlayByName
+
+      if (findByName(nameToUse, savedPlays)) {
+        const prompted = window.prompt(
+          'That play name already exists. Enter a different name:',
+          nameToUse,
+        )
+
+        if (!prompted || !prompted.trim()) {
+          showSaveMessage('Save cancelled — name must be unique.')
+          return
+        }
+
+        if (findByName(prompted, savedPlays)) {
+          showSaveMessage('That name also exists. Please choose a unique name.')
+          return
+        }
+
+        nameToUse = prompted.trim()
+      }
       if (useCloud && activeTeamId) {
         const saved = await cloudPlayRepository.addNewPlay(
           activeTeamId,
@@ -488,24 +509,21 @@ function App() {
           customFormations,
           user?.id,
         )
-        setPlay(saved)
-        setActiveSavedPlayId(saved.id)
-        setSelectedLoadId(saved.id)
-        updatePlayBaseline(saved)
+        syncEditorAfterSave({ ...play, name: nameToUse }, saved.id)
         await loadTeamData()
         showSaveMessage('Play saved.')
         return
       }
 
       const saved = addNewPlay(preparePlayForSave({ ...play, name: nameToUse }))
-      setPlay(saved)
-      setActiveSavedPlayId(saved.id)
-      setSelectedLoadId(saved.id)
-      updatePlayBaseline(saved)
+      syncEditorAfterSave({ ...play, name: nameToUse }, saved.id)
       setSavedPlays(getAllSavedPlays())
       showSaveMessage('Play saved.')
     } catch (error) {
       showSaveMessage(error instanceof Error ? error.message : 'Failed to save play.')
+    } finally {
+      isSavingRef.current = false
+      setIsSaving(false)
     }
   }
 
@@ -527,6 +545,10 @@ function App() {
         return
       }
 
+      console.log('SET editing players', {
+        players: loaded.players.map((player) => ({ id: player.id, ...player.position })),
+        defenders: loaded.defenders.map((defender) => ({ id: defender.id, ...defender.position })),
+      })
       setPlay(loaded)
       setSelectedLoadId(playId)
       setActiveSavedPlayId(playId)
@@ -915,13 +937,19 @@ function App() {
   }
 
   async function handleUnsavedSave() {
-    if (!dialog) return
+    if (!dialog || isSavingRef.current) return
 
     if (dialog.kind === 'unsaved-play') {
       const action = dialog.action
+      setDialog(null)
+
+      if (action.type === 'saveAsNew') {
+        await executeSaveAsNew()
+        return
+      }
+
       const saved = await executeSaveChanges()
       if (!saved) return
-      setDialog(null)
       await continuePendingAction(action)
       return
     }
@@ -1138,6 +1166,7 @@ function App() {
           onSaveAsNew={handleSaveAsNew}
           onMirrorPlay={handleMirrorPlay}
           isMirrored={play.mirrored}
+          isSaving={isSaving}
         />
 
         <main className="canvas-area">

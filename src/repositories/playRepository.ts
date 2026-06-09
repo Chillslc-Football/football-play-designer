@@ -7,6 +7,7 @@ import type { CustomFormation } from '../utils/formationStorage'
 /** Supabase `play_type` enum values. */
 type DbPlayType = 'offense' | 'defense'
 import { normalizePlayName } from '../utils/playStorage'
+import { renderPlayToDbPlay } from '../utils/positionCoordinates'
 import { normalizePlayRecord, type LegacyPlay } from '../utils/playNormalize'
 
 type PlayRow = {
@@ -45,12 +46,14 @@ function fromDbPlayType(value: unknown): PlayType {
 }
 
 function playToData(play: Play, id: string): Play {
-  return {
+  const renderPlay: Play = {
     ...play,
     id,
     name: normalizePlayName(play.name),
     categories: normalizeCategories(play.categories),
   }
+
+  return renderPlayToDbPlay(renderPlay)
 }
 
 function playCategories(play: Play, rowCategories?: string[] | null): string[] {
@@ -122,6 +125,7 @@ function rowToPlay(row: PlayRow, customFormations: CustomFormation[]): Play {
     defenderRoutes: stored.defenderRoutes ?? [],
     playerNotes: stored.playerNotes ?? {},
     categories: playCategories(stored as Play, row.categories),
+    positionFormat: stored.positionFormat,
     createdAt: stored.createdAt ?? row.created_at ?? new Date().toISOString(),
   }
 
@@ -173,6 +177,7 @@ export async function addPlay(
   userId?: string,
 ): Promise<Play> {
   const row = playToInsertRow(play, teamId, userId)
+  console.log('Creating play once:', row)
   const { data, error } = await supabase
     .from('plays')
     .insert(row)

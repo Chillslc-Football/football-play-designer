@@ -13,8 +13,12 @@ import {
   createPlayersForFormation,
   getDefaultFormationName,
 } from '../utils/formationUtils'
+import { COORDINATE_SPACE_RENDER } from '../utils/positionCoordinates'
 import { createDefendersForFront, getDefaultFrontName } from '../utils/frontUtils'
 import { clampPlayPositions } from '../utils/losClamp'
+
+/** How player/defender/path coordinates are stored in persistence. */
+export type PositionFormat = 'yard' | 'normalized'
 
 /**
  * A Play holds everything the user creates for one football play.
@@ -48,6 +52,8 @@ export type Play = {
   playerNotes: PlayerNotes
   /** Category tags for filtering (Run, Pass, custom labels, etc.). */
   categories: string[]
+  /** Runtime uses yards; persisted plays may use normalized 0–100 percentages. */
+  positionFormat?: PositionFormat
   createdAt: string
 }
 
@@ -73,6 +79,7 @@ export function createEmptyPlay(playType: PlayType = DEFAULT_PLAY_TYPE): Play {
     defenderRoutes: createEmptyDefenderRoutes(),
     playerNotes: createEmptyPlayerNotes(),
     categories: [],
+    positionFormat: COORDINATE_SPACE_RENDER,
     createdAt: new Date().toISOString(),
   })
 }

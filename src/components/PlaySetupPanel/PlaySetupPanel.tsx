@@ -63,6 +63,7 @@ type PlaySetupPanelProps = {
   onSaveAsNew: () => void
   onMirrorPlay: () => void
   isMirrored: boolean
+  isSaving?: boolean
 }
 
 export function PlaySetupPanel({
@@ -107,6 +108,7 @@ export function PlaySetupPanel({
   onSaveAsNew,
   onMirrorPlay,
   isMirrored,
+  isSaving = false,
 }: PlaySetupPanelProps) {
   const schemeSectionTitle = playType === 'defensive' ? 'Front' : 'Formation'
 
@@ -194,6 +196,7 @@ export function PlaySetupPanel({
             onDeletePlay={onDeletePlay}
             onMirrorPlay={onMirrorPlay}
             isMirrored={isMirrored}
+            isSaving={isSaving}
           />
         </section>
 

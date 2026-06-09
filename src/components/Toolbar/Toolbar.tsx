@@ -9,6 +9,7 @@ type ToolbarProps = {
   onDeletePlay: () => void
   onMirrorPlay: () => void
   isMirrored: boolean
+  isSaving?: boolean
 }
 
 export function Toolbar({
@@ -20,7 +21,9 @@ export function Toolbar({
   onDeletePlay,
   onMirrorPlay,
   isMirrored,
+  isSaving = false,
 }: ToolbarProps) {
+  const saveDisabled = !canEdit || isSaving
   const canDelete = selectedLoadId !== ''
 
   return (
@@ -32,12 +35,17 @@ export function Toolbar({
         type="button"
         className="btn btn-primary sidebar-btn"
         onClick={onSaveChanges}
-        disabled={!canEdit}
+        disabled={saveDisabled}
       >
-        Save Changes
+        {isSaving ? 'Saving…' : 'Save Changes'}
       </button>
-      <button type="button" className="btn sidebar-btn" onClick={onSaveAsNew} disabled={!canEdit}>
-        Save As New Play
+      <button
+        type="button"
+        className="btn sidebar-btn"
+        onClick={onSaveAsNew}
+        disabled={saveDisabled}
+      >
+        {isSaving ? 'Saving…' : 'Save As New Play'}
       </button>
       <button
         type="button"

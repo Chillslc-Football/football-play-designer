@@ -1,5 +1,6 @@
 import type { Play } from '../types/play'
 import { getCustomFormations } from './formationStorage'
+import { renderPlayToDbPlay } from './positionCoordinates'
 import { normalizePlayRecord, type LegacyPlay } from './playNormalize'
 
 /**
@@ -12,26 +13,30 @@ export function normalizePlayName(name: string): string {
   return name.trim() || 'Untitled Play'
 }
 
-/** Migrates older saves (formation, fieldPosition) into the current Play shape. */
-function normalizePlay(play: LegacyPlay): Play {
-  return normalizePlayRecord(play, getCustomFormations())
-}
-
-export function getAllSavedPlays(): Play[] {
+function readRawPlays(): LegacyPlay[] {
   const raw = localStorage.getItem(STORAGE_KEY)
   if (!raw) return []
 
   try {
     const parsed = JSON.parse(raw) as LegacyPlay[]
-    if (!Array.isArray(parsed)) return []
-    return parsed.map(normalizePlay)
+    return Array.isArray(parsed) ? parsed : []
   } catch {
     return []
   }
 }
 
-function writePlays(plays: Play[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(plays))
+/** Migrates older saves (formation, fieldPosition) into the current Play shape. */
+function normalizePlay(play: LegacyPlay): Play {
+  return normalizePlayRecord(play, getCustomFormations())
+}
+
+function writeStoredPlays(renderPlays: Play[]): void {
+  const stored = renderPlays.map((play) => renderPlayToDbPlay(play))
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
+}
+
+export function getAllSavedPlays(): Play[] {
+  return readRawPlays().map(normalizePlay)
 }
 
 export function findSavedPlayByName(name: string, plays?: Play[]): Play | undefined {
@@ -41,53 +46,53 @@ export function findSavedPlayByName(name: string, plays?: Play[]): Play | undefi
 }
 
 export function upsertPlayById(play: Play, id: string): Play {
-  const playToSave: Play = {
+  const runtimePlay: Play = {
     ...play,
     id,
     name: normalizePlayName(play.name),
   }
 
-  const plays = getAllSavedPlays()
-  const index = plays.findIndex((saved) => saved.id === id)
+  const runtimePlays = getAllSavedPlays()
+  const index = runtimePlays.findIndex((saved) => saved.id === id)
 
   if (index >= 0) {
-    plays[index] = playToSave
+    runtimePlays[index] = runtimePlay
   } else {
-    plays.push(playToSave)
+    runtimePlays.push(runtimePlay)
   }
 
-  writePlays(plays)
-  return playToSave
+  writeStoredPlays(runtimePlays)
+  return runtimePlay
 }
 
 export function addNewPlay(play: Play): Play {
-  const newPlay: Play = {
+  const runtimePlay: Play = {
     ...play,
     id: crypto.randomUUID(),
     name: normalizePlayName(play.name),
   }
 
-  const plays = getAllSavedPlays()
-  plays.push(newPlay)
-  writePlays(plays)
-  return newPlay
+  const runtimePlays = getAllSavedPlays()
+  runtimePlays.push(runtimePlay)
+  writeStoredPlays(runtimePlays)
+  return runtimePlay
 }
 
 export function getPlayById(playId: string): Play | null {
-  const play = getAllSavedPlays().find((saved) => saved.id === playId)
-  return play ? normalizePlay(play) : null
+  const raw = readRawPlays().find((saved) => saved.id === playId)
+  return raw ? normalizePlay(raw) : null
 }
 
 export function deletePlayFromStorage(playId: string): void {
-  const plays = getAllSavedPlays().filter((saved) => saved.id !== playId)
-  writePlays(plays)
+  const runtimePlays = getAllSavedPlays().filter((saved) => saved.id !== playId)
+  writeStoredPlays(runtimePlays)
 }
 
 export function removeCategoryFromAllPlays(categoryName: string): Play[] {
-  const plays = getAllSavedPlays().map((saved) => ({
+  const runtimePlays = getAllSavedPlays().map((saved) => ({
     ...saved,
     categories: saved.categories.filter((category) => category !== categoryName),
   }))
-  writePlays(plays)
-  return plays
+  writeStoredPlays(runtimePlays)
+  return runtimePlays
 }

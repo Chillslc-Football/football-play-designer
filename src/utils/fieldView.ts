@@ -138,22 +138,28 @@ function usesHorizontalOrientation(players: Player[]): boolean {
   const center = players.find((player) => player.id === 'C')
   if (!center) return false
 
-  return (
-    center.position.x <= LOS_VIEW_Y + 2 &&
-    Math.abs(center.position.y - FIELD_WIDTH / 2) < 18 &&
-    center.position.x < center.position.y
-  )
+  const yNearWidthCenter = Math.abs(center.position.y - FIELD_WIDTH / 2) < 18
+  const xNearWidthCenter = Math.abs(center.position.x - FIELD_WIDTH / 2) < 12
+  const yNearLos = Math.abs(center.position.y - LOS_VIEW_Y) < 4
+
+  // Portrait: center on LOS with x at field width center — already correct, do not flip.
+  if (xNearWidthCenter && yNearLos) return false
+
+  // Horizontal legacy: center on width centerline with small x (attack left-to-right).
+  return yNearWidthCenter && center.position.x < LOS_VIEW_Y && !xNearWidthCenter
 }
 
 function usesHorizontalFormation(positions: Record<string, Position>): boolean {
   const center = positions.C
   if (!center) return false
 
-  return (
-    center.x <= LOS_VIEW_Y + 2 &&
-    Math.abs(center.y - FIELD_WIDTH / 2) < 18 &&
-    center.x < center.y
-  )
+  const yNearWidthCenter = Math.abs(center.y - FIELD_WIDTH / 2) < 18
+  const xNearWidthCenter = Math.abs(center.x - FIELD_WIDTH / 2) < 12
+  const yNearLos = Math.abs(center.y - LOS_VIEW_Y) < 4
+
+  if (xNearWidthCenter && yNearLos) return false
+
+  return yNearWidthCenter && center.x < LOS_VIEW_Y && !xNearWidthCenter
 }
 
 /** Converts left-to-right attack coordinates into north/south portrait coordinates. */

@@ -16,7 +16,18 @@ import {
   getDefaultFrontName,
   getFrontLabel,
 } from './frontUtils'
-import { getDefaultFormationName, getFormationLabel } from './formationUtils'
+import {
+  createPlayersForFormation,
+  getDefaultFormationName,
+  getFormationLabel,
+} from './formationUtils'
+import {
+  COORDINATE_SPACE_DB,
+  COORDINATE_SPACE_RENDER,
+  dbPlayToRenderPlay,
+  hasSavedDefenderPositions,
+  hasSavedPlayerPositions,
+} from './positionCoordinates'
 
 export type LegacyPlay = Play & {
   formation?: string
@@ -37,6 +48,9 @@ export function normalizePlayRecord(
   const frontId = play.frontId ?? DEFAULT_FRONT_ID
   const frontName = play.frontName ?? getFrontLabel(frontId) ?? getDefaultFrontName()
 
+  const savedPlayers = hasSavedPlayerPositions(play.players)
+  const savedDefenders = hasSavedDefenderPositions(play.defenders)
+
   const normalized: Play = {
     ...createEmptyPlay(playType),
     ...play,
@@ -47,17 +61,28 @@ export function normalizePlayRecord(
     opponentFormationId: play.opponentFormationId ?? null,
     opponentFormationName: play.opponentFormationName ?? null,
     driveStartYardLine: resolveDriveStartYardLine(play),
+    players: savedPlayers
+      ? play.players
+      : createPlayersForFormation(formationId, customFormations),
+    defenders: savedDefenders ? play.defenders : createDefendersForFront(frontId),
     routes: play.routes ?? createEmptyRoutes(),
     blocks: play.blocks ?? createEmptyBlocks(),
     playerNotes: {
       ...createEmptyPlayerNotes(),
       ...play.playerNotes,
     },
-    defenders: play.defenders ?? createDefendersForFront(frontId),
-    playType,
     defenderRoutes: play.defenderRoutes ?? createEmptyDefenderRoutes(),
+    playType,
     categories: normalizeCategories(play.categories),
   }
 
-  return clampPlayPositions(migratePlayToFieldView(normalized))
+  const fromDatabase = normalized.positionFormat === COORDINATE_SPACE_DB
+  const renderPlay = fromDatabase ? dbPlayToRenderPlay(normalized) : normalized
+
+  const migrated = fromDatabase ? renderPlay : migratePlayToFieldView(renderPlay)
+
+  return {
+    ...clampPlayPositions(migrated),
+    positionFormat: COORDINATE_SPACE_RENDER,
+  }
 }
