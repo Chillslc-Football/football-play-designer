@@ -8,20 +8,52 @@ import './Header.css'
  */
 export function Header() {
   const { user, signOut } = useAuth()
-  const { team } = useTeam()
+  const { team, activeTeamId, memberships, switchTeam } = useTeam()
   const email = user?.email ?? ''
+
+  async function handleTeamChange(teamId: string) {
+    const result = await switchTeam(teamId)
+    if (result.error) {
+      console.error('[Header] team switch failed', result.error)
+    }
+  }
 
   return (
     <header className="header">
       <div className="header-inner">
         {email && (
           <div className="header-user">
-            <span className="header-user-email" title={email}>
-              {email}
-            </span>
-            <button type="button" className="btn header-logout-btn" onClick={() => signOut()}>
-              Logout
-            </button>
+            <div className="header-team-row">
+              <span className="header-user-label">Team:</span>
+              {memberships.length > 1 ? (
+                <select
+                  className="select-field header-team-select"
+                  value={activeTeamId ?? ''}
+                  onChange={(event) => void handleTeamChange(event.target.value)}
+                  aria-label="Active team"
+                >
+                  {memberships.map((membership) => (
+                    <option key={membership.team.id} value={membership.team.id}>
+                      {membership.team.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="header-team-name">{team?.name ?? '—'}</span>
+              )}
+            </div>
+
+            <div className="header-account-row">
+              <span className="header-signed-in">
+                Signed in as:{' '}
+                <span className="header-user-email" title={email}>
+                  {email}
+                </span>
+              </span>
+              <button type="button" className="btn header-logout-btn" onClick={() => signOut()}>
+                Logout
+              </button>
+            </div>
           </div>
         )}
 
@@ -30,7 +62,6 @@ export function Header() {
             🏈
           </div>
           <h1 className="header-title">Football Play Designer MVP</h1>
-          {team && <p className="header-team-name">{team.name}</p>}
           <p className="header-subtitle">
             Design, save, and mirror offensive plays — built for coaches.
           </p>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import * as teamRepository from '../repositories/teamRepository'
-import type { Team, TeamRole } from '../types/team'
+import type { Team, TeamMembership, TeamRole } from '../types/team'
 import { TeamContext, type TeamResult } from './teamContext'
 
 type TeamProviderProps = {
@@ -14,12 +14,14 @@ function applyLoadResult(
     setActiveTeamId: (id: string | null) => void
     setTeam: (team: Team | null) => void
     setRole: (role: TeamRole | null) => void
+    setMemberships: (memberships: TeamMembership[]) => void
     setNeedsOnboarding: (needs: boolean) => void
   },
 ) {
   setters.setActiveTeamId(result.activeTeamId)
   setters.setTeam(result.team)
   setters.setRole(result.role)
+  setters.setMemberships(result.memberships)
   setters.setNeedsOnboarding(result.needsOnboarding)
 }
 
@@ -28,6 +30,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null)
   const [team, setTeam] = useState<Team | null>(null)
   const [role, setRole] = useState<TeamRole | null>(null)
+  const [memberships, setMemberships] = useState<TeamMembership[]>([])
   const [loading, setLoading] = useState(true)
   const [profileLoaded, setProfileLoaded] = useState(false)
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
@@ -37,6 +40,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
       setActiveTeamId(null)
       setTeam(null)
       setRole(null)
+      setMemberships([])
       setProfileLoaded(false)
       setNeedsOnboarding(false)
       setLoading(false)
@@ -51,6 +55,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
         setActiveTeamId,
         setTeam,
         setRole,
+        setMemberships,
         setNeedsOnboarding,
       })
     } catch (error) {
@@ -58,6 +63,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
       setActiveTeamId(null)
       setTeam(null)
       setRole(null)
+      setMemberships([])
       setNeedsOnboarding(true)
     } finally {
       setProfileLoaded(true)
@@ -84,25 +90,59 @@ export function TeamProvider({ children }: TeamProviderProps) {
 
       try {
         const teamId = await teamRepository.createTeam(trimmed)
-        const membership = await teamRepository.loadActiveTeamAfterCreate(user.id, teamId)
-        setActiveTeamId(teamId)
-        setTeam(membership.team)
-        setRole(membership.role)
-        setProfileLoaded(true)
-        setNeedsOnboarding(false)
+        await teamRepository.loadActiveTeamAfterCreate(user.id, teamId)
+        const result = await teamRepository.loadActiveTeamForUser(user.id)
+        applyLoadResult(result, {
+          setActiveTeamId,
+          setTeam,
+          setRole,
+          setMemberships,
+          setNeedsOnboarding,
+        })
         return { error: null }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Could not create team'
         setActiveTeamId(null)
         setTeam(null)
         setRole(null)
+        setMemberships([])
         setNeedsOnboarding(true)
         return { error: message }
       } finally {
+        setProfileLoaded(true)
         setLoading(false)
       }
     },
     [user],
+  )
+
+  const switchTeam = useCallback(
+    async (teamId: string): Promise<TeamResult> => {
+      if (!user) {
+        return { error: 'Not signed in' }
+      }
+
+      const membership = memberships.find((entry) => entry.team.id === teamId)
+      if (!membership) {
+        return { error: 'You are not a member of that team' }
+      }
+
+      if (teamId === activeTeamId) {
+        return { error: null }
+      }
+
+      try {
+        await teamRepository.updateLastTeamId(user.id, teamId)
+        setActiveTeamId(teamId)
+        setTeam(membership.team)
+        setRole(membership.role)
+        return { error: null }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not switch team'
+        return { error: message }
+      }
+    },
+    [user, memberships, activeTeamId],
   )
 
   const value = useMemo(
@@ -110,20 +150,24 @@ export function TeamProvider({ children }: TeamProviderProps) {
       activeTeamId,
       team,
       role,
+      memberships,
       loading,
       profileLoaded,
       needsOnboarding,
       createTeam,
+      switchTeam,
       refreshTeam,
     }),
     [
       activeTeamId,
       team,
       role,
+      memberships,
       loading,
       profileLoaded,
       needsOnboarding,
       createTeam,
+      switchTeam,
       refreshTeam,
     ],
   )

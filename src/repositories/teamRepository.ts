@@ -11,6 +11,7 @@ export type ActiveTeamLoadResult = {
   activeTeamId: string | null
   team: Team | null
   role: TeamRole | null
+  memberships: TeamMembership[]
   needsOnboarding: boolean
 }
 
@@ -123,48 +124,51 @@ export async function loadActiveTeamForUser(userId: string): Promise<ActiveTeamL
   const memberRows = await fetchMembershipRows(userId)
   console.log('[TeamProvider] team_members rows', memberRows)
 
-  const findRole = (teamId: string): TeamRole | null =>
-    memberRows.find((row) => row.team_id === teamId)?.role ?? null
+  const memberships: TeamMembership[] = []
+  for (const row of memberRows) {
+    const team = await fetchTeamById(row.team_id)
+    if (!team) continue
+    memberships.push({ role: row.role, team })
+  }
+
+  const findMembership = (teamId: string): TeamMembership | null =>
+    memberships.find((entry) => entry.team.id === teamId) ?? null
 
   if (lastTeamId) {
-    const team = await fetchTeamById(lastTeamId)
-    console.log('[TeamProvider] active team fetch result', team)
+    const activeMembership = findMembership(lastTeamId)
+    console.log('[TeamProvider] active team fetch result', activeMembership?.team ?? null)
 
-    if (team) {
-      const role = findRole(lastTeamId)
-      if (role) {
-        return {
-          profile,
-          activeTeamId: lastTeamId,
-          team,
-          role,
-          needsOnboarding: false,
-        }
+    if (activeMembership) {
+      return {
+        profile,
+        activeTeamId: lastTeamId,
+        team: activeMembership.team,
+        role: activeMembership.role,
+        memberships,
+        needsOnboarding: false,
       }
     }
   }
 
-  if (memberRows.length > 0) {
-    const fallbackTeamId = memberRows[0].team_id
-    const team = await fetchTeamById(fallbackTeamId)
+  if (memberships.length > 0) {
+    const fallback = memberships[0]
     console.log('[TeamProvider] team_members fallback result', {
-      teamId: fallbackTeamId,
-      team,
-      role: memberRows[0].role,
+      teamId: fallback.team.id,
+      team: fallback.team,
+      role: fallback.role,
     })
 
-    if (team) {
-      if (lastTeamId !== fallbackTeamId) {
-        await updateLastTeamId(userId, fallbackTeamId)
-      }
+    if (lastTeamId !== fallback.team.id) {
+      await updateLastTeamId(userId, fallback.team.id)
+    }
 
-      return {
-        profile,
-        activeTeamId: fallbackTeamId,
-        team,
-        role: memberRows[0].role,
-        needsOnboarding: false,
-      }
+    return {
+      profile,
+      activeTeamId: fallback.team.id,
+      team: fallback.team,
+      role: fallback.role,
+      memberships,
+      needsOnboarding: false,
     }
   }
 
@@ -176,6 +180,7 @@ export async function loadActiveTeamForUser(userId: string): Promise<ActiveTeamL
     activeTeamId: null,
     team: null,
     role: null,
+    memberships,
     needsOnboarding,
   }
 }

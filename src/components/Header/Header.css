@@ -17,18 +17,49 @@
   top: 0;
   right: 0;
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
   max-width: 100%;
 }
 
-.header-user-email {
+.header-team-row,
+.header-account-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.header-user-label,
+.header-signed-in {
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.header-user-email {
+  color: var(--text-light);
   max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+.header-team-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-light);
+}
+
+.header-team-select {
+  min-width: 160px;
+  max-width: 220px;
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 13px;
 }
 
 .header-logout-btn {
@@ -55,13 +86,6 @@
   letter-spacing: -0.3px;
 }
 
-.header-team-name {
-  margin: 0 0 6px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text-light);
-}
-
 .header-subtitle {
   font-size: 0.95rem;
   color: var(--text-muted);
@@ -72,8 +96,13 @@
 @media (max-width: 600px) {
   .header-user {
     position: static;
-    justify-content: center;
+    align-items: center;
     margin-bottom: var(--space-sm);
+  }
+
+  .header-team-row,
+  .header-account-row {
+    justify-content: center;
   }
 
   .header-user-email {
