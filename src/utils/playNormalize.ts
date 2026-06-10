@@ -1,6 +1,7 @@
 import { DEFAULT_FRONT_ID } from '../data/builtinFronts'
 import { DEFAULT_FORMATION_ID } from '../data/builtinFormations'
 import { createEmptyBlocks } from '../types/block'
+import { createEmptyMotions } from '../types/motion'
 import { resolveDriveStartYardLine } from '../types/driveStart'
 import { createEmptyPlay, type Play } from '../types/play'
 import { createEmptyPlayerNotes } from '../types/playerNotes'
@@ -67,6 +68,7 @@ export function normalizePlayRecord(
     defenders: savedDefenders ? play.defenders : createDefendersForFront(frontId),
     routes: play.routes ?? createEmptyRoutes(),
     blocks: play.blocks ?? createEmptyBlocks(),
+    motions: play.motions ?? createEmptyMotions(),
     playerNotes: {
       ...createEmptyPlayerNotes(),
       ...play.playerNotes,

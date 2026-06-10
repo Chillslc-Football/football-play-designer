@@ -1,6 +1,7 @@
 import { DEFAULT_FORMATION_ID } from '../data/builtinFormations'
 import { DEFAULT_FRONT_ID } from '../data/builtinFronts'
 import { createEmptyBlocks, type Block } from './block'
+import { createEmptyMotions, type Motion } from './motion'
 import type { Defender } from './defender'
 import type { DriveStartYardLine } from './driveStart'
 import { DEFAULT_DRIVE_START } from './driveStart'
@@ -48,6 +49,7 @@ export type Play = {
   defenders: Defender[]
   routes: Route[]
   blocks: Block[]
+  motions: Motion[]
   defenderRoutes: DefenderRoute[]
   playerNotes: PlayerNotes
   /** Category tags for filtering (Run, Pass, custom labels, etc.). */
@@ -76,6 +78,7 @@ export function createEmptyPlay(playType: PlayType = DEFAULT_PLAY_TYPE): Play {
     defenders: createDefendersForFront(DEFAULT_FRONT_ID),
     routes: createEmptyRoutes(),
     blocks: createEmptyBlocks(),
+    motions: createEmptyMotions(),
     defenderRoutes: createEmptyDefenderRoutes(),
     playerNotes: createEmptyPlayerNotes(),
     categories: [],

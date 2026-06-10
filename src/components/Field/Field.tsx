@@ -13,6 +13,7 @@ import {
 } from '../../constants/field'
 import { LOS_VIEW_Y } from '../../constants/field'
 import type { Block } from '../../types/block'
+import type { Motion, MotionType } from '../../types/motion'
 import type { Defender, DefenderLabel } from '../../types/defender'
 import type { DefenderRoute } from '../../types/defenderRoute'
 import type { DriveStartYardLine } from '../../types/driveStart'
@@ -42,11 +43,14 @@ import {
   getAnchorVertexIndex,
   type RouteEditSelection,
 } from '../../utils/routeEdit'
+import { motionToRoute, routeToMotion } from '../../utils/motionEdit'
 import { BlockLine } from '../BlockLine/BlockLine'
+import { MotionLine } from '../MotionLine/MotionLine'
 import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog'
 import type { DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
 import { PlayerMarker } from '../PlayerMarker/PlayerMarker'
 import { RouteLine } from '../RouteLine/RouteLine'
+import { FIELD_DISPLAY_THEME } from '../../constants/fieldDisplayTheme'
 import './Field.css'
 
 const DRAG_THRESHOLD = 5
@@ -64,8 +68,10 @@ type FieldProps = {
   routes: Route[]
   defenderRoutes: DefenderRoute[]
   blocks: Block[]
+  motions: Motion[]
   playerNotes: PlayerNotes
   drawingMode: DrawingMode
+  motionType: MotionType
   driveStartYardLine: DriveStartYardLine
   selectedPlayerId: PlayerLabel | null
   selectedDefenderId: DefenderLabel | null
@@ -76,6 +82,7 @@ type FieldProps = {
   onRouteComplete: (route: Route) => void
   onDefenderRouteComplete: (route: DefenderRoute) => void
   onBlockComplete: (block: Block) => void
+  onMotionComplete: (motion: Motion) => void
 }
 
 type DraftPath = {
@@ -121,8 +128,10 @@ export function Field({
   routes,
   defenderRoutes,
   blocks,
+  motions,
   playerNotes,
   drawingMode,
+  motionType,
   driveStartYardLine,
   selectedPlayerId,
   selectedDefenderId,
@@ -133,10 +142,12 @@ export function Field({
   onRouteComplete,
   onDefenderRouteComplete,
   onBlockComplete,
+  onMotionComplete,
 }: FieldProps) {
   const offenseEditable = !viewOnly && playType === 'offensive'
   const defenseEditable = !viewOnly && playType === 'defensive'
   const routesEditable = offenseEditable
+  const motionsEditable = offenseEditable
   const defenderRoutesEditable = defenseEditable
   const svgRef = useRef<SVGSVGElement>(null)
   const draggingTargetRef = useRef<DragTarget | null>(null)
@@ -145,21 +156,29 @@ export function Field({
   const pointerStartRef = useRef<(DragTarget & { x: number; y: number }) | null>(null)
   const routeDragRef = useRef<RouteDragState | null>(null)
   const routeEditSelectionRef = useRef<RouteEditSelection | null>(null)
+  const motionDragRef = useRef<RouteDragState | null>(null)
+  const motionEditSelectionRef = useRef<RouteEditSelection | null>(null)
+  const motionTypeRef = useRef<MotionType>(motionType)
   const defenderRouteDragRef = useRef<DefenderRouteDragState | null>(null)
   const defenderRouteEditSelectionRef = useRef<DefenderRouteEditSelection | null>(null)
 
   const [draftPath, setDraftPath] = useState<DraftPath | null>(null)
   const [freehandDraft, setFreehandDraft] = useState<FreehandDraft | null>(null)
   const [routeEditSelection, setRouteEditSelection] = useState<RouteEditSelection | null>(null)
+  const [motionFreehandDraft, setMotionFreehandDraft] = useState<FreehandDraft | null>(null)
+  const [motionEditSelection, setMotionEditSelection] = useState<RouteEditSelection | null>(null)
   const [defenderFreehandDraft, setDefenderFreehandDraft] = useState<DefenderFreehandDraft | null>(
     null,
   )
   const [defenderRouteEditSelection, setDefenderRouteEditSelection] =
     useState<DefenderRouteEditSelection | null>(null)
   const [deleteEntireRouteOpen, setDeleteEntireRouteOpen] = useState(false)
+  const [deleteEntireMotionOpen, setDeleteEntireMotionOpen] = useState(false)
 
   routeEditSelectionRef.current = routeEditSelection
+  motionEditSelectionRef.current = motionEditSelection
   defenderRouteEditSelectionRef.current = defenderRouteEditSelection
+  motionTypeRef.current = motionType
 
   drawingModeRef.current = drawingMode
 
@@ -233,6 +252,15 @@ export function Field({
     setRouteEditSelection(null)
   }, [])
 
+  const clearMotionDrag = useCallback(() => {
+    motionDragRef.current = null
+    setMotionFreehandDraft(null)
+  }, [])
+
+  const clearMotionEditSelection = useCallback(() => {
+    setMotionEditSelection(null)
+  }, [])
+
   const clearDefenderRouteEditSelection = useCallback(() => {
     setDefenderRouteEditSelection(null)
   }, [])
@@ -256,6 +284,19 @@ export function Field({
     [defenderRoutes],
   )
 
+  const getMotionForPlayer = useCallback(
+    (playerId: PlayerLabel): Motion => {
+      return (
+        motions.find((entry) => entry.playerId === playerId) ?? {
+          playerId,
+          motionType: motionTypeRef.current,
+          points: [],
+        }
+      )
+    },
+    [motions],
+  )
+
   const resolveDrawAnchor = useCallback((): {
     playerId: PlayerLabel
     vertexIndex: number
@@ -276,6 +317,27 @@ export function Field({
 
     return { playerId: selectedPlayerId, vertexIndex: 0 }
   }, [selectedPlayerId, getRouteForPlayer, routesEditable])
+
+  const resolveMotionDrawAnchor = useCallback((): {
+    playerId: PlayerLabel
+    vertexIndex: number
+  } | null => {
+    if (!motionsEditable || drawingModeRef.current !== 'motion') return null
+
+    if (motionEditSelectionRef.current) {
+      return {
+        playerId: motionEditSelectionRef.current.playerId,
+        vertexIndex: getAnchorVertexIndex(motionEditSelectionRef.current),
+      }
+    }
+
+    if (!selectedPlayerId) return null
+
+    const existing = getMotionForPlayer(selectedPlayerId)
+    if (existing.points.length > 0) return null
+
+    return { playerId: selectedPlayerId, vertexIndex: 0 }
+  }, [selectedPlayerId, getMotionForPlayer, motionsEditable])
 
   const resolveDefenderDrawAnchor = useCallback((): {
     defenderId: DefenderLabel
@@ -313,6 +375,24 @@ export function Field({
       })
     },
     [getRouteForPlayer, onRouteComplete],
+  )
+
+  const commitMotionExtension = useCallback(
+    (playerId: PlayerLabel, anchorVertexIndex: number, newPoints: Position[]) => {
+      if (newPoints.length === 0) return
+
+      const existing = getMotionForPlayer(playerId)
+      const updatedRoute = extendRouteFromAnchor(motionToRoute(existing), anchorVertexIndex, newPoints)
+      const updated = routeToMotion(updatedRoute, motionTypeRef.current)
+      onMotionComplete(updated)
+
+      setMotionEditSelection({
+        playerId,
+        kind: 'vertex',
+        vertexIndex: updated.points.length,
+      })
+    },
+    [getMotionForPlayer, onMotionComplete],
   )
 
   const commitDefenderRouteExtension = useCallback(
@@ -380,6 +460,55 @@ export function Field({
     setDeleteEntireRouteOpen(true)
   }, [selectedPlayerId, routes, routesEditable])
 
+  const deleteSelectedMotionSegment = useCallback(() => {
+    const selected = motionEditSelectionRef.current
+    if (!selected || selected.kind !== 'segment' || motionDragRef.current) return
+
+    const motion = motions.find((entry) => entry.playerId === selected.playerId)
+    if (!motion) {
+      clearMotionEditSelection()
+      return
+    }
+
+    const updatedRoute = deleteRouteSegment(motionToRoute(motion), selected.segmentIndex)
+    const updated = routeToMotion(updatedRoute, motion.motionType)
+    onMotionComplete(updated)
+
+    if (updated.points.length === 0) {
+      clearMotionEditSelection()
+      return
+    }
+
+    const nextSegmentIndex = Math.min(selected.segmentIndex, updated.points.length - 1)
+    setMotionEditSelection({
+      playerId: selected.playerId,
+      kind: 'segment',
+      segmentIndex: nextSegmentIndex,
+    })
+  }, [motions, onMotionComplete, clearMotionEditSelection])
+
+  const executeDeleteEntireMotion = useCallback(() => {
+    const playerId = motionEditSelectionRef.current?.playerId ?? selectedPlayerId
+    if (!playerId || !motionsEditable) return
+
+    const motion = motions.find((entry) => entry.playerId === playerId)
+    if (!motion || motion.points.length === 0) return
+
+    onMotionComplete(routeToMotion(deleteEntireRoute(motionToRoute(motion)), motion.motionType))
+    clearMotionEditSelection()
+    setDeleteEntireMotionOpen(false)
+  }, [selectedPlayerId, motions, motionsEditable, onMotionComplete, clearMotionEditSelection])
+
+  const requestDeleteEntireMotion = useCallback(() => {
+    const playerId = motionEditSelectionRef.current?.playerId ?? selectedPlayerId
+    if (!playerId || !motionsEditable) return
+
+    const motion = motions.find((entry) => entry.playerId === playerId)
+    if (!motion || motion.points.length === 0) return
+
+    setDeleteEntireMotionOpen(true)
+  }, [selectedPlayerId, motions, motionsEditable])
+
   const deleteSelectedDefenderRouteSegment = useCallback(() => {
     const selected = defenderRouteEditSelectionRef.current
     if (!selected || selected.kind !== 'segment' || defenderRouteDragRef.current) return
@@ -424,6 +553,35 @@ export function Field({
 
   const toggleVertexSelection = useCallback((playerId: PlayerLabel, vertexIndex: number) => {
     setRouteEditSelection((current) => {
+      if (
+        current?.playerId === playerId &&
+        current.kind === 'vertex' &&
+        current.vertexIndex === vertexIndex
+      ) {
+        return null
+      }
+      return { playerId, kind: 'vertex', vertexIndex }
+    })
+  }, [])
+
+  const toggleMotionSegmentSelection = useCallback(
+    (playerId: PlayerLabel, segmentIndex: number) => {
+      setMotionEditSelection((current) => {
+        if (
+          current?.playerId === playerId &&
+          current.kind === 'segment' &&
+          current.segmentIndex === segmentIndex
+        ) {
+          return null
+        }
+        return { playerId, kind: 'segment', segmentIndex }
+      })
+    },
+    [],
+  )
+
+  const toggleMotionVertexSelection = useCallback((playerId: PlayerLabel, vertexIndex: number) => {
+    setMotionEditSelection((current) => {
       if (
         current?.playerId === playerId &&
         current.kind === 'vertex' &&
@@ -487,7 +645,10 @@ export function Field({
     if (
       target.closest('.route-segment-group') ||
       target.closest('.route-vertex-handle-hit') ||
-      target.closest('.route-path-hit')
+      target.closest('.route-path-hit') ||
+      target.closest('.motion-segment-group') ||
+      target.closest('.motion-vertex-handle-hit') ||
+      target.closest('.motion-path-hit')
     ) {
       return
     }
@@ -501,6 +662,25 @@ export function Field({
 
       event.preventDefault()
       routeDragRef.current = {
+        playerId: anchor.playerId,
+        anchorVertexIndex: anchor.vertexIndex,
+        dragPoints: [],
+        screenX: event.clientX,
+        screenY: event.clientY,
+        startedDrag: false,
+      }
+      return
+    }
+
+    if (drawingMode === 'motion' && playType === 'offensive') {
+      const anchor = resolveMotionDrawAnchor()
+      if (!anchor) {
+        clearMotionEditSelection()
+        return
+      }
+
+      event.preventDefault()
+      motionDragRef.current = {
         playerId: anchor.playerId,
         anchorVertexIndex: anchor.vertexIndex,
         dragPoints: [],
@@ -530,7 +710,7 @@ export function Field({
       return
     }
 
-    if (!offenseEditable || !selectedPlayerId) return
+    if (!offenseEditable || !selectedPlayerId || drawingMode !== 'block') return
 
     event.preventDefault()
     clearRouteEditSelection()
@@ -542,8 +722,10 @@ export function Field({
 
   useEffect(() => {
     clearRouteDrag()
+    clearMotionDrag()
     clearDefenderRouteDrag()
     clearRouteEditSelection()
+    clearMotionEditSelection()
     clearDefenderRouteEditSelection()
   }, [
     drawingMode,
@@ -551,8 +733,10 @@ export function Field({
     selectedDefenderId,
     playType,
     clearRouteDrag,
+    clearMotionDrag,
     clearDefenderRouteDrag,
     clearRouteEditSelection,
+    clearMotionEditSelection,
     clearDefenderRouteEditSelection,
   ])
 
@@ -586,6 +770,7 @@ export function Field({
       }
 
       const routeDrag = routeDragRef.current
+      const motionDrag = motionDragRef.current
 
       if (
         drawingModeRef.current === 'route' &&
@@ -608,6 +793,31 @@ export function Field({
             playerId: routeDrag.playerId,
             anchorVertexIndex: routeDrag.anchorVertexIndex,
             points: routeDrag.dragPoints,
+          })
+        }
+      }
+
+      if (
+        drawingModeRef.current === 'motion' &&
+        playType === 'offensive' &&
+        motionDrag &&
+        !dragging
+      ) {
+        const position = getSvgPosition(event.clientX, event.clientY)
+        const dx = event.clientX - motionDrag.screenX
+        const dy = event.clientY - motionDrag.screenY
+        const distance = Math.sqrt(dx * dx + dy * dy)
+
+        if (!motionDrag.startedDrag && distance > DRAG_THRESHOLD) {
+          motionDrag.startedDrag = true
+        }
+
+        if (motionDrag.startedDrag) {
+          motionDrag.dragPoints = appendPathPoint(motionDrag.dragPoints, position)
+          setMotionFreehandDraft({
+            playerId: motionDrag.playerId,
+            anchorVertexIndex: motionDrag.anchorVertexIndex,
+            points: motionDrag.dragPoints,
           })
         }
       }
@@ -659,6 +869,7 @@ export function Field({
       if (pointerStart?.kind === 'offense' && offenseEditable) {
         onSelectPlayer(pointerStart.id)
         clearRouteEditSelection()
+        clearMotionEditSelection()
         pointerStartRef.current = null
       } else if (pointerStart?.kind === 'defense' && defenseEditable) {
         onSelectDefender(pointerStart.id)
@@ -691,6 +902,31 @@ export function Field({
         }
 
         clearRouteDrag()
+      }
+
+      const motionDrag = motionDragRef.current
+
+      if (drawingModeRef.current === 'motion' && playType === 'offensive' && motionDrag) {
+        if (!motionDrag.startedDrag) {
+          const position = getSvgPosition(event.clientX, event.clientY)
+          const last = motionDrag.dragPoints[motionDrag.dragPoints.length - 1]
+          const dx = last ? position.x - last.x : 0
+          const dy = last ? position.y - last.y : 0
+          const isDistinct =
+            !last || Math.sqrt(dx * dx + dy * dy) >= CLICK_MIN_DISTANCE
+
+          if (isDistinct) {
+            commitMotionExtension(motionDrag.playerId, motionDrag.anchorVertexIndex, [position])
+          }
+        } else if (motionDrag.dragPoints.length > 0) {
+          commitMotionExtension(
+            motionDrag.playerId,
+            motionDrag.anchorVertexIndex,
+            motionDrag.dragPoints,
+          )
+        }
+
+        clearMotionDrag()
       }
 
       const defenderRouteDrag = defenderRouteDragRef.current
@@ -744,7 +980,12 @@ export function Field({
 
       if (event.key === 'Delete' || event.key === 'Backspace') {
         if (event.shiftKey) {
-          if (playType === 'offensive' && routesEditable && !routeDragRef.current) {
+          if (
+            playType === 'offensive' &&
+            drawingModeRef.current === 'route' &&
+            routesEditable &&
+            !routeDragRef.current
+          ) {
             const playerId = routeEditSelectionRef.current?.playerId ?? selectedPlayerId
             const route = playerId
               ? routes.find((entry) => entry.playerId === playerId)
@@ -754,17 +995,41 @@ export function Field({
               event.preventDefault()
               setDeleteEntireRouteOpen(true)
             }
+          } else if (
+            playType === 'offensive' &&
+            drawingModeRef.current === 'motion' &&
+            motionsEditable &&
+            !motionDragRef.current
+          ) {
+            const playerId = motionEditSelectionRef.current?.playerId ?? selectedPlayerId
+            const motion = playerId
+              ? motions.find((entry) => entry.playerId === playerId)
+              : undefined
+
+            if (motion && motion.points.length > 0) {
+              event.preventDefault()
+              setDeleteEntireMotionOpen(true)
+            }
           }
           return
         }
 
         if (
           playType === 'offensive' &&
+          drawingModeRef.current === 'route' &&
           routeEditSelectionRef.current?.kind === 'segment' &&
           !routeDragRef.current
         ) {
           event.preventDefault()
           deleteSelectedRouteSegment()
+        } else if (
+          playType === 'offensive' &&
+          drawingModeRef.current === 'motion' &&
+          motionEditSelectionRef.current?.kind === 'segment' &&
+          !motionDragRef.current
+        ) {
+          event.preventDefault()
+          deleteSelectedMotionSegment()
         } else if (
           playType === 'defensive' &&
           defenderRouteEditSelectionRef.current?.kind === 'segment' &&
@@ -799,11 +1064,15 @@ export function Field({
     selectedPlayerId,
     routesEditable,
     deleteSelectedRouteSegment,
+    deleteSelectedMotionSegment,
     deleteSelectedDefenderRouteSegment,
     clearRouteDrag,
+    clearMotionDrag,
     clearDefenderRouteDrag,
     commitRouteExtension,
+    commitMotionExtension,
     commitDefenderRouteExtension,
+    motions,
   ])
 
   const freehandRouteForDisplay = useMemo(() => {
@@ -821,6 +1090,24 @@ export function Field({
       playerPosition,
     }
   }, [freehandDraft, getRouteForPlayer, players])
+
+  const freehandMotionForDisplay = useMemo(() => {
+    if (!motionFreehandDraft) return null
+
+    const playerPosition = getPlayerPosition(motionFreehandDraft.playerId)
+    const existing = getMotionForPlayer(motionFreehandDraft.playerId)
+    const updatedRoute = extendRouteFromAnchor(
+      motionToRoute(existing),
+      motionFreehandDraft.anchorVertexIndex,
+      motionFreehandDraft.points,
+    )
+    return {
+      playerId: motionFreehandDraft.playerId,
+      motionType: motionTypeRef.current,
+      points: updatedRoute.points,
+      playerPosition,
+    }
+  }, [motionFreehandDraft, getMotionForPlayer, players, motionType])
 
   const freehandDefenderRouteForDisplay = useMemo(() => {
     if (!defenderFreehandDraft) return null
@@ -843,12 +1130,31 @@ export function Field({
       routes.find((entry) => entry.playerId === selectedPlayerId && entry.points.length > 0),
   )
 
-  const canDeleteEntireRoute = routesEditable && selectedPlayerHasRoute
+  const selectedPlayerHasMotion = Boolean(
+    selectedPlayerId &&
+      motions.find((entry) => entry.playerId === selectedPlayerId && entry.points.length > 0),
+  )
+
+  const canDeleteEntireRoute = routesEditable && drawingMode === 'route' && selectedPlayerHasRoute
+  const canDeleteEntireMotion =
+    motionsEditable && drawingMode === 'motion' && selectedPlayerHasMotion
 
   const hintText = (() => {
     if (playType === 'offensive' && selectedPlayerId) {
       if (drawingMode === 'block') {
         return `${selectedPlayerId} selected — drag on the field to draw a blocking assignment`
+      }
+      if (drawingMode === 'motion') {
+        if (motionEditSelection?.kind === 'segment') {
+          return 'Segment selected — Delete removes segment, Shift+Delete removes entire motion'
+        }
+        if (motionEditSelection) {
+          return 'Extend motion from selected point — click or drag on the field'
+        }
+        if (selectedPlayerHasMotion) {
+          return `${selectedPlayerId} selected — click motion to select a segment`
+        }
+        return `${selectedPlayerId} selected — click the field to start a ${motionType} motion`
       }
       if (routeEditSelection?.kind === 'segment') {
         return 'Segment selected — Delete removes segment, Shift+Delete removes entire route'
@@ -876,7 +1182,7 @@ export function Field({
   const rightSidelineX = FIELD_WIDTH - YARD_NUMBER_SIDELINE_INSET
 
   return (
-    <div className="field-container">
+    <div className={`field-container field-display-${FIELD_DISPLAY_THEME}`}>
       <ConfirmDialog
         open={deleteEntireRouteOpen}
         message="Delete this entire route?"
@@ -885,8 +1191,16 @@ export function Field({
         onConfirm={executeDeleteEntireRoute}
         onCancel={() => setDeleteEntireRouteOpen(false)}
       />
+      <ConfirmDialog
+        open={deleteEntireMotionOpen}
+        message="Delete this entire motion?"
+        variant="delete"
+        confirmLabel="Delete Motion"
+        onConfirm={executeDeleteEntireMotion}
+        onCancel={() => setDeleteEntireMotionOpen(false)}
+      />
 
-      {(hintText || canDeleteEntireRoute) && (
+      {(hintText || canDeleteEntireRoute || canDeleteEntireMotion) && (
         <div className="route-draw-controls">
           {hintText && <span className="route-draw-hint">{hintText}</span>}
           {canDeleteEntireRoute && (
@@ -896,6 +1210,15 @@ export function Field({
               onClick={requestDeleteEntireRoute}
             >
               Delete Entire Route
+            </button>
+          )}
+          {canDeleteEntireMotion && (
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={requestDeleteEntireMotion}
+            >
+              Delete Entire Motion
             </button>
           )}
         </div>
@@ -1104,6 +1427,35 @@ export function Field({
               />
             ))}
 
+            {motions.map((motion) => (
+              <MotionLine
+                key={`motion-${motion.playerId}`}
+                playerPosition={getPlayerPosition(motion.playerId)}
+                motion={motion}
+                readOnly={!motionsEditable}
+                selectedSegmentIndex={
+                  motionEditSelection?.playerId === motion.playerId &&
+                  motionEditSelection.kind === 'segment'
+                    ? motionEditSelection.segmentIndex
+                    : null
+                }
+                selectedVertexIndex={
+                  motionEditSelection?.playerId === motion.playerId &&
+                  motionEditSelection.kind === 'vertex'
+                    ? motionEditSelection.vertexIndex
+                    : null
+                }
+                onSegmentSelect={(segmentIndex) => {
+                  if (!motionsEditable || motionDragRef.current) return
+                  toggleMotionSegmentSelection(motion.playerId, segmentIndex)
+                }}
+                onVertexSelect={(vertexIndex) => {
+                  if (!motionsEditable || motionDragRef.current) return
+                  toggleMotionVertexSelection(motion.playerId, vertexIndex)
+                }}
+              />
+            ))}
+
             {routes.map((route) => (
               <RouteLine
                 key={`route-${route.playerId}`}
@@ -1179,6 +1531,18 @@ export function Field({
                 route={{
                   playerId: freehandRouteForDisplay.playerId,
                   points: freehandRouteForDisplay.points,
+                }}
+                isDraft
+              />
+            )}
+
+            {freehandMotionForDisplay && drawingMode === 'motion' && playType === 'offensive' && (
+              <MotionLine
+                playerPosition={freehandMotionForDisplay.playerPosition}
+                motion={{
+                  playerId: freehandMotionForDisplay.playerId,
+                  motionType: freehandMotionForDisplay.motionType,
+                  points: freehandMotionForDisplay.points,
                 }}
                 isDraft
               />

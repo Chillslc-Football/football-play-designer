@@ -1,52 +1,101 @@
+import type { MotionType } from '../../types/motion'
 import type { PlayType } from '../../types/playType'
 import './DrawingModeSelector.css'
 
-export type DrawingMode = 'route' | 'block'
+export type DrawingMode = 'route' | 'block' | 'motion'
 
 type DrawingModeSelectorProps = {
   mode: DrawingMode
   playType?: PlayType
   canEdit?: boolean
+  motionType?: MotionType
+  onMotionTypeChange?: (motionType: MotionType) => void
   onChange: (mode: DrawingMode) => void
+}
+
+type ModeOption = {
+  id: DrawingMode
+  label: string
+  className?: string
+  offensiveOnly?: boolean
 }
 
 export function DrawingModeSelector({
   mode,
   playType = 'offensive',
   canEdit = true,
+  motionType = 'jog',
+  onMotionTypeChange,
   onChange,
 }: DrawingModeSelectorProps) {
   const routeLabel = playType === 'defensive' ? 'Movement' : 'Route'
 
+  const modeOptions: ModeOption[] = [
+    { id: 'route', label: routeLabel },
+    { id: 'block', label: 'Blocking', className: 'drawing-mode-toggle-btn-block', offensiveOnly: true },
+    { id: 'motion', label: 'Motion', className: 'drawing-mode-toggle-btn-motion', offensiveOnly: true },
+  ]
+
+  const visibleModes = modeOptions.filter(
+    (option) => playType === 'offensive' || !option.offensiveOnly,
+  )
+
   return (
-    <div
-      className="drawing-mode-toggle"
-      role="radiogroup"
-      aria-label="Drawing mode"
-    >
-      <button
-        type="button"
-        role="radio"
-        aria-checked={mode === 'route'}
-        className={`drawing-mode-toggle-btn ${mode === 'route' ? 'drawing-mode-toggle-btn-active' : ''}`}
-        onClick={() => onChange('route')}
-        disabled={!canEdit}
+    <div className="drawing-mode-selector">
+      <div
+        className={`drawing-mode-toggle ${
+          visibleModes.length > 2 ? 'drawing-mode-toggle-three' : ''
+        }`}
+        role="radiogroup"
+        aria-label="Drawing mode"
       >
-        {routeLabel}
-      </button>
-      {playType === 'offensive' && (
-        <button
-          type="button"
-          role="radio"
-          aria-checked={mode === 'block'}
-          className={`drawing-mode-toggle-btn drawing-mode-toggle-btn-block ${
-            mode === 'block' ? 'drawing-mode-toggle-btn-active' : ''
-          }`}
-          onClick={() => onChange('block')}
-          disabled={!canEdit}
+        {visibleModes.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            role="radio"
+            aria-checked={mode === option.id}
+            className={`drawing-mode-toggle-btn ${option.className ?? ''} ${
+              mode === option.id ? 'drawing-mode-toggle-btn-active' : ''
+            }`}
+            onClick={() => onChange(option.id)}
+            disabled={!canEdit}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {playType === 'offensive' && mode === 'motion' && (
+        <div
+          className="motion-type-toggle"
+          role="radiogroup"
+          aria-label="Motion type"
         >
-          Blocking
-        </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={motionType === 'jog'}
+            className={`motion-type-toggle-btn motion-type-toggle-btn-jog ${
+              motionType === 'jog' ? 'motion-type-toggle-btn-active' : ''
+            }`}
+            onClick={() => onMotionTypeChange?.('jog')}
+            disabled={!canEdit}
+          >
+            Jog
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={motionType === 'sprint'}
+            className={`motion-type-toggle-btn motion-type-toggle-btn-sprint ${
+              motionType === 'sprint' ? 'motion-type-toggle-btn-active' : ''
+            }`}
+            onClick={() => onMotionTypeChange?.('sprint')}
+            disabled={!canEdit}
+          >
+            Sprint
+          </button>
+        </div>
       )}
     </div>
   )

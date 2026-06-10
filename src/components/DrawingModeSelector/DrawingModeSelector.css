@@ -1,17 +1,37 @@
+.drawing-mode-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
 .drawing-mode-toggle {
   display: flex;
   width: 100%;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  overflow: hidden;
+  overflow: visible;
   background: var(--surface);
 }
 
+.drawing-mode-toggle-three {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Route + Blocking on the first row; Motion gets a full-width second row. */
+.drawing-mode-toggle-three .drawing-mode-toggle-btn:nth-child(3) {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--border-strong);
+  border-right: none;
+  font-size: 12px;
+}
+
 .drawing-mode-toggle-btn {
-  flex: 1;
+  min-width: 0;
   min-height: 32px;
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: 6px 4px;
+  font-size: 11px;
   font-weight: 600;
   font-family: inherit;
   border: none;
@@ -20,9 +40,16 @@
   color: var(--text-on-surface);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.drawing-mode-toggle-btn:last-child {
+.drawing-mode-toggle-three .drawing-mode-toggle-btn:last-child {
+  border-right: none;
+}
+
+.drawing-mode-toggle:not(.drawing-mode-toggle-three) .drawing-mode-toggle-btn:last-child {
   border-right: none;
 }
 
@@ -51,4 +78,60 @@
 
 .drawing-mode-toggle-btn-block.drawing-mode-toggle-btn-active:hover:not(:disabled) {
   background: var(--block-orange-dark);
+}
+
+.drawing-mode-toggle-btn-motion.drawing-mode-toggle-btn-active {
+  background: #f97316;
+}
+
+.drawing-mode-toggle-btn-motion.drawing-mode-toggle-btn-active:hover:not(:disabled) {
+  background: #ea580c;
+}
+
+.motion-type-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: visible;
+  background: var(--surface);
+}
+
+.motion-type-toggle-btn {
+  min-width: 0;
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-right: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-on-surface);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.motion-type-toggle-btn:last-child {
+  border-right: none;
+}
+
+.motion-type-toggle-btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.motion-type-toggle-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.motion-type-toggle-btn-jog.motion-type-toggle-btn-active {
+  background: #f97316;
+  color: #fff;
+}
+
+.motion-type-toggle-btn-sprint.motion-type-toggle-btn-active {
+  background: #22c55e;
+  color: #fff;
 }

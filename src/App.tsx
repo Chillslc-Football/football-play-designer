@@ -11,6 +11,7 @@ import { Notes } from './components/Notes/Notes'
 import { PlaySetupPanel } from './components/PlaySetupPanel/PlaySetupPanel'
 import { PlayerAssignmentPanel } from './components/PlayerAssignmentPanel/PlayerAssignmentPanel'
 import { type DrawingMode } from './components/DrawingModeSelector/DrawingModeSelector'
+import { createEmptyMotions, type Motion, type MotionType } from './types/motion'
 import type { DefenderLabel } from './types/defender'
 import type { DefenderRoute } from './types/defenderRoute'
 import { createEmptyDefenderRoutes } from './types/defenderRoute'
@@ -79,7 +80,13 @@ import {
 } from './utils/playStorage'
 import { getDefenderMirrorPartner } from './utils/defenseMirror'
 import { getMirrorPartner, mirrorFootballPlay } from './utils/footballMirror'
-import { clampDefensePosition, clampOffensePosition } from './utils/losClamp'
+import {
+  clampDefensePosition,
+  clampOffensePosition,
+  isBackfieldLimitExceeded,
+  isInBackfield,
+  resolveOffensePlayerPosition,
+} from './utils/losClamp'
 import { COORDINATE_SPACE_RENDER } from './utils/positionCoordinates'
 import './App.css'
 
@@ -121,6 +128,7 @@ function App() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<PlayerLabel | null>(null)
   const [selectedDefenderId, setSelectedDefenderId] = useState<DefenderLabel | null>(null)
   const [drawingMode, setDrawingMode] = useState<DrawingMode>('route')
+  const [motionType, setMotionType] = useState<MotionType>('jog')
   const [setupPanelOpen, setSetupPanelOpen] = useState(true)
   const [dataLoading, setDataLoading] = useState(false)
   const [playBaseline, setPlayBaseline] = useState(() => playToComparable(createEmptyPlay()))
@@ -650,7 +658,7 @@ function App() {
     setSelectedPlayerId(null)
     setSelectedDefenderId(null)
 
-    if (playType === 'defensive' && drawingMode === 'block') {
+    if (playType === 'defensive' && (drawingMode === 'block' || drawingMode === 'motion')) {
       setDrawingMode('route')
     }
 
@@ -706,6 +714,7 @@ function App() {
         players,
         routes: createEmptyRoutes(),
         blocks: createEmptyBlocks(),
+        motions: createEmptyMotions(),
         defenderRoutes: createEmptyDefenderRoutes(),
         notes: current.notes,
         playerNotes: current.playerNotes,
@@ -756,6 +765,11 @@ function App() {
     const formation = customFormations.find((entry) => entry.id === play.formationId)
     if (!formation) return false
 
+    if (isBackfieldLimitExceeded(play.players)) {
+      showSaveMessage('Formation cannot be saved — maximum 5 players in the backfield.')
+      return false
+    }
+
     const updatedFormation: CustomFormation = {
       ...formation,
       positions: positionsFromPlayers(
@@ -794,6 +808,11 @@ function App() {
 
     if (isFormationNameTaken(name, customFormations)) {
       showSaveMessage('That formation name already exists. Choose a unique name.')
+      return
+    }
+
+    if (isBackfieldLimitExceeded(play.players)) {
+      showSaveMessage('Formation cannot be saved — maximum 5 players in the backfield.')
       return
     }
 
@@ -1015,13 +1034,30 @@ function App() {
   function handlePlayerMove(playerId: PlayerLabel, position: Position) {
     if (!canEdit || play.playType !== 'offensive') return
 
-    const clamped = clampOffensePosition(position)
-    setPlay((current) => ({
-      ...current,
-      players: current.players.map((player) =>
-        player.id === playerId ? { ...player, position: clamped } : player,
-      ),
-    }))
+    const clampedTarget = clampOffensePosition(position)
+    let blockedBackfieldEntry = false
+
+    setPlay((current) => {
+      const previous = current.players.find((player) => player.id === playerId)?.position
+      const nextPosition = resolveOffensePlayerPosition(current.players, playerId, position)
+
+      blockedBackfieldEntry =
+        Boolean(previous) &&
+        !isInBackfield(previous!) &&
+        isInBackfield(clampedTarget) &&
+        !isInBackfield(nextPosition)
+
+      return {
+        ...current,
+        players: current.players.map((player) =>
+          player.id === playerId ? { ...player, position: nextPosition } : player,
+        ),
+      }
+    })
+
+    if (blockedBackfieldEntry) {
+      showSaveMessage('Maximum 5 players in the backfield.')
+    }
   }
 
   function handleDefenderMove(defenderId: DefenderLabel, position: Position) {
@@ -1072,6 +1108,19 @@ function App() {
       return {
         ...current,
         blocks: [...otherBlocks, block],
+      }
+    })
+  }
+
+  function handleMotionComplete(motion: Motion) {
+    if (!canEdit || play.playType !== 'offensive') return
+
+    setPlay((current) => {
+      const otherMotions = current.motions.filter((entry) => entry.playerId !== motion.playerId)
+      return {
+        ...current,
+        motions:
+          motion.points.length === 0 ? otherMotions : [...otherMotions, motion],
       }
     })
   }
@@ -1160,6 +1209,8 @@ function App() {
           onDeletePlay={handleDeletePlay}
           playType={play.playType}
           drawingMode={drawingMode}
+          motionType={motionType}
+          onMotionTypeChange={setMotionType}
           onDrawingModeChange={setDrawingMode}
           onNewPlay={handleNewPlay}
           onSaveChanges={handleSaveChanges}
@@ -1191,8 +1242,10 @@ function App() {
                   routes={play.routes}
                   defenderRoutes={play.defenderRoutes}
                   blocks={play.blocks}
+                  motions={play.motions ?? []}
                   playerNotes={play.playerNotes}
                   drawingMode={drawingMode}
+                  motionType={motionType}
                   driveStartYardLine={play.driveStartYardLine}
                   selectedPlayerId={selectedPlayerId}
                   selectedDefenderId={selectedDefenderId}
@@ -1203,6 +1256,7 @@ function App() {
                   onRouteComplete={handleRouteComplete}
                   onDefenderRouteComplete={handleDefenderRouteComplete}
                   onBlockComplete={handleBlockComplete}
+                  onMotionComplete={handleMotionComplete}
                 />
               </div>
 

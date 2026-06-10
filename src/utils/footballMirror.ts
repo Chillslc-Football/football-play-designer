@@ -1,4 +1,5 @@
 import type { Block } from '../types/block'
+import type { Motion } from '../types/motion'
 import type { Play } from '../types/play'
 import type { Player, PlayerLabel, Position } from '../types/player'
 import { mirrorDefenderRoutes, mirrorDefenders } from './defenseMirror'
@@ -156,6 +157,7 @@ export function mirrorFootballPlay(play: Play): Play {
 
   const routes: Route[] = mirrorAndReassignPaths(play.routes, centerX)
   const blocks: Block[] = mirrorAndReassignPaths(play.blocks, centerX)
+  const motions: Motion[] = mirrorAndReassignPaths(play.motions ?? [], centerX)
   const playerNotes = mirrorPlayerNotes(play.playerNotes)
 
   const mirrored: Play = {
@@ -166,6 +168,7 @@ export function mirrorFootballPlay(play: Play): Play {
     defenders: mirrorDefenders(play.defenders, players),
     routes,
     blocks,
+    motions,
     defenderRoutes: mirrorDefenderRoutes(play.defenderRoutes, centerX),
     playerNotes,
     notes: play.notes,

@@ -1,3 +1,5 @@
+@import '../../styles/fieldDisplayTheme.css';
+
 .field-container {
   width: 100%;
   height: 100%;
@@ -6,17 +8,17 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #1e4d22;
+  background: var(--field-container-bg);
   padding: 0;
 }
 
 .route-hint {
   text-align: center;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--field-hint-color);
   margin: 0;
   padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--field-hint-bg);
   flex-shrink: 0;
 }
 
@@ -26,7 +28,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--field-controls-bg);
   flex-shrink: 0;
 }
 
@@ -38,7 +40,7 @@
 
 .route-draw-hint {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--field-hint-color);
 }
 
 .field-viewport {
@@ -57,11 +59,11 @@
 }
 
 .field-viewbox-bg {
-  fill: #1e4d22;
+  fill: var(--field-viewbox-bg);
 }
 
 .field-turf {
-  fill: #3f9a46;
+  fill: var(--field-turf);
 }
 
 .turf-stripe {
@@ -69,24 +71,24 @@
 }
 
 .turf-stripe-light {
-  fill: #48a84f;
-  opacity: 0.55;
+  fill: var(--field-turf-stripe-light);
+  opacity: var(--field-turf-stripe-light-opacity);
 }
 
 .turf-stripe-dark {
-  fill: #358a3c;
-  opacity: 0.45;
+  fill: var(--field-turf-stripe-dark);
+  opacity: var(--field-turf-stripe-dark-opacity);
 }
 
 .field-boundary {
   fill: none;
-  stroke: #ffffff;
+  stroke: var(--field-line);
   stroke-width: 0.35;
   pointer-events: none;
 }
 
 .yard-line {
-  stroke: #ffffff;
+  stroke: var(--field-line);
   pointer-events: none;
 }
 
@@ -101,7 +103,7 @@
 }
 
 .hash-mark {
-  stroke: #ffffff;
+  stroke: var(--field-line);
   stroke-width: 0.1;
   opacity: 0.85;
   pointer-events: none;
@@ -112,31 +114,31 @@
 }
 
 .yard-number-sideline {
-  fill: #ffffff;
+  fill: var(--field-yard-number);
   font-size: 3.6px;
   font-weight: 700;
   font-family: Arial, Helvetica, sans-serif;
   text-anchor: middle;
   dominant-baseline: middle;
   paint-order: stroke fill;
-  stroke: rgba(0, 0, 0, 0.2);
+  stroke: var(--field-yard-number-stroke);
   stroke-width: 0.08px;
 }
 
 .yard-number-arrow {
-  fill: #ffffff;
+  fill: var(--field-yard-arrow);
   pointer-events: none;
 }
 
 .los-line {
-  stroke: rgba(255, 255, 255, 0.7);
+  stroke: var(--field-los);
   stroke-width: 0.18;
   stroke-dasharray: 0.5 0.45;
   pointer-events: none;
 }
 
 .field-side-locked {
-  fill: rgba(0, 0, 0, 0.14);
+  fill: var(--field-side-locked);
   pointer-events: none;
 }
 
@@ -160,9 +162,9 @@
 }
 
 .player-symbol {
-  fill: #ffffff;
-  stroke: #1a1a1a;
-  stroke-width: 0.12px;
+  fill: var(--field-player-symbol-fill);
+  stroke: var(--field-player-symbol-stroke);
+  stroke-width: var(--field-player-symbol-stroke-width, 0.12px);
   paint-order: stroke fill;
   font-family: Arial, Helvetica, sans-serif;
   font-weight: 900;
@@ -170,23 +172,38 @@
   dominant-baseline: middle;
   pointer-events: none;
   user-select: none;
+  filter: var(--field-marker-shadow, none);
 }
 
 .player-marker-selected .player-symbol {
-  stroke-width: 0.18px;
+  stroke-width: calc(var(--field-player-symbol-stroke-width, 0.12px) + 0.06px);
 }
 
-.player-label,
-.defender-label {
-  fill: #ffffff;
+.player-label {
+  fill: var(--field-player-label-fill);
   font-family: Arial, Helvetica, sans-serif;
   font-size: 0.85px;
   font-weight: 600;
   text-anchor: middle;
   dominant-baseline: hanging;
   paint-order: stroke fill;
-  stroke: #1a1a1a;
+  stroke: var(--field-player-label-stroke);
   stroke-width: 0.1px;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0;
+}
+
+.defender-label {
+  fill: var(--field-defender-label-fill, #ffffff);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.85px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: hanging;
+  paint-order: stroke fill;
+  stroke: var(--field-defender-label-stroke, #1a1a1a);
+  stroke-width: 0.12px;
   pointer-events: none;
   user-select: none;
   opacity: 0;
@@ -194,7 +211,8 @@
 
 .player-marker:hover .player-label,
 .player-marker-selected .player-label,
-.defender-marker:hover .defender-label {
+.defender-marker:hover .defender-label,
+.defender-marker-selected .defender-label {
   opacity: 1;
 }
 
@@ -213,18 +231,13 @@
 }
 
 .defender-marker-selected .defender-symbol {
-  stroke-width: 0.18px;
-}
-
-.defender-marker:hover .defender-label,
-.defender-marker-selected .defender-label {
-  opacity: 1;
+  stroke-width: calc(var(--field-defender-symbol-stroke-width, 0.12px) + 0.06px);
 }
 
 .defender-symbol {
-  fill: #ffffff;
-  stroke: #1a1a1a;
-  stroke-width: 0.12px;
+  fill: var(--field-defender-symbol-fill, #ffffff);
+  stroke: var(--field-defender-symbol-stroke, #1a1a1a);
+  stroke-width: var(--field-defender-symbol-stroke-width, 0.12px);
   paint-order: stroke fill;
   font-family: Arial, Helvetica, sans-serif;
   font-weight: 900;
@@ -232,11 +245,12 @@
   dominant-baseline: middle;
   pointer-events: none;
   user-select: none;
+  filter: var(--field-marker-shadow, none);
 }
 
 /* ---- Routes & blocks (child components inside the SVG) ---- */
 .field-svg .route-arrow-head-filled {
-  fill: #ffffff;
+  fill: var(--field-route-arrow-fill);
   stroke: none;
 }
 

@@ -2,6 +2,7 @@ import { FormationSelector } from '../FormationSelector/FormationSelector'
 import { PlayControls } from '../PlayControls/PlayControls'
 import { Toolbar } from '../Toolbar/Toolbar'
 import { DrawingModeSelector, type DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
+import type { MotionType } from '../../types/motion'
 import type { DriveStartYardLine } from '../../types/driveStart'
 import type { Play } from '../../types/play'
 import type { PlayType } from '../../types/playType'
@@ -57,6 +58,8 @@ type PlaySetupPanelProps = {
   onDeletePlay: () => void
   playType: PlayType
   drawingMode: DrawingMode
+  motionType: MotionType
+  onMotionTypeChange: (motionType: MotionType) => void
   onDrawingModeChange: (mode: DrawingMode) => void
   onNewPlay: () => void
   onSaveChanges: () => void
@@ -102,6 +105,8 @@ export function PlaySetupPanel({
   onDeletePlay,
   playType,
   drawingMode,
+  motionType,
+  onMotionTypeChange,
   onDrawingModeChange,
   onNewPlay,
   onSaveChanges,
@@ -206,6 +211,8 @@ export function PlaySetupPanel({
             mode={drawingMode}
             playType={playType}
             canEdit={canEdit}
+            motionType={motionType}
+            onMotionTypeChange={onMotionTypeChange}
             onChange={onDrawingModeChange}
           />
         </section>

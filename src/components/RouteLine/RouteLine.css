@@ -18,7 +18,7 @@
 
 .route-segment {
   fill: none;
-  stroke: #ffffff;
+  stroke: var(--field-route-stroke, #ffffff);
   stroke-width: 0.21;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -27,12 +27,12 @@
 
 .route-segment-selected {
   stroke-width: 0.34;
-  filter: drop-shadow(0 0 0.35px rgba(255, 255, 255, 0.9));
+  filter: drop-shadow(0 0 0.35px var(--field-route-stroke, #ffffff));
 }
 
 .route-line-draft {
   fill: none;
-  stroke: #ffffff;
+  stroke: var(--field-route-stroke, #ffffff);
   stroke-width: 0.21;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -42,7 +42,7 @@
 }
 
 .route-vertex-handle {
-  fill: #ffffff;
+  fill: var(--field-route-vertex-fill, #ffffff);
   opacity: 0.45;
   pointer-events: none;
 }
@@ -54,6 +54,6 @@
 
 .route-vertex-handle-selected {
   opacity: 1;
-  stroke: rgba(0, 0, 0, 0.35);
+  stroke: var(--field-route-vertex-stroke, rgba(0, 0, 0, 0.35));
   stroke-width: 0.08px;
 }

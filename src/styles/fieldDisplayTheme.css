@@ -1,0 +1,75 @@
+/**
+ * Field-only display colors. Does not affect app chrome, blocking, or motion lines.
+ *
+ * Rollback: in fieldDisplayTheme.ts set FIELD_DISPLAY_THEME = 'green'
+ */
+
+/* ---- Original green field (rollback target) ---- */
+.field-container.field-display-green {
+  --field-container-bg: #1e4d22;
+  --field-viewbox-bg: #1e4d22;
+  --field-turf: #3f9a46;
+  --field-turf-stripe-light: #48a84f;
+  --field-turf-stripe-dark: #358a3c;
+  --field-turf-stripe-light-opacity: 0.55;
+  --field-turf-stripe-dark-opacity: 0.45;
+  --field-line: #ffffff;
+  --field-yard-number: #ffffff;
+  --field-yard-number-stroke: rgba(0, 0, 0, 0.2);
+  --field-yard-arrow: #ffffff;
+  --field-los: rgba(255, 255, 255, 0.7);
+  --field-player-symbol-fill: #ffffff;
+  --field-player-symbol-stroke: #1a1a1a;
+  --field-player-symbol-stroke-width: 0.12px;
+  --field-player-label-fill: #ffffff;
+  --field-player-label-stroke: #1a1a1a;
+  --field-defender-symbol-fill: #ffffff;
+  --field-defender-symbol-stroke: #1a1a1a;
+  --field-defender-symbol-stroke-width: 0.12px;
+  --field-defender-label-fill: #ffffff;
+  --field-defender-label-stroke: #1a1a1a;
+  --field-marker-shadow: none;
+  --field-route-stroke: #ffffff;
+  --field-route-vertex-fill: #ffffff;
+  --field-route-vertex-stroke: rgba(0, 0, 0, 0.35);
+  --field-route-arrow-fill: #ffffff;
+  --field-side-locked: rgba(0, 0, 0, 0.14);
+  --field-hint-color: rgba(255, 255, 255, 0.75);
+  --field-hint-bg: rgba(0, 0, 0, 0.25);
+  --field-controls-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* ---- White field with black lines, numbers, players, and routes ---- */
+.field-container.field-display-white {
+  --field-container-bg: #ffffff;
+  --field-viewbox-bg: #ffffff;
+  --field-turf: #ffffff;
+  --field-turf-stripe-light: #f3f3f3;
+  --field-turf-stripe-dark: #ffffff;
+  --field-turf-stripe-light-opacity: 1;
+  --field-turf-stripe-dark-opacity: 1;
+  --field-line: #111111;
+  --field-yard-number: #111111;
+  --field-yard-number-stroke: transparent;
+  --field-yard-arrow: #111111;
+  --field-los: #e6b800;
+  --field-player-symbol-fill: #ffffff;
+  --field-player-symbol-stroke: #111111;
+  --field-player-symbol-stroke-width: 0.5px;
+  --field-player-label-fill: #111111;
+  --field-player-label-stroke: #ffffff;
+  --field-defender-symbol-fill: #111111;
+  --field-defender-symbol-stroke: #ffffff;
+  --field-defender-symbol-stroke-width: 0.5px;
+  --field-defender-label-fill: #111111;
+  --field-defender-label-stroke: #ffffff;
+  --field-marker-shadow: drop-shadow(0 0 0.12px #ffffff) drop-shadow(0 0 0.35px rgba(0, 0, 0, 0.4));
+  --field-route-stroke: #111111;
+  --field-route-vertex-fill: #111111;
+  --field-route-vertex-stroke: rgba(0, 0, 0, 0.35);
+  --field-route-arrow-fill: #111111;
+  --field-side-locked: rgba(0, 0, 0, 0.06);
+  --field-hint-color: rgba(0, 0, 0, 0.7);
+  --field-hint-bg: rgba(0, 0, 0, 0.06);
+  --field-controls-bg: rgba(0, 0, 0, 0.06);
+}

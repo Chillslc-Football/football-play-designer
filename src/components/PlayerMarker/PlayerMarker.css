@@ -11,16 +11,17 @@
 }
 
 .player-symbol {
-  fill: #ffffff;
+  fill: var(--field-player-symbol-fill, #ffffff);
   font-family: Arial, Helvetica, sans-serif;
   font-weight: 900;
   text-anchor: middle;
   dominant-baseline: middle;
   paint-order: stroke fill;
-  stroke: #111111;
-  stroke-width: 0.45px;
+  stroke: var(--field-player-symbol-stroke, #111111);
+  stroke-width: var(--field-player-symbol-stroke-width, 0.45px);
   pointer-events: none;
   user-select: none;
+  filter: var(--field-marker-shadow, none);
 }
 
 .player-marker-selected .player-symbol {
@@ -29,15 +30,15 @@
 }
 
 .player-label {
-  fill: #111111;
+  fill: var(--field-player-label-fill, #111111);
   font-family: Arial, Helvetica, sans-serif;
   font-size: 1.5px;
   font-weight: 700;
   text-anchor: middle;
   dominant-baseline: hanging;
   paint-order: stroke fill;
-  stroke: #ffffff;
-  stroke-width: 0.16px;
+  stroke: var(--field-player-label-stroke, #ffffff);
+  stroke-width: 0.14px;
   opacity: 0;
   pointer-events: none;
   user-select: none;

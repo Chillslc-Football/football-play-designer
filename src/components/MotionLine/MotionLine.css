@@ -1,0 +1,80 @@
+.motion-path {
+  pointer-events: none;
+}
+
+.motion-segment-group {
+  pointer-events: auto;
+}
+
+.motion-path-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+.motion-segment {
+  fill: none;
+  stroke-width: 0.18;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 0.5 0.45;
+  pointer-events: none;
+}
+
+.motion-segment-jog {
+  stroke: #f97316;
+}
+
+.motion-segment-sprint {
+  stroke: #22c55e;
+}
+
+.motion-segment-selected {
+  stroke-width: 0.34;
+}
+
+.motion-line-draft {
+  fill: none;
+  stroke-width: 0.18;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 0.5 0.45;
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.motion-line-draft-jog {
+  stroke: #f97316;
+}
+
+.motion-line-draft-sprint {
+  stroke: #22c55e;
+}
+
+.motion-vertex-handle {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.motion-vertex-handle-jog {
+  fill: #f97316;
+}
+
+.motion-vertex-handle-sprint {
+  fill: #22c55e;
+}
+
+.motion-vertex-handle-hit {
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.motion-vertex-handle-selected {
+  opacity: 1;
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 0.08px;
+}

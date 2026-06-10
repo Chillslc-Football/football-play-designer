@@ -103,6 +103,10 @@ export function renderPlayToDbPlay(play: Play): Play {
       ...block,
       points: renderPathToDb(block.points),
     })),
+    motions: play.motions.map((motion) => ({
+      ...motion,
+      points: renderPathToDb(motion.points),
+    })),
     defenderRoutes: play.defenderRoutes.map((route) => ({
       ...route,
       points: renderPathToDb(route.points),
@@ -160,6 +164,10 @@ export function dbPlayToRenderPlay(play: Play): Play {
     blocks: play.blocks.map((block) => ({
       ...block,
       points: dbPathToRender(block.points),
+    })),
+    motions: play.motions.map((motion) => ({
+      ...motion,
+      points: dbPathToRender(motion.points),
     })),
     defenderRoutes: play.defenderRoutes.map((route) => ({
       ...route,

@@ -122,6 +122,7 @@ function rowToPlay(row: PlayRow, customFormations: CustomFormation[]): Play {
     defenders: stored.defenders ?? [],
     routes: stored.routes ?? [],
     blocks: stored.blocks ?? [],
+    motions: stored.motions ?? [],
     defenderRoutes: stored.defenderRoutes ?? [],
     playerNotes: stored.playerNotes ?? {},
     categories: playCategories(stored as Play, row.categories),

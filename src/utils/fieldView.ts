@@ -115,11 +115,14 @@ export function clampViewPosition(position: Position): Position {
   }
 }
 
-function usesLegacyCoordinates(play: Pick<Play, 'players' | 'routes' | 'blocks'>): boolean {
+function usesLegacyCoordinates(
+  play: Pick<Play, 'players' | 'routes' | 'blocks' | 'motions'>,
+): boolean {
   const xs = [
     ...play.players.map((player) => player.position.x),
     ...play.routes.flatMap((route) => route.points.map((point) => point.x)),
     ...play.blocks.flatMap((block) => block.points.map((point) => point.x)),
+    ...(play.motions ?? []).flatMap((motion) => motion.points.map((point) => point.x)),
   ]
 
   if (xs.length === 0) return false
@@ -197,6 +200,7 @@ function migratePlayToPortrait(play: Play): Play {
     })),
     routes: migratePathsToPortrait(play.routes),
     blocks: migratePathsToPortrait(play.blocks),
+    motions: migratePathsToPortrait(play.motions ?? []),
   }
 }
 
@@ -217,6 +221,7 @@ export function migratePlayToFieldView(play: Play): Play {
       })),
       routes: migratePaths(migrated.routes),
       blocks: migratePaths(migrated.blocks),
+      motions: migratePaths(migrated.motions ?? []),
     }
   }
 
