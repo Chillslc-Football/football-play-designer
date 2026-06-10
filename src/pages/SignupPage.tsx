@@ -5,9 +5,22 @@ import './AuthPages.css'
 type SignupPageProps = {
   onSwitchToLogin: () => void
   defaultEmail?: string
+  lockedEmail?: boolean
+  emailRedirectTo?: string
+  title?: string
+  subtitle?: string
+  onBack?: () => void
 }
 
-export function SignupPage({ onSwitchToLogin, defaultEmail = '' }: SignupPageProps) {
+export function SignupPage({
+  onSwitchToLogin,
+  defaultEmail = '',
+  lockedEmail = false,
+  emailRedirectTo,
+  title = 'Create account',
+  subtitle = 'Football Play Designer',
+  onBack,
+}: SignupPageProps) {
   const { signUp } = useAuth()
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState(defaultEmail)
@@ -22,7 +35,7 @@ export function SignupPage({ onSwitchToLogin, defaultEmail = '' }: SignupPagePro
     setMessage(null)
     setSubmitting(true)
 
-    const result = await signUp(email, password, displayName)
+    const result = await signUp(email, password, displayName, { emailRedirectTo })
     if (result.error) {
       setError(result.error)
     } else if (result.message) {
@@ -35,8 +48,8 @@ export function SignupPage({ onSwitchToLogin, defaultEmail = '' }: SignupPagePro
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1>Create account</h1>
-        <p className="auth-card-subtitle">Football Play Designer</p>
+        <h1>{title}</h1>
+        <p className="auth-card-subtitle">{subtitle}</p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           {error && <p className="auth-error">{error}</p>}
@@ -68,8 +81,11 @@ export function SignupPage({ onSwitchToLogin, defaultEmail = '' }: SignupPagePro
               type="email"
               autoComplete="email"
               required
+              readOnly={lockedEmail}
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                if (!lockedEmail) setEmail(event.target.value)
+              }}
             />
           </div>
 
@@ -94,12 +110,20 @@ export function SignupPage({ onSwitchToLogin, defaultEmail = '' }: SignupPagePro
           </button>
         </form>
 
-        <p className="auth-switch">
-          Already have an account?{' '}
-          <button type="button" onClick={onSwitchToLogin}>
-            Sign in
-          </button>
-        </p>
+        {onBack ? (
+          <p className="auth-switch">
+            <button type="button" onClick={onBack}>
+              Back to invite
+            </button>
+          </p>
+        ) : (
+          <p className="auth-switch">
+            Already have an account?{' '}
+            <button type="button" onClick={onSwitchToLogin}>
+              Sign in
+            </button>
+          </p>
+        )}
       </div>
     </div>
   )

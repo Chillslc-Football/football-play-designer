@@ -1,22 +1,25 @@
-export const PENDING_INVITE_TOKEN_KEY = 'pending_invite_token'
+export const PENDING_INVITE_URL_KEY = 'pending_invite_url'
 
 export function getInviteTokenFromUrl(): string | null {
-  const token = new URLSearchParams(window.location.search).get('token')?.trim()
-  return token || null
+  return new URLSearchParams(window.location.search).get('token')
 }
 
-export function savePendingInviteToken(token: string): void {
-  sessionStorage.setItem(PENDING_INVITE_TOKEN_KEY, token.trim())
+export function savePendingInviteUrl(url?: string): void {
+  const inviteUrl = url ?? window.location.href
+  if (!inviteUrl.includes('/accept-invite')) return
+  localStorage.setItem(PENDING_INVITE_URL_KEY, inviteUrl)
 }
 
-export function getPendingInviteToken(): string | null {
-  const fromUrl = getInviteTokenFromUrl()
-  if (fromUrl) return fromUrl
-  return sessionStorage.getItem(PENDING_INVITE_TOKEN_KEY)?.trim() || null
+export function getPendingInviteUrl(): string | null {
+  const fromCurrent = window.location.pathname.replace(/\/+$/, '') === '/accept-invite'
+    ? window.location.href
+    : null
+  if (fromCurrent) return fromCurrent
+  return localStorage.getItem(PENDING_INVITE_URL_KEY)
 }
 
-export function clearPendingInviteToken(): void {
-  sessionStorage.removeItem(PENDING_INVITE_TOKEN_KEY)
+export function clearPendingInviteUrl(): void {
+  localStorage.removeItem(PENDING_INVITE_URL_KEY)
 }
 
 export function isAcceptInvitePath(): boolean {
@@ -25,5 +28,6 @@ export function isAcceptInvitePath(): boolean {
 }
 
 export function clearAcceptInviteUrl(): void {
+  clearPendingInviteUrl()
   window.history.replaceState({}, '', '/')
 }

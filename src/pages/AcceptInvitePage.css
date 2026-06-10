@@ -8,8 +8,14 @@
 }
 
 .accept-invite-notice {
-  margin: 0;
+  margin: 0 0 16px;
   font-size: 13px;
   line-height: 1.45;
   color: #4a5f4a;
+}
+
+.accept-invite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }

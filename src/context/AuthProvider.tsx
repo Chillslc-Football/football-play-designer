@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
-import { AuthContext, type AuthResult } from './authContext'
+import { AuthContext, type AuthResult, type SignUpOptions } from './authContext'
 
 type AuthProviderProps = {
   children: ReactNode
@@ -49,7 +49,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const signUp = useCallback(
-    async (email: string, password: string, displayName: string): Promise<AuthResult> => {
+    async (
+      email: string,
+      password: string,
+      displayName: string,
+      options?: SignUpOptions,
+    ): Promise<AuthResult> => {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
@@ -57,6 +62,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           data: {
             display_name: displayName.trim(),
           },
+          emailRedirectTo: options?.emailRedirectTo,
         },
       })
 
@@ -65,7 +71,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       if (!data.session) {
-        return toAuthResult(null, 'Account created. Check your email to confirm, then sign in.')
+        return toAuthResult(
+          null,
+          'Account created. Check your email to confirm. After confirming, you will return to this invite to accept it.',
+        )
       }
 
       return toAuthResult(null)

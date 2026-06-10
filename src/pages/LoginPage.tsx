@@ -5,9 +5,20 @@ import './AuthPages.css'
 type LoginPageProps = {
   onSwitchToSignup: () => void
   defaultEmail?: string
+  lockedEmail?: boolean
+  title?: string
+  subtitle?: string
+  onBack?: () => void
 }
 
-export function LoginPage({ onSwitchToSignup, defaultEmail = '' }: LoginPageProps) {
+export function LoginPage({
+  onSwitchToSignup,
+  defaultEmail = '',
+  lockedEmail = false,
+  title = 'Sign in',
+  subtitle = 'Football Play Designer',
+  onBack,
+}: LoginPageProps) {
   const { signIn } = useAuth()
   const [email, setEmail] = useState(defaultEmail)
   const [password, setPassword] = useState('')
@@ -30,8 +41,8 @@ export function LoginPage({ onSwitchToSignup, defaultEmail = '' }: LoginPageProp
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1>Sign in</h1>
-        <p className="auth-card-subtitle">Football Play Designer</p>
+        <h1>{title}</h1>
+        <p className="auth-card-subtitle">{subtitle}</p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           {error && <p className="auth-error">{error}</p>}
@@ -46,8 +57,11 @@ export function LoginPage({ onSwitchToSignup, defaultEmail = '' }: LoginPageProp
               type="email"
               autoComplete="email"
               required
+              readOnly={lockedEmail}
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                if (!lockedEmail) setEmail(event.target.value)
+              }}
             />
           </div>
 
@@ -72,12 +86,20 @@ export function LoginPage({ onSwitchToSignup, defaultEmail = '' }: LoginPageProp
           </button>
         </form>
 
-        <p className="auth-switch">
-          Need an account?{' '}
-          <button type="button" onClick={onSwitchToSignup}>
-            Sign up
-          </button>
-        </p>
+        {onBack ? (
+          <p className="auth-switch">
+            <button type="button" onClick={onBack}>
+              Back to invite
+            </button>
+          </p>
+        ) : (
+          <p className="auth-switch">
+            Need an account?{' '}
+            <button type="button" onClick={onSwitchToSignup}>
+              Sign up
+            </button>
+          </p>
+        )}
       </div>
     </div>
   )

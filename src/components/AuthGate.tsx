@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { AcceptInvitePage } from '../pages/AcceptInvitePage'
 import { LoginPage } from '../pages/LoginPage'
 import { SignupPage } from '../pages/SignupPage'
-import { getInviteTokenFromUrl, isAcceptInvitePath, savePendingInviteToken } from '../utils/inviteToken'
+import { isAcceptInvitePath, savePendingInviteUrl } from '../utils/inviteToken'
 import { TeamGate } from './TeamGate'
 import '../pages/AuthPages.css'
 
@@ -31,9 +31,8 @@ export function AuthGate() {
   const [authView, setAuthView] = useState<'login' | 'signup'>('login')
 
   useEffect(() => {
-    const token = getInviteTokenFromUrl()
-    if (token) {
-      savePendingInviteToken(token)
+    if (isAcceptInvitePath()) {
+      savePendingInviteUrl()
     }
   }, [])
 

@@ -8,16 +8,24 @@ type PreviewRow = {
   status: InvitePreviewStatus
 }
 
-function normalizePreview(row: PreviewRow | null): InvitePreview {
+type PreviewRowRaw = PreviewRow & {
+  invited_email?: string | null
+}
+
+function normalizePreview(row: PreviewRowRaw | null): InvitePreview {
   if (!row) {
     return { teamName: null, role: null, email: null, status: 'invalid' }
   }
 
+  const email = row.email ?? row.invited_email ?? null
+  const status =
+    row.status ?? (row.team_name && email ? 'pending' : 'invalid')
+
   return {
     teamName: row.team_name,
     role: row.role,
-    email: row.email,
-    status: row.status,
+    email,
+    status,
   }
 }
 
