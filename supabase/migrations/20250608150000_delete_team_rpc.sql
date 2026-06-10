@@ -1,4 +1,5 @@
 -- Allow team_owner to delete a team and cascade related data.
+-- Apply in Supabase SQL editor if team delete only clears UI state.
 
 CREATE OR REPLACE FUNCTION public.delete_team(p_team_id uuid)
 RETURNS void
@@ -29,3 +30,7 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.delete_team(uuid) TO authenticated;
+
+-- Verify in SQL editor:
+-- SELECT routine_name FROM information_schema.routines
+-- WHERE routine_schema = 'public' AND routine_name = 'delete_team';

@@ -65,14 +65,26 @@ export function Header({
     setDeletingTeam(true)
     setDeleteTeamError(null)
 
+    console.log('[Header] delete team confirm', {
+      teamId: activeTeamId,
+      teamName: team.name,
+      role,
+    })
+
     const result = await deleteTeam(activeTeamId)
     setDeletingTeam(false)
 
     if (result.error) {
+      console.error('[Header] delete team failed', {
+        teamId: activeTeamId,
+        role,
+        error: result.error,
+      })
       setDeleteTeamError(result.error)
       return
     }
 
+    console.log('[Header] delete team succeeded', { teamId: activeTeamId })
     setDeleteTeamOpen(false)
   }
 

@@ -1,5 +1,9 @@
 export type InviteRole = 'coach' | 'player' | 'parent'
 
+export type TeamInvite = {
+  token: string
+}
+
 export type InvitePreviewStatus = 'pending' | 'expired' | 'accepted' | 'revoked' | 'invalid'
 
 export type InvitePreview = {

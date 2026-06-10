@@ -197,12 +197,33 @@ export async function clearLastTeamId(userId: string): Promise<void> {
   }
 }
 
-export async function deleteTeam(teamId: string): Promise<void> {
-  const { error } = await supabase.rpc('delete_team', { p_team_id: teamId })
+export async function deleteTeam(teamId: string, context?: { role?: string | null }): Promise<void> {
+  console.log('[deleteTeam] starting', {
+    teamId,
+    role: context?.role ?? null,
+    rpc: 'delete_team',
+    params: { p_team_id: teamId },
+  })
+
+  const { data, error } = await supabase.rpc('delete_team', { p_team_id: teamId })
+
+  console.log('[deleteTeam] RPC response', { teamId, data, error })
 
   if (error) {
     logSupabaseError('delete_team RPC', error)
-    throw new Error(error.message)
+    const details = [error.message, error.code ? `code=${error.code}` : null, error.hint ? `hint=${error.hint}` : null]
+      .filter(Boolean)
+      .join(' — ')
+    throw new Error(details)
+  }
+
+  const remainingTeam = await fetchTeamById(teamId)
+  console.log('[deleteTeam] post-delete team lookup', { teamId, remainingTeam })
+
+  if (remainingTeam) {
+    throw new Error(
+      'Team was not deleted from the database. Apply supabase/migrations/20250608150000_delete_team_rpc.sql in Supabase, then try again.',
+    )
   }
 }
 

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useInviteRoles } from '../../hooks/useInviteRoles'
 import * as inviteRepository from '../../repositories/inviteRepository'
 import { INVITE_ROLE_LABELS, type InviteRole } from '../../types/invite'
-import { buildInviteLink } from '../../utils/inviteToken'
 import '../ConfirmDialog/ConfirmDialog.css'
 import './InviteMemberDialog.css'
 
@@ -59,8 +58,9 @@ export function InviteMemberDialog({ open, teamId, onClose }: InviteMemberDialog
     setSubmitting(true)
 
     try {
-      const token = await inviteRepository.createTeamInvite(teamId, email, role)
-      setInviteLink(buildInviteLink(token))
+      const invite = await inviteRepository.createTeamInvite(teamId, email, role)
+      const inviteUrl = `${window.location.origin}/accept-invite?token=${invite.token}`
+      setInviteLink(inviteUrl)
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : 'Could not create invite'
       setError(message)

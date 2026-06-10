@@ -162,9 +162,23 @@ export function TeamProvider({ children }: TeamProviderProps) {
       setLoading(true)
 
       try {
-        await teamRepository.deleteTeam(teamId)
+        console.log('[TeamProvider.deleteTeam] request', {
+          teamId,
+          activeTeamId,
+          role,
+          userId: user.id,
+        })
+
+        await teamRepository.deleteTeam(teamId, { role })
 
         const result = await teamRepository.loadActiveTeamForUser(user.id)
+        console.log('[TeamProvider.deleteTeam] reload result', {
+          activeTeamId: result.activeTeamId,
+          team: result.team?.id ?? null,
+          membershipCount: result.memberships.length,
+          needsOnboarding: result.needsOnboarding,
+        })
+
         applyLoadResult(result, {
           setActiveTeamId,
           setTeam,
@@ -173,9 +187,14 @@ export function TeamProvider({ children }: TeamProviderProps) {
           setNeedsOnboarding,
         })
 
+        if (result.team?.id === teamId) {
+          throw new Error('Team delete appeared to succeed but the team is still active. Refresh and try again.')
+        }
+
         return { error: null }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Could not delete team'
+        console.error('[TeamProvider.deleteTeam] failed', { teamId, role, message, error })
         return { error: message }
       } finally {
         setProfileLoaded(true)

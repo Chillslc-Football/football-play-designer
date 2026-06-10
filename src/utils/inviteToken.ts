@@ -19,12 +19,6 @@ export function clearPendingInviteToken(): void {
   sessionStorage.removeItem(PENDING_INVITE_TOKEN_KEY)
 }
 
-export function buildInviteLink(token: string): string {
-  const url = new URL('/accept-invite', window.location.origin)
-  url.searchParams.set('token', token)
-  return url.toString()
-}
-
 export function isAcceptInvitePath(): boolean {
   const path = window.location.pathname.replace(/\/+$/, '') || '/'
   return path === '/accept-invite'

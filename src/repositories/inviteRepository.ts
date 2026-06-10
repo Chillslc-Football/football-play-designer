@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
-import type { InvitePreview, InvitePreviewStatus, InviteRole } from '../types/invite'
+import type { InvitePreview, InvitePreviewStatus, InviteRole, TeamInvite } from '../types/invite'
 
 type PreviewRow = {
   team_name: string | null
@@ -25,22 +25,40 @@ export async function createTeamInvite(
   teamId: string,
   email: string,
   role: InviteRole,
-): Promise<string> {
-  const { data, error } = await supabase.rpc('create_team_invite', {
-    p_team_id: teamId,
-    p_role: role,
-    p_email: email.trim(),
-  })
+): Promise<TeamInvite> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser()
+
+  if (userError) {
+    throw new Error(userError.message)
+  }
+
+  if (!user) {
+    throw new Error('Not signed in')
+  }
+
+  const { data, error } = await supabase
+    .from('team_invites')
+    .insert({
+      team_id: teamId,
+      role,
+      email: email.trim().toLowerCase(),
+      created_by: user.id,
+    })
+    .select('token')
+    .single()
 
   if (error) {
     throw new Error(error.message)
   }
 
-  if (typeof data !== 'string' || data.trim().length === 0) {
+  if (!data || typeof data.token !== 'string' || data.token.length === 0) {
     throw new Error('Invite was created but no token was returned')
   }
 
-  return data.trim()
+  return { token: data.token }
 }
 
 export async function previewTeamInvite(token: string): Promise<InvitePreview> {
