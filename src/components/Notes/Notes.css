@@ -13,7 +13,7 @@
   width: 100%;
   padding: 10px 14px;
   border: none;
-  background: rgba(0, 0, 0, 0.12);
+  background: var(--panel-toggle-bg);
   color: var(--text-light);
   font-family: inherit;
   cursor: pointer;
@@ -21,7 +21,7 @@
 }
 
 .notes-toggle:hover {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--panel-toggle-hover);
 }
 
 .notes-toggle-title {
@@ -30,20 +30,7 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--gold);
-}
-
-.notes-step {
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--grass-mid);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
+  color: var(--panel-toggle-title);
 }
 
 .notes-chevron {
@@ -78,4 +65,12 @@
 
 .notes-textarea::placeholder {
   color: #888;
+}
+
+.play-setup-panel .notes-section .notes-toggle {
+  padding: 10px 12px;
+}
+
+.play-setup-panel .notes-section .notes-body {
+  padding: 0 12px 12px;
 }

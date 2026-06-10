@@ -8,7 +8,7 @@ type NotesProps = {
 }
 
 export function Notes({ value, canEdit = true, onChange }: NotesProps) {
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
 
   return (
     <section className={`notes-section ${isOpen ? 'is-open' : 'is-collapsed'}`}>
@@ -19,7 +19,6 @@ export function Notes({ value, canEdit = true, onChange }: NotesProps) {
         aria-expanded={isOpen}
       >
         <span className="notes-toggle-title">Play Notes</span>
-        <span className="notes-step">5</span>
         <span className="notes-chevron" aria-hidden="true">
           {isOpen ? '▾' : '▸'}
         </span>

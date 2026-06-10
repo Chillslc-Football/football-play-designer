@@ -92,6 +92,14 @@ export function RouteLine({
               y2={end.y}
               className={isSelected ? 'route-segment route-segment-selected' : 'route-segment'}
               markerEnd={isLast ? 'url(#route-arrow)' : undefined}
+              onMouseDown={
+                readOnly
+                  ? undefined
+                  : (event) => {
+                      event.stopPropagation()
+                      onSegmentSelect?.(index)
+                    }
+              }
             />
           </g>
         )

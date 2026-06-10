@@ -1,8 +1,12 @@
 import { FormationSelector } from '../FormationSelector/FormationSelector'
+import { Notes } from '../Notes/Notes'
 import { PlayControls } from '../PlayControls/PlayControls'
+import { PlayerAssignmentPanel } from '../PlayerAssignmentPanel/PlayerAssignmentPanel'
 import { Toolbar } from '../Toolbar/Toolbar'
 import { DrawingModeSelector, type DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
 import type { MotionType } from '../../types/motion'
+import type { PlayerLabel } from '../../types/player'
+import type { PlayerNotes } from '../../types/playerNotes'
 import type { DriveStartYardLine } from '../../types/driveStart'
 import type { Play } from '../../types/play'
 import type { PlayType } from '../../types/playType'
@@ -67,6 +71,11 @@ type PlaySetupPanelProps = {
   onMirrorPlay: () => void
   isMirrored: boolean
   isSaving?: boolean
+  selectedPlayerId: PlayerLabel | null
+  playerNotes: PlayerNotes
+  onPlayerNotesChange: (playerId: PlayerLabel, notes: string) => void
+  playNotes: string
+  onPlayNotesChange: (notes: string) => void
 }
 
 export function PlaySetupPanel({
@@ -114,6 +123,11 @@ export function PlaySetupPanel({
   onMirrorPlay,
   isMirrored,
   isSaving = false,
+  selectedPlayerId,
+  playerNotes,
+  onPlayerNotesChange,
+  playNotes,
+  onPlayNotesChange,
 }: PlaySetupPanelProps) {
   const schemeSectionTitle = playType === 'defensive' ? 'Front' : 'Formation'
 
@@ -205,7 +219,7 @@ export function PlaySetupPanel({
           />
         </section>
 
-        <section className="sidebar-section sidebar-section-last">
+        <section className="sidebar-section">
           <h3 className="sidebar-section-title">Drawing Mode</h3>
           <DrawingModeSelector
             mode={drawingMode}
@@ -215,6 +229,19 @@ export function PlaySetupPanel({
             onMotionTypeChange={onMotionTypeChange}
             onChange={onDrawingModeChange}
           />
+        </section>
+
+        <section className="sidebar-section sidebar-section-accordion">
+          <PlayerAssignmentPanel
+            selectedPlayerId={selectedPlayerId}
+            playerNotes={playerNotes}
+            canEdit={canEdit}
+            onPlayerNotesChange={onPlayerNotesChange}
+          />
+        </section>
+
+        <section className="sidebar-section sidebar-section-accordion sidebar-section-last">
+          <Notes value={playNotes} canEdit={canEdit} onChange={onPlayNotesChange} />
         </section>
       </div>
     </aside>

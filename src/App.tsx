@@ -7,9 +7,8 @@ import * as cloudPlayRepository from './repositories/playRepository'
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog'
 import { Header } from './components/Header/Header'
 import { Field } from './components/Field/Field'
-import { Notes } from './components/Notes/Notes'
+import { APP_DISPLAY_THEME } from './constants/appDisplayTheme'
 import { PlaySetupPanel } from './components/PlaySetupPanel/PlaySetupPanel'
-import { PlayerAssignmentPanel } from './components/PlayerAssignmentPanel/PlayerAssignmentPanel'
 import { type DrawingMode } from './components/DrawingModeSelector/DrawingModeSelector'
 import { createEmptyMotions, type Motion, type MotionType } from './types/motion'
 import type { DefenderLabel } from './types/defender'
@@ -1152,7 +1151,7 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app app-theme-${APP_DISPLAY_THEME}`}>
       <ConfirmDialog
         open={dialog !== null}
         message={dialogMessage}
@@ -1218,6 +1217,11 @@ function App() {
           onMirrorPlay={handleMirrorPlay}
           isMirrored={play.mirrored}
           isSaving={isSaving}
+          selectedPlayerId={selectedPlayerId}
+          playerNotes={play.playerNotes}
+          onPlayerNotesChange={handlePlayerNotesChange}
+          playNotes={play.notes}
+          onPlayNotesChange={handleNotesChange}
         />
 
         <main className="canvas-area">
@@ -1232,44 +1236,31 @@ function App() {
           )}
 
           <div className="field-stage">
-            <div className="field-stage-main">
-              <div className="field-column">
-                <Field
-                  playType={play.playType}
-                  viewOnly={!canEdit}
-                  players={play.players}
-                  defenders={play.defenders}
-                  routes={play.routes}
-                  defenderRoutes={play.defenderRoutes}
-                  blocks={play.blocks}
-                  motions={play.motions ?? []}
-                  playerNotes={play.playerNotes}
-                  drawingMode={drawingMode}
-                  motionType={motionType}
-                  driveStartYardLine={play.driveStartYardLine}
-                  selectedPlayerId={selectedPlayerId}
-                  selectedDefenderId={selectedDefenderId}
-                  onSelectPlayer={handleSelectPlayer}
-                  onSelectDefender={handleSelectDefender}
-                  onPlayerMove={handlePlayerMove}
-                  onDefenderMove={handleDefenderMove}
-                  onRouteComplete={handleRouteComplete}
-                  onDefenderRouteComplete={handleDefenderRouteComplete}
-                  onBlockComplete={handleBlockComplete}
-                  onMotionComplete={handleMotionComplete}
-                />
-              </div>
-
-              <PlayerAssignmentPanel
-                selectedPlayerId={selectedPlayerId}
+            <div className="field-column">
+              <Field
+                playType={play.playType}
+                viewOnly={!canEdit}
+                players={play.players}
+                defenders={play.defenders}
+                routes={play.routes}
+                defenderRoutes={play.defenderRoutes}
+                blocks={play.blocks}
+                motions={play.motions ?? []}
                 playerNotes={play.playerNotes}
-                canEdit={canEdit}
-                onPlayerNotesChange={handlePlayerNotesChange}
+                drawingMode={drawingMode}
+                motionType={motionType}
+                driveStartYardLine={play.driveStartYardLine}
+                selectedPlayerId={selectedPlayerId}
+                selectedDefenderId={selectedDefenderId}
+                onSelectPlayer={handleSelectPlayer}
+                onSelectDefender={handleSelectDefender}
+                onPlayerMove={handlePlayerMove}
+                onDefenderMove={handleDefenderMove}
+                onRouteComplete={handleRouteComplete}
+                onDefenderRouteComplete={handleDefenderRouteComplete}
+                onBlockComplete={handleBlockComplete}
+                onMotionComplete={handleMotionComplete}
               />
-            </div>
-
-            <div className="notes-wrapper">
-              <Notes value={play.notes} canEdit={canEdit} onChange={handleNotesChange} />
             </div>
           </div>
         </main>

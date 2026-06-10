@@ -29,8 +29,8 @@ export function CreateTeamPage() {
         <h1>Create your team</h1>
         <p className="auth-card-subtitle">
           {user?.email
-            ? `Signed in as ${user.email}. Create a team to start designing plays.`
-            : 'Create a team to start designing plays.'}
+            ? `Signed in as ${user.email}. Create a team to get started, or use an invite link to join an existing team.`
+            : 'Create a team to get started, or use an invite link to join an existing team.'}
         </p>
 
         <form className="auth-form" onSubmit={handleSubmit}>

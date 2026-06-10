@@ -123,27 +123,32 @@ export function FormationSelector({
       />
 
       {!isDefensive && (
-        <div className="formation-selector-actions btn-row">
-          <button
-            type="button"
-            className="btn sidebar-btn"
-            onClick={onSaveCurrentFormation}
-            disabled={!canEdit}
-          >
-            Save Formation
-          </button>
-
-          {isCustomSelected && (
+        <>
+          <div className="formation-selector-actions btn-row">
             <button
               type="button"
-              className="btn btn-danger sidebar-btn"
-              onClick={onDeleteCustomFormation}
+              className="btn btn-primary sidebar-btn"
+              onClick={onSaveCurrentFormation}
               disabled={!canEdit}
             >
-              Delete Formation
+              Save Formation
             </button>
-          )}
-        </div>
+
+            {isCustomSelected && (
+              <button
+                type="button"
+                className="btn btn-danger sidebar-btn"
+                onClick={onDeleteCustomFormation}
+                disabled={!canEdit}
+              >
+                Delete Formation
+              </button>
+            )}
+          </div>
+          <p className="formation-selector-hint">
+            Position players on the field, then save as a custom formation.
+          </p>
+        </>
       )}
     </div>
   )

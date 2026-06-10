@@ -5,6 +5,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--app-bg);
+  color: var(--text-light);
 }
 
 .app-body {
@@ -28,6 +30,7 @@
   gap: var(--space-xs);
   padding: var(--space-xs) var(--space-sm) var(--space-sm);
   overflow: hidden;
+  background: var(--canvas-bg);
 }
 
 .save-message {
@@ -48,41 +51,68 @@
   background: rgba(0, 0, 0, 0.35);
 }
 
+.app-theme-light .save-message-readonly {
+  color: #3d5240;
+  background: #e8ece8;
+}
+
 .field-stage {
   flex: 1;
   min-height: 0;
   display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  overflow: hidden;
-}
-
-.field-stage-main {
-  flex: 1 1 0;
-  min-height: 0;
-  display: flex;
-  gap: var(--space-sm);
-  align-items: stretch;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
 }
 
 .field-column {
   flex: 1 1 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
   min-height: 0;
+  container-type: size;
+}
+
+.field-column .field-stack {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  align-items: stretch;
+  width: min(100cqw, calc(100cqh * 60.3 / 54.5));
+  max-height: 100cqh;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.field-column .field-stack:has(.route-draw-controls) {
+  width: min(100cqw, calc((100cqh - 52px) * 60.3 / 54.5));
 }
 
 .field-column .field-container {
   width: 100%;
-  height: 100%;
+  height: auto;
+  flex: 0 0 auto;
   min-height: 0;
+  background: var(--field-card-bg, transparent);
+  border: 1px solid var(--field-card-border);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  box-shadow: var(--field-card-shadow);
+  overflow: hidden;
 }
 
-.notes-wrapper {
-  flex-shrink: 0;
+.field-column .field-stack:not(:has(.route-draw-controls)) .field-container {
+  border-radius: var(--radius-md);
+}
+
+.field-column .field-viewport {
+  aspect-ratio: 60.3 / 54.5;
+  width: 100%;
+  flex: 0 0 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {
@@ -101,7 +131,16 @@
     overflow: visible;
   }
 
-  .field-stage-main {
-    flex-direction: column;
+  .field-column .field-stack {
+    width: 100%;
+  }
+
+  .field-column .field-container {
+    width: 100%;
+    height: auto;
+  }
+
+  .field-column .field-viewport {
+    width: 100%;
   }
 }

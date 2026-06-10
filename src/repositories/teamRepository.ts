@@ -198,9 +198,10 @@ export async function clearLastTeamId(userId: string): Promise<void> {
 }
 
 export async function deleteTeam(teamId: string): Promise<void> {
-  const { error } = await supabase.from('teams').delete().eq('id', teamId)
+  const { error } = await supabase.rpc('delete_team', { p_team_id: teamId })
 
   if (error) {
+    logSupabaseError('delete_team RPC', error)
     throw new Error(error.message)
   }
 }

@@ -22,7 +22,8 @@
   stroke-width: 0.21;
   stroke-linecap: round;
   stroke-linejoin: round;
-  pointer-events: none;
+  pointer-events: stroke;
+  cursor: pointer;
 }
 
 .route-segment-selected {

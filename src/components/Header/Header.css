@@ -1,8 +1,8 @@
 .header {
-  background: linear-gradient(180deg, #1a4d1a 0%, var(--grass-dark) 100%);
-  border-bottom: 1px solid var(--border);
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
   padding: 6px 12px;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
   flex-shrink: 0;
 }
 
@@ -22,7 +22,7 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--header-title-color);
   letter-spacing: -0.2px;
   white-space: nowrap;
   overflow: hidden;
@@ -61,7 +61,7 @@
 
 .header-account-group {
   padding-left: 4px;
-  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  border-left: 1px solid var(--header-divider);
 }
 
 .header-user-label {
@@ -69,13 +69,13 @@
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--header-text-muted);
   white-space: nowrap;
 }
 
 .header-user-email {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--header-text-muted);
   max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -85,7 +85,19 @@
 .header-team-name {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-light);
+  color: var(--header-text);
+  white-space: nowrap;
+}
+
+.header-role-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--header-text-muted);
+  padding: 2px 6px;
+  border: 1px solid var(--header-divider);
+  border-radius: 999px;
   white-space: nowrap;
 }
 

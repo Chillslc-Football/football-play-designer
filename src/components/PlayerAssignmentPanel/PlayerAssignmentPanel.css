@@ -10,7 +10,7 @@
 
 .assignment-panel.is-collapsed {
   width: auto;
-  min-width: 180px;
+  min-width: 0;
 }
 
 .assignment-panel-toggle {
@@ -20,7 +20,7 @@
   width: 100%;
   padding: 10px 12px;
   border: none;
-  background: rgba(0, 0, 0, 0.12);
+  background: var(--panel-toggle-bg);
   color: var(--text-light);
   font-family: inherit;
   font-size: 12px;
@@ -32,12 +32,12 @@
 }
 
 .assignment-panel-toggle:hover {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--panel-toggle-hover);
 }
 
 .assignment-panel-toggle-title {
   flex: 1;
-  color: var(--gold);
+  color: var(--panel-toggle-title);
 }
 
 .assignment-panel-badge {
@@ -102,6 +102,14 @@
   color: var(--text-muted);
   margin: 0;
   line-height: 1.45;
+}
+
+.play-setup-panel .assignment-panel {
+  width: 100%;
+}
+
+.play-setup-panel .assignment-panel.is-collapsed {
+  width: 100%;
 }
 
 @media (max-width: 900px) {

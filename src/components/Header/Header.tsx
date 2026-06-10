@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
+import { useCanInvite } from '../../hooks/useCanInvite'
 import { useTeam } from '../../hooks/useTeam'
 import type { PlayType } from '../../types/playType'
+import { TEAM_ROLE_LABELS } from '../../utils/roleLabels'
 import { DeleteTeamDialog } from '../DeleteTeamDialog/DeleteTeamDialog'
 import { FeedbackDialog } from '../FeedbackDialog/FeedbackDialog'
+import { InviteMemberDialog } from '../InviteMemberDialog/InviteMemberDialog'
 import { PlayTypeSelector } from '../PlayTypeSelector/PlayTypeSelector'
 import './Header.css'
 
@@ -24,9 +27,11 @@ export function Header({
 }: HeaderProps) {
   const { user, signOut } = useAuth()
   const { team, activeTeamId, memberships, role, deleteTeam } = useTeam()
+  const canInvite = useCanInvite()
   const email = user?.email ?? ''
   const userId = user?.id ?? ''
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
   const [deleteTeamOpen, setDeleteTeamOpen] = useState(false)
   const [deleteTeamError, setDeleteTeamError] = useState<string | null>(null)
   const [deletingTeam, setDeletingTeam] = useState(false)
@@ -96,6 +101,13 @@ export function Header({
           onClose={() => setFeedbackOpen(false)}
         />
       )}
+      {team && activeTeamId && canInvite && (
+        <InviteMemberDialog
+          open={inviteOpen}
+          teamId={activeTeamId}
+          onClose={() => setInviteOpen(false)}
+        />
+      )}
 
       <div className="header-inner">
         <div className="header-brand">
@@ -127,6 +139,20 @@ export function Header({
                 </select>
               ) : (
                 <span className="header-team-name">{team?.name ?? '—'}</span>
+              )}
+              {role && (
+                <span className="header-role-badge" title="Your team role">
+                  {TEAM_ROLE_LABELS[role]}
+                </span>
+              )}
+              {canInvite && team && (
+                <button
+                  type="button"
+                  className="btn header-action-btn"
+                  onClick={() => setInviteOpen(true)}
+                >
+                  Invite
+                </button>
               )}
               {isTeamOwner && team && (
                 <button

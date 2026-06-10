@@ -101,6 +101,14 @@ export function MotionLine({
                   ? `motion-segment ${typeClass} motion-segment-selected`
                   : `motion-segment ${typeClass}`
               }
+              onMouseDown={
+                readOnly
+                  ? undefined
+                  : (event) => {
+                      event.stopPropagation()
+                      onSegmentSelect?.(index)
+                    }
+              }
             />
           </g>
         )

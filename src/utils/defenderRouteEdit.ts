@@ -17,6 +17,26 @@ export function getDefenderAnchorVertexIndex(selection: DefenderRouteEditSelecti
   return selection.kind === 'vertex' ? selection.vertexIndex : selection.segmentIndex + 1
 }
 
+export function canDeleteDefenderRouteSegmentSelection(
+  selection: DefenderRouteEditSelection | null,
+): boolean {
+  return selection !== null && getDeletableDefenderRouteSegmentIndex(selection) !== null
+}
+
+export function getDeletableDefenderRouteSegmentIndex(
+  selection: DefenderRouteEditSelection,
+): number | null {
+  if (selection.kind === 'segment') {
+    return selection.segmentIndex
+  }
+
+  if (selection.kind === 'vertex' && selection.vertexIndex > 0) {
+    return selection.vertexIndex - 1
+  }
+
+  return null
+}
+
 export function deleteEntireDefenderRoute(route: DefenderRoute): DefenderRoute {
   return {
     ...route,

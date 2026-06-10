@@ -1,3 +1,5 @@
+@import './styles/appDisplayTheme.css';
+
 :root {
   --grass-dark: #143d14;
   --grass-mid: #2d6a2d;
@@ -37,8 +39,8 @@
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: var(--text-light);
-  background-color: var(--grass-dark);
+  color: var(--text-on-surface);
+  background-color: var(--app-bg, #f0f0f0);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

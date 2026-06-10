@@ -22,14 +22,26 @@
   flex-shrink: 0;
 }
 
+.field-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 0;
+}
+
 .route-draw-controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
-  background: var(--field-controls-bg);
+  padding: 6px 10px;
+  background: var(--field-card-bg, var(--field-controls-bg));
+  border: 1px solid var(--field-card-border, transparent);
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  box-shadow: var(--field-card-shadow, none);
   flex-shrink: 0;
+  z-index: 2;
 }
 
 .route-draw-controls .btn {

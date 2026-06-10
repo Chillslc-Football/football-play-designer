@@ -1,0 +1,26 @@
+.invite-member-dialog {
+  max-width: 440px;
+}
+
+.invite-member-dialog-title {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+
+.invite-member-message {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted, #4a5f4a);
+}
+
+.invite-member-form,
+.invite-member-success {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.invite-member-link-input {
+  font-size: 12px;
+}

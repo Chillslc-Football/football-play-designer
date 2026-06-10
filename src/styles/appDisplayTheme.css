@@ -1,0 +1,77 @@
+/**
+ * App shell colors. Field diagram colors remain in fieldDisplayTheme.css.
+ *
+ * Rollback: in appDisplayTheme.ts set APP_DISPLAY_THEME = 'dark'
+ */
+
+.app-theme-light {
+  --app-bg: #f0f0f0;
+  --canvas-bg: #f0f0f0;
+  --header-bg: #ffffff;
+  --header-border: #e0e0e0;
+  --header-title-color: #143d14;
+  --header-text: #3d5240;
+  --header-text-muted: #6b7c6e;
+  --header-divider: #e0e0e0;
+
+  --sidebar-bg: #fafafa;
+  --sidebar-header-bg: #ffffff;
+  --sidebar-border: #e5e5e5;
+  --sidebar-section-title: #2a3d2c;
+  --sidebar-reopen-bg: #2d6a2d;
+  --sidebar-reopen-hover: #3d8a3d;
+
+  --text-light: #1a2a1c;
+  --text-muted: #5a6e5c;
+  --surface-card: #ffffff;
+  --surface-card-border: #e0e0e0;
+  --border: #e5e5e5;
+  --border-strong: #c5ccc6;
+  --surface-hover: #f0f4f0;
+
+  --panel-toggle-bg: #f0f0f0;
+  --panel-toggle-hover: #e8e8e8;
+  --panel-toggle-title: #2a3d2c;
+
+  --field-card-bg: #ffffff;
+  --field-card-border: #e0e0e0;
+  --field-card-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+
+  --play-type-selector-bg: #f0f0f0;
+}
+
+.app-theme-dark {
+  --app-bg: #143d14;
+  --canvas-bg: #143d14;
+  --header-bg: linear-gradient(180deg, #1a4d1a 0%, #143d14 100%);
+  --header-border: rgba(255, 255, 255, 0.12);
+  --header-title-color: #f0c040;
+  --header-text: #edf5ed;
+  --header-text-muted: #b8d4b8;
+  --header-divider: rgba(255, 255, 255, 0.15);
+
+  --sidebar-bg: rgba(0, 0, 0, 0.2);
+  --sidebar-header-bg: #143d14;
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --sidebar-section-title: #f0c040;
+  --sidebar-reopen-bg: #2d6a2d;
+  --sidebar-reopen-hover: #3d8a3d;
+
+  --text-light: #edf5ed;
+  --text-muted: #b8d4b8;
+  --surface-card: rgba(255, 255, 255, 0.06);
+  --surface-card-border: rgba(255, 255, 255, 0.14);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-strong: #2d6a2d;
+  --surface-hover: #f0f7f0;
+
+  --panel-toggle-bg: rgba(0, 0, 0, 0.12);
+  --panel-toggle-hover: rgba(0, 0, 0, 0.2);
+  --panel-toggle-title: #f0c040;
+
+  --field-card-bg: transparent;
+  --field-card-border: transparent;
+  --field-card-shadow: none;
+
+  --play-type-selector-bg: rgba(0, 0, 0, 0.2);
+}

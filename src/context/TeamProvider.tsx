@@ -164,24 +164,14 @@ export function TeamProvider({ children }: TeamProviderProps) {
       try {
         await teamRepository.deleteTeam(teamId)
 
-        const remaining = memberships.filter((entry) => entry.team.id !== teamId)
-
-        if (remaining.length > 0) {
-          const next = remaining[0]
-          await teamRepository.updateLastTeamId(user.id, next.team.id)
-          setActiveTeamId(next.team.id)
-          setTeam(next.team)
-          setRole(next.role)
-          setMemberships(remaining)
-          setNeedsOnboarding(false)
-        } else {
-          await teamRepository.clearLastTeamId(user.id)
-          setActiveTeamId(null)
-          setTeam(null)
-          setRole(null)
-          setMemberships([])
-          setNeedsOnboarding(true)
-        }
+        const result = await teamRepository.loadActiveTeamForUser(user.id)
+        applyLoadResult(result, {
+          setActiveTeamId,
+          setTeam,
+          setRole,
+          setMemberships,
+          setNeedsOnboarding,
+        })
 
         return { error: null }
       } catch (error) {
@@ -192,7 +182,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
         setLoading(false)
       }
     },
-    [user, role, activeTeamId, memberships],
+    [user, role, activeTeamId],
   )
 
   const value = useMemo(

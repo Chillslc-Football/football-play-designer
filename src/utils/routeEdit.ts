@@ -101,18 +101,32 @@ export function getSvgPointFromMouseEvent(
 
 export function isRouteVertexInteractive(
   vertexIndex: number,
-  vertexCount: number,
-  denseRoute: boolean,
-  selectedSegmentIndex: number | null,
+  _vertexCount: number,
+  _denseRoute: boolean,
+  _selectedSegmentIndex: number | null,
 ): boolean {
-  if (!denseRoute) return true
-  if (vertexIndex === 0 || vertexIndex === vertexCount - 1) return true
-  if (selectedSegmentIndex === null) return false
-  return vertexIndex === selectedSegmentIndex || vertexIndex === selectedSegmentIndex + 1
+  return vertexIndex > 0
 }
 
 export function getAnchorVertexIndex(selection: RouteEditSelection): number {
   return selection.kind === 'vertex' ? selection.vertexIndex : selection.segmentIndex + 1
+}
+
+/** Segment index to remove when deleting from a segment or waypoint selection. */
+export function getDeletableRouteSegmentIndex(selection: RouteEditSelection): number | null {
+  if (selection.kind === 'segment') {
+    return selection.segmentIndex
+  }
+
+  if (selection.kind === 'vertex' && selection.vertexIndex > 0) {
+    return selection.vertexIndex - 1
+  }
+
+  return null
+}
+
+export function canDeleteRouteSegmentSelection(selection: RouteEditSelection | null): boolean {
+  return selection !== null && getDeletableRouteSegmentIndex(selection) !== null
 }
 
 /** Clears all waypoints for a player route. */

@@ -1,10 +1,10 @@
 .play-setup-panel {
-  width: 292px;
+  width: 320px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: rgba(0, 0, 0, 0.2);
-  border-right: 1px solid var(--border);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
   overflow: hidden;
   max-height: calc(100svh - 88px);
 }
@@ -15,9 +15,9 @@
   justify-content: space-between;
   gap: 8px;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--sidebar-border);
   flex-shrink: 0;
-  background: var(--grass-dark);
+  background: var(--sidebar-header-bg);
 }
 
 .play-setup-title {
@@ -26,7 +26,7 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--sidebar-section-title);
 }
 
 .play-setup-collapse {
@@ -44,11 +44,15 @@
 
 .sidebar-section {
   padding: 8px 12px 10px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--sidebar-border);
 }
 
 .sidebar-section-last {
   border-bottom: none;
+}
+
+.sidebar-section-accordion {
+  padding: 0;
 }
 
 .sidebar-section-title {
@@ -57,7 +61,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--sidebar-section-title);
 }
 
 .play-setup-panel .sidebar-field-label {
@@ -77,6 +81,15 @@
   font-size: 12px;
 }
 
+.play-setup-panel .assignment-panel,
+.play-setup-panel .notes-section {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
 .play-setup-reopen {
   position: fixed;
   left: 0;
@@ -89,10 +102,10 @@
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  border: 1px solid var(--surface-card-border);
+  border: 1px solid var(--sidebar-border);
   border-left: none;
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  background: var(--grass-mid);
+  background: var(--sidebar-reopen-bg);
   color: #fff;
   cursor: pointer;
   box-shadow: var(--shadow-md);
@@ -100,7 +113,7 @@
 }
 
 .play-setup-reopen:hover {
-  background: var(--grass-light);
+  background: var(--sidebar-reopen-hover);
 }
 
 @media (max-width: 768px) {
@@ -108,7 +121,7 @@
     width: 100%;
     max-height: none;
     border-right: none;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--sidebar-border);
   }
 
   .play-setup-reopen {
@@ -118,6 +131,6 @@
     transform: none;
     writing-mode: horizontal-tb;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--surface-card-border);
+    border: 1px solid var(--sidebar-border);
   }
 }

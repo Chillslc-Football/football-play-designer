@@ -16,7 +16,7 @@ export function PlayerAssignmentPanel({
   canEdit = true,
   onPlayerNotesChange,
 }: PlayerAssignmentPanelProps) {
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
 
   return (
     <aside className={`assignment-panel ${isOpen ? 'is-open' : 'is-collapsed'}`}>

@@ -4,12 +4,13 @@ import './AuthPages.css'
 
 type SignupPageProps = {
   onSwitchToLogin: () => void
+  defaultEmail?: string
 }
 
-export function SignupPage({ onSwitchToLogin }: SignupPageProps) {
+export function SignupPage({ onSwitchToLogin, defaultEmail = '' }: SignupPageProps) {
   const { signUp } = useAuth()
   const [displayName, setDisplayName] = useState('')
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(defaultEmail)
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)

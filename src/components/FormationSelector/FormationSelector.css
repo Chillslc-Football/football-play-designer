@@ -21,3 +21,10 @@
   padding: 6px 10px;
   font-size: 13px;
 }
+
+.formation-selector-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
