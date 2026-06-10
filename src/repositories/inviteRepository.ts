@@ -63,20 +63,27 @@ export async function createTeamInvite(
 
 export async function previewTeamInvite(token: string): Promise<InvitePreview> {
   const { data, error } = await supabase.rpc('preview_team_invite', {
-    p_token: token.trim(),
+    p_token: token,
   })
 
   if (error) {
     throw new Error(error.message)
   }
 
-  const row = Array.isArray(data) ? (data[0] as PreviewRow | undefined) : (data as PreviewRow | null)
-  return normalizePreview(row ?? null)
+  const row = Array.isArray(data)
+    ? (data[0] as PreviewRow | undefined)
+    : (data as PreviewRow | null | undefined)
+
+  if (!row) {
+    return { teamName: null, role: null, email: null, status: 'invalid' }
+  }
+
+  return normalizePreview(row)
 }
 
 export async function acceptTeamInvite(token: string): Promise<string> {
   const { data, error } = await supabase.rpc('accept_team_invite', {
-    p_token: token.trim(),
+    p_token: token,
   })
 
   if (error) {

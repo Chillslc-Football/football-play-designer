@@ -1,18 +1,34 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useTeam } from '../hooks/useTeam'
+import { supabase } from '../lib/supabaseClient'
 import { LoginPage } from './LoginPage'
 import { SignupPage } from './SignupPage'
 import * as inviteRepository from '../repositories/inviteRepository'
-import { INVITE_ROLE_LABELS, type InvitePreview } from '../types/invite'
-import {
-  clearAcceptInviteUrl,
-  clearPendingInviteToken,
-  getPendingInviteToken,
-  savePendingInviteToken,
-} from '../utils/inviteToken'
+import { INVITE_ROLE_LABELS, type InvitePreview, type InvitePreviewStatus, type InviteRole } from '../types/invite'
+import { clearAcceptInviteUrl, clearPendingInviteToken } from '../utils/inviteToken'
 import './AuthPages.css'
 import './AcceptInvitePage.css'
+
+type PreviewRpcRow = {
+  team_name: string | null
+  role: InviteRole | null
+  email: string | null
+  status: InvitePreviewStatus
+}
+
+function readTokenFromUrl(): string | null {
+  return new URLSearchParams(window.location.search).get('token')
+}
+
+function parsePreviewRpcData(data: unknown): PreviewRpcRow | null {
+  if (data == null) return null
+
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row || typeof row !== 'object') return null
+
+  return row as PreviewRpcRow
+}
 
 function AcceptInviteLoggedOut({
   teamName,
@@ -34,7 +50,8 @@ function AcceptInviteLoggedOut({
           <strong>{roleLabel}</strong>.
         </p>
         <p className="accept-invite-notice">
-          Sign in or create an account using <strong>{invitedEmail}</strong> to accept this invite.
+          Sign in or create an account using <strong>{invitedEmail}</strong> to accept this
+          invite.
         </p>
       </div>
 
@@ -48,10 +65,12 @@ function AcceptInviteLoggedOut({
 }
 
 function AcceptInviteLoggedIn({
+  token,
   teamName,
   roleLabel,
   invitedEmail,
 }: {
+  token: string
   teamName: string
   roleLabel: string
   invitedEmail: string
@@ -60,7 +79,6 @@ function AcceptInviteLoggedIn({
   const { refreshTeam } = useTeam()
   const [acceptError, setAcceptError] = useState<string | null>(null)
   const [accepting, setAccepting] = useState(false)
-  const token = getPendingInviteToken()
 
   const userEmail = user?.email?.toLowerCase() ?? ''
   const emailMatches = userEmail === invitedEmail.toLowerCase()
@@ -81,8 +99,6 @@ function AcceptInviteLoggedIn({
   }
 
   async function handleAcceptInvite() {
-    if (!token) return
-
     setAccepting(true)
     setAcceptError(null)
 
@@ -124,53 +140,67 @@ function AcceptInviteLoggedIn({
 
 export function AcceptInvitePage() {
   const { user, loading: authLoading } = useAuth()
+  const [token, setToken] = useState<string | null>(null)
   const [preview, setPreview] = useState<InvitePreview | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(true)
-
-  const token = getPendingInviteToken()
-
-  useEffect(() => {
-    const currentToken = getPendingInviteToken()
-    if (currentToken) {
-      savePendingInviteToken(currentToken)
-    }
-  }, [])
 
   useEffect(() => {
     let cancelled = false
 
     async function loadPreview() {
-      if (!token) {
-        setPreview({ teamName: null, role: null, email: null, status: 'invalid' })
-        setPreviewLoading(false)
+      const urlToken = readTokenFromUrl()
+      setToken(urlToken)
+
+      console.log('[AcceptInvite] token', urlToken)
+
+      if (!urlToken) {
+        if (!cancelled) {
+          setPreview(null)
+          setPreviewLoading(false)
+        }
         return
       }
 
       setPreviewLoading(true)
       setPreviewError(null)
 
-      try {
-        const result = await inviteRepository.previewTeamInvite(token)
-        if (!cancelled) {
-          setPreview(result)
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setPreviewError(error instanceof Error ? error.message : 'Could not load invite')
-        }
-      } finally {
-        if (!cancelled) {
-          setPreviewLoading(false)
-        }
+      const { data, error } = await supabase.rpc('preview_team_invite', {
+        p_token: urlToken,
+      })
+
+      console.log('[AcceptInvite] preview_team_invite', { token: urlToken, data, error })
+
+      if (cancelled) return
+
+      if (error) {
+        setPreviewError(error.message)
+        setPreview(null)
+        setPreviewLoading(false)
+        return
       }
+
+      const row = parsePreviewRpcData(data)
+      if (!row) {
+        setPreview(null)
+        setPreviewLoading(false)
+        return
+      }
+
+      setPreview({
+        teamName: row.team_name,
+        role: row.role,
+        email: row.email,
+        status: row.status,
+      })
+      setPreviewLoading(false)
     }
 
     void loadPreview()
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [])
 
   if (authLoading || previewLoading) {
     return <div className="auth-loading">Loading invite…</div>
@@ -198,10 +228,21 @@ export function AcceptInvitePage() {
     )
   }
 
-  const status = preview?.status ?? 'invalid'
-  const invitedEmail = preview?.email ?? ''
-  const teamName = preview?.teamName ?? 'this team'
-  const roleLabel = preview?.role ? INVITE_ROLE_LABELS[preview.role] : 'member'
+  if (!preview) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <h1>Invite unavailable</h1>
+          <p className="auth-card-subtitle">This invite link is not valid.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const status = preview.status
+  const invitedEmail = preview.email ?? ''
+  const teamName = preview.teamName ?? 'this team'
+  const roleLabel = preview.role ? INVITE_ROLE_LABELS[preview.role] : 'member'
 
   if (status !== 'pending') {
     const message =
@@ -211,7 +252,9 @@ export function AcceptInvitePage() {
           ? 'This invite has already been used.'
           : status === 'revoked'
             ? 'This invite was revoked.'
-            : 'This invite link is not valid.'
+            : status === 'invalid'
+              ? 'This invite link is not valid.'
+              : 'This invite link is not valid.'
 
     return (
       <div className="auth-page">
@@ -235,6 +278,7 @@ export function AcceptInvitePage() {
 
   return (
     <AcceptInviteLoggedIn
+      token={token}
       teamName={teamName}
       roleLabel={roleLabel}
       invitedEmail={invitedEmail}
