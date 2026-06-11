@@ -1,0 +1,52 @@
+.wristband-card-face {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px dashed #333;
+  background: #fff;
+  color: #111;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.wristband-card-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 4px 6px;
+  border-right: 1px solid #ccc;
+}
+
+.wristband-card-column:last-child {
+  border-right: none;
+}
+
+.wristband-card-heading {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 4px;
+  padding-bottom: 2px;
+  min-height: 1.2em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wristband-card-play-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.wristband-card-play-list li {
+  font-size: 8px;
+  line-height: 1.25;
+  padding: 1px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -9,6 +9,12 @@
   color: var(--text-light);
 }
 
+.main-app .app {
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
 .app-body {
   flex: 1;
   display: flex;

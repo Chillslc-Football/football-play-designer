@@ -1,0 +1,40 @@
+.wristband-print-sheet {
+  margin: 0 auto;
+  background: #fff;
+  box-sizing: border-box;
+  page-break-after: always;
+}
+
+.wristband-print-grid {
+  display: grid;
+  width: 100%;
+  height: 100%;
+}
+
+.wristband-print-slot {
+  box-sizing: border-box;
+  padding: 0;
+}
+
+.wristband-print-slot .wristband-card-face {
+  width: 100% !important;
+  height: 100% !important;
+  border: 1px dashed #000;
+}
+
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 0;
+  }
+
+  body {
+    margin: 0;
+    background: #fff;
+  }
+
+  .wristband-print-sheet {
+    margin: 0;
+    box-shadow: none;
+  }
+}

@@ -1,4 +1,4 @@
-import App from '../App'
+import { MainApp } from './MainApp/MainApp'
 import { useTeam } from '../hooks/useTeam'
 import { CreateTeamPage } from '../pages/CreateTeamPage'
 import '../pages/AuthPages.css'
@@ -14,5 +14,5 @@ export function TeamGate() {
     return <CreateTeamPage />
   }
 
-  return <App />
+  return <MainApp />
 }
