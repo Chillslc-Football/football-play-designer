@@ -39,9 +39,11 @@ export function PlayerMarker({
       <text className="player-symbol" fontSize={PLAYBOOK_SYMBOL_SIZE}>
         O
       </text>
-      <text className="player-label" y={PLAYBOOK_LABEL_OFFSET}>
-        {player.label}
-      </text>
+      {player.label ? (
+        <text className="player-label" y={PLAYBOOK_LABEL_OFFSET}>
+          {player.label}
+        </text>
+      ) : null}
     </g>
   )
 }

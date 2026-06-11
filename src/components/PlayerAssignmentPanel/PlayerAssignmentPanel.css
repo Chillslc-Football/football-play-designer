@@ -58,12 +58,40 @@
   padding: 10px 12px 12px;
 }
 
-.assignment-player-label {
-  font-size: 1.5rem;
+.assignment-slot-id {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.assignment-label-input {
+  width: 4.5rem;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
   font-weight: 700;
-  color: var(--text-light);
-  margin: 0 0 8px;
-  letter-spacing: 1px;
+  font-family: inherit;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-on-surface);
+}
+
+.assignment-label-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-ring);
+}
+
+.assignment-label-input:read-only {
+  opacity: 0.85;
+  cursor: default;
 }
 
 .assignment-field-label {

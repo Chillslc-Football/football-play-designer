@@ -15,9 +15,22 @@ export const FIELD_PADDING_BOTTOM = 2
 export const FIELD_PADDING_LEFT = 3.5
 export const FIELD_PADDING_RIGHT = 3.5
 
-/** Full SVG viewBox dimensions — playing field plus label padding. */
+/**
+ * Endzone depth beyond each goal line — 1 SVG unit = 1 yard (same scale as yard lines).
+ * Rendered outside the 0–50 playable coordinate system (north of yard 0, south of yard 100).
+ */
+export const ENDZONE_DEPTH_YARDS = 10
+
+/**
+ * Y origin of the playable field inside the SVG viewBox.
+ * Extra space above y = 0 fits the opponent endzone when the north goal line is in view.
+ */
+export const FIELD_PLAY_AREA_Y = FIELD_PADDING_TOP + ENDZONE_DEPTH_YARDS
+
+/** Full SVG viewBox dimensions — opponent endzone headroom, playing field, own endzone, padding. */
 export const VIEWBOX_WIDTH = FIELD_PADDING_LEFT + FIELD_WIDTH + FIELD_PADDING_RIGHT
-export const VIEWBOX_HEIGHT = FIELD_PADDING_TOP + FIELD_VIEW_LENGTH + FIELD_PADDING_BOTTOM
+export const VIEWBOX_HEIGHT =
+  FIELD_PLAY_AREA_Y + FIELD_VIEW_LENGTH + ENDZONE_DEPTH_YARDS + FIELD_PADDING_BOTTOM
 
 /** Line of scrimmage y — fixed so coaches always draw from the same spot. */
 export const BACKFIELD_YARDS = 12

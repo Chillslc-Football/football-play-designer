@@ -31,6 +31,7 @@ function formationToData(formation: CustomFormation, id: string): CustomFormatio
     id,
     label: formation.label,
     positions: formation.positions,
+    ...(formation.positionLabels ? { positionLabels: formation.positionLabels } : {}),
   }
 }
 
@@ -43,6 +44,7 @@ function rowToFormation(row: FormationRow): CustomFormation {
     id: row.id,
     label,
     positions: migrateFormationPositions(rawPositions) as Record<PlayerLabel, Position>,
+    positionLabels: stored.positionLabels,
   }
 }
 

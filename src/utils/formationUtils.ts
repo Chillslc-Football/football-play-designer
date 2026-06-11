@@ -3,7 +3,13 @@ import {
   DEFAULT_FORMATION_ID,
   type FormationDefinition,
 } from '../data/builtinFormations'
-import type { Player, PlayerLabel, Position } from '../types/player'
+import {
+  normalizePositionLabel,
+  resolvePlayerDisplayLabel,
+  type Player,
+  type PlayerLabel,
+  type Position,
+} from '../types/player'
 import type { CustomFormation } from './formationStorage'
 
 /** Play filter value that shows every saved play. */
@@ -11,20 +17,44 @@ export const ALL_PLAYS_FILTER = 'all'
 
 export type PlayFilterId = typeof ALL_PLAYS_FILTER | string
 
-/** Builds player objects from a position map. */
+/** Display label for a formation slot; uses stored custom label when present. */
+export function labelForFormationSlot(
+  id: PlayerLabel,
+  positionLabels?: Partial<Record<PlayerLabel, string>>,
+): string {
+  if (positionLabels && Object.prototype.hasOwnProperty.call(positionLabels, id)) {
+    return resolvePlayerDisplayLabel(id, positionLabels[id])
+  }
+  return id
+}
+
+/** Builds player objects from a position map and optional custom labels. */
 export function playersFromPositions(
   positions: Record<PlayerLabel, Position>,
+  positionLabels?: Partial<Record<PlayerLabel, string>>,
 ): Player[] {
-  const labels = Object.keys(positions) as PlayerLabel[]
-  return labels.map((label) => ({
-    id: label,
-    label,
-    position: positions[label],
+  const slotIds = Object.keys(positions) as PlayerLabel[]
+  return slotIds.map((id) => ({
+    id,
+    label: labelForFormationSlot(id, positionLabels),
+    position: positions[id],
   }))
 }
 
+/** Extracts per-slot labels from on-field players for formation save. */
+export function positionLabelsFromPlayers(players: Player[]): Partial<Record<PlayerLabel, string>> {
+  return Object.fromEntries(
+    players.map((player) => [
+      player.id,
+      player.label === undefined || player.label === null
+        ? player.id
+        : normalizePositionLabel(player.label),
+    ]),
+  ) as Partial<Record<PlayerLabel, string>>
+}
+
 export function playersFromFormation(formation: FormationDefinition): Player[] {
-  return playersFromPositions(formation.positions)
+  return playersFromPositions(formation.positions, formation.positionLabels)
 }
 
 /** Converts current on-field players into a formation position map. */
@@ -50,6 +80,7 @@ export function getFormationById(
     id: custom.id,
     label: custom.label,
     positions: custom.positions,
+    positionLabels: custom.positionLabels,
     isBuiltin: false,
   }
 }
@@ -118,6 +149,7 @@ export function getAllFormations(
   const customAsDefinitions: FormationDefinition[] = customFormations.map((f) => ({
     id: f.id,
     label: f.label,
+    positionLabels: f.positionLabels,
     positions: f.positions,
     isBuiltin: false,
   }))

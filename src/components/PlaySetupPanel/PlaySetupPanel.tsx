@@ -72,8 +72,10 @@ type PlaySetupPanelProps = {
   isMirrored: boolean
   isSaving?: boolean
   selectedPlayerId: PlayerLabel | null
+  selectedPlayerLabel: string
   playerNotes: PlayerNotes
   onPlayerNotesChange: (playerId: PlayerLabel, notes: string) => void
+  onPlayerLabelChange: (playerId: PlayerLabel, label: string) => void
   playNotes: string
   onPlayNotesChange: (notes: string) => void
 }
@@ -124,8 +126,10 @@ export function PlaySetupPanel({
   isMirrored,
   isSaving = false,
   selectedPlayerId,
+  selectedPlayerLabel,
   playerNotes,
   onPlayerNotesChange,
+  onPlayerLabelChange,
   playNotes,
   onPlayNotesChange,
 }: PlaySetupPanelProps) {
@@ -234,9 +238,11 @@ export function PlaySetupPanel({
         <section className="sidebar-section sidebar-section-accordion">
           <PlayerAssignmentPanel
             selectedPlayerId={selectedPlayerId}
+            selectedPlayerLabel={selectedPlayerLabel}
             playerNotes={playerNotes}
             canEdit={canEdit}
             onPlayerNotesChange={onPlayerNotesChange}
+            onPlayerLabelChange={onPlayerLabelChange}
           />
         </section>
 

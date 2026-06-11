@@ -22,6 +22,7 @@ import {
   getDefaultFormationName,
   getFormationLabel,
 } from './formationUtils'
+import { normalizePositionLabel, type Player } from '../types/player'
 import {
   COORDINATE_SPACE_DB,
   COORDINATE_SPACE_RENDER,
@@ -52,6 +53,17 @@ export function normalizePlayRecord(
   const savedPlayers = hasSavedPlayerPositions(play.players)
   const savedDefenders = hasSavedDefenderPositions(play.defenders)
 
+  function normalizeLoadedPlayer(player: Player): Player {
+    if (player.label === undefined || player.label === null) {
+      return { ...player, label: player.id }
+    }
+    return { ...player, label: normalizePositionLabel(player.label) }
+  }
+
+  const loadedPlayers = savedPlayers
+    ? play.players.map(normalizeLoadedPlayer)
+    : createPlayersForFormation(formationId, customFormations)
+
   const normalized: Play = {
     ...createEmptyPlay(playType),
     ...play,
@@ -62,9 +74,7 @@ export function normalizePlayRecord(
     opponentFormationId: play.opponentFormationId ?? null,
     opponentFormationName: play.opponentFormationName ?? null,
     driveStartYardLine: resolveDriveStartYardLine(play),
-    players: savedPlayers
-      ? play.players
-      : createPlayersForFormation(formationId, customFormations),
+    players: loadedPlayers,
     defenders: savedDefenders ? play.defenders : createDefendersForFront(frontId),
     routes: play.routes ?? createEmptyRoutes(),
     blocks: play.blocks ?? createEmptyBlocks(),

@@ -1,4 +1,5 @@
 import {
+  ENDZONE_DEPTH_YARDS,
   FIELD_VIEW_LENGTH,
   FIELD_WIDTH,
   HASH_MARK_LANES,
@@ -38,6 +39,63 @@ export type YardLabel = {
  */
 export function absoluteYardToViewY(absoluteYard: number, viewStartYard: number): number {
   return absoluteYard - viewStartYard
+}
+
+/** Opponent goal line on the absolute field (offense attacks north toward yard 0). */
+export const OPPONENT_GOAL_LINE_YARD = 0
+
+/** Own goal line on the absolute field (endzone sits south of this line). */
+export const OWN_GOAL_LINE_YARD = 100
+
+export function getOpponentGoalLineViewY(bounds: FieldViewBounds): number {
+  return absoluteYardToViewY(OPPONENT_GOAL_LINE_YARD, bounds.viewStartYard)
+}
+
+export function getOwnGoalLineViewY(bounds: FieldViewBounds): number {
+  return absoluteYardToViewY(OWN_GOAL_LINE_YARD, bounds.viewStartYard)
+}
+
+/** @deprecated Use getOpponentGoalLineViewY */
+export function getGoalLineViewY(bounds: FieldViewBounds): number {
+  return getOpponentGoalLineViewY(bounds)
+}
+
+export type EndzoneRenderBounds = {
+  topY: number
+  bottomY: number
+}
+
+/** Ten-yard endzone north of the opponent goal line (absolute yard 0). */
+export function getOpponentEndzoneRenderBounds(bounds: FieldViewBounds): EndzoneRenderBounds | null {
+  const bottomY = getOpponentGoalLineViewY(bounds)
+  const topY = bottomY - ENDZONE_DEPTH_YARDS
+
+  if (topY >= FIELD_VIEW_LENGTH) {
+    return null
+  }
+
+  return { topY, bottomY }
+}
+
+/** Ten-yard endzone south of the own goal line (absolute yard 100). */
+export function getOwnEndzoneRenderBounds(bounds: FieldViewBounds): EndzoneRenderBounds | null {
+  const topY = getOwnGoalLineViewY(bounds)
+  const bottomY = topY + ENDZONE_DEPTH_YARDS
+
+  if (bottomY <= 0) {
+    return null
+  }
+
+  if (topY >= FIELD_VIEW_LENGTH + ENDZONE_DEPTH_YARDS) {
+    return null
+  }
+
+  return { topY, bottomY }
+}
+
+/** @deprecated Use getOpponentEndzoneRenderBounds */
+export function getEndzoneRenderBounds(bounds: FieldViewBounds): EndzoneRenderBounds | null {
+  return getOpponentEndzoneRenderBounds(bounds)
 }
 
 export function getFieldViewBounds(driveStart: DriveStartYardLine): FieldViewBounds {

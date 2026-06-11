@@ -18,6 +18,8 @@
   --field-yard-number-stroke: rgba(0, 0, 0, 0.2);
   --field-yard-arrow: #ffffff;
   --field-los: rgba(255, 255, 255, 0.7);
+  --field-endzone: #2d6a2d;
+  --field-goal-line: #ffffff;
   --field-player-symbol-fill: #ffffff;
   --field-player-symbol-stroke: #1a1a1a;
   --field-player-symbol-stroke-width: 0.12px;
@@ -53,6 +55,8 @@
   --field-yard-number-stroke: transparent;
   --field-yard-arrow: #111111;
   --field-los: #e6b800;
+  --field-endzone: #d8d8d8;
+  --field-goal-line: #111111;
   --field-player-symbol-fill: #ffffff;
   --field-player-symbol-stroke: #111111;
   --field-player-symbol-stroke-width: 0.5px;

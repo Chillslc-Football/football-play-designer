@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  ENDZONE_DEPTH_YARDS,
   FIELD_LENGTH,
   FIELD_PADDING_LEFT,
-  FIELD_PADDING_TOP,
+  FIELD_PLAY_AREA_Y,
   FIELD_WIDTH,
   PLAYBOOK_HIT_SIZE,
   PLAYBOOK_LABEL_OFFSET,
@@ -43,6 +44,10 @@ import {
   getFieldViewBounds,
   getHashMarks,
   getMajorYardLabels,
+  getOpponentEndzoneRenderBounds,
+  getOpponentGoalLineViewY,
+  getOwnEndzoneRenderBounds,
+  getOwnGoalLineViewY,
   getYardLines,
 } from '../../utils/fieldView'
 import { appendPathPoint } from '../../utils/pathUtils'
@@ -205,6 +210,22 @@ export function Field({
     () => getMajorYardLabels(viewBounds),
     [viewBounds],
   )
+  const opponentEndzoneBounds = useMemo(
+    () => getOpponentEndzoneRenderBounds(viewBounds),
+    [viewBounds],
+  )
+  const ownEndzoneBounds = useMemo(
+    () => getOwnEndzoneRenderBounds(viewBounds),
+    [viewBounds],
+  )
+  const opponentGoalLineViewY = useMemo(
+    () => getOpponentGoalLineViewY(viewBounds),
+    [viewBounds],
+  )
+  const ownGoalLineViewY = useMemo(
+    () => getOwnGoalLineViewY(viewBounds),
+    [viewBounds],
+  )
 
   const turfStripes = useMemo(() => {
     const stripes: { y: number; light: boolean }[] = []
@@ -237,7 +258,7 @@ export function Field({
 
     return clampPosition({
       x: svgPoint.x - FIELD_PADDING_LEFT,
-      y: svgPoint.y - FIELD_PADDING_TOP,
+      y: svgPoint.y - FIELD_PLAY_AREA_Y,
     })
   }
 
@@ -1749,7 +1770,7 @@ export function Field({
             className="field-viewbox-bg"
           />
 
-          <g className="field-play-area" transform={`translate(${FIELD_PADDING_LEFT}, ${FIELD_PADDING_TOP})`}>
+          <g className="field-play-area" transform={`translate(${FIELD_PADDING_LEFT}, ${FIELD_PLAY_AREA_Y})`}>
             <g className="field-turf-surface" filter="url(#turf-grain)">
               <rect
                 x={0}
@@ -1769,6 +1790,29 @@ export function Field({
                 />
               ))}
             </g>
+
+            {opponentEndzoneBounds && (
+              <rect
+                x={0}
+                y={opponentEndzoneBounds.topY}
+                width={FIELD_WIDTH}
+                height={opponentEndzoneBounds.bottomY - opponentEndzoneBounds.topY}
+                className="field-endzone field-endzone-opponent"
+                aria-hidden="true"
+              />
+            )}
+
+            {ownEndzoneBounds && (
+              <rect
+                x={0}
+                y={ownEndzoneBounds.topY}
+                width={FIELD_WIDTH}
+                height={ownEndzoneBounds.bottomY - ownEndzoneBounds.topY}
+                className="field-endzone field-endzone-own"
+                aria-hidden="true"
+              />
+            )}
+
             <rect
               x={0}
               y={0}
@@ -1787,6 +1831,26 @@ export function Field({
                 className={line.isMajor ? 'yard-line yard-line-major' : 'yard-line yard-line-minor'}
               />
             ))}
+
+            {opponentEndzoneBounds && opponentGoalLineViewY < FIELD_LENGTH && (
+              <line
+                x1={0}
+                y1={opponentGoalLineViewY}
+                x2={FIELD_WIDTH}
+                y2={opponentGoalLineViewY}
+                className="goal-line"
+              />
+            )}
+
+            {ownEndzoneBounds && ownGoalLineViewY > 0 && ownGoalLineViewY < FIELD_LENGTH + ENDZONE_DEPTH_YARDS && (
+              <line
+                x1={0}
+                y1={ownGoalLineViewY}
+                x2={FIELD_WIDTH}
+                y2={ownGoalLineViewY}
+                className="goal-line"
+              />
+            )}
 
             {hashMarks.map((mark) => (
               <line

@@ -18,7 +18,11 @@ import type { PlayType } from './types/playType'
 import type { DriveStartYardLine } from './types/driveStart'
 import { createEmptyBlocks, type Block } from './types/block'
 import { createEmptyPlay, type Play } from './types/play'
-import { type PlayerLabel, type Position } from './types/player'
+import {
+  normalizePositionLabel,
+  type PlayerLabel,
+  type Position,
+} from './types/player'
 import { createEmptyRoutes, type Route } from './types/route'
 import {
   addCustomFormation,
@@ -64,6 +68,7 @@ import {
   getPlayFilterOptions,
   isCustomFormationId,
   isFormationNameTaken,
+  positionLabelsFromPlayers,
   positionsFromPlayers,
   type PlayFilterId,
   withFormationSnapshot,
@@ -777,6 +782,7 @@ function App() {
           position: clampOffensePosition(player.position),
         })),
       ),
+      positionLabels: positionLabelsFromPlayers(play.players),
     }
 
     try {
@@ -824,6 +830,7 @@ function App() {
           position: clampOffensePosition(player.position),
         })),
       ),
+      positionLabels: positionLabelsFromPlayers(play.players),
     }
 
     try {
@@ -1017,6 +1024,17 @@ function App() {
         ...current.playerNotes,
         [playerId]: notes,
       },
+    }))
+  }
+
+  function handlePlayerLabelChange(playerId: PlayerLabel, label: string) {
+    if (!canEdit) return
+    const normalized = normalizePositionLabel(label)
+    setPlay((current) => ({
+      ...current,
+      players: current.players.map((player) =>
+        player.id === playerId ? { ...player, label: normalized } : player,
+      ),
     }))
   }
 
@@ -1218,8 +1236,14 @@ function App() {
           isMirrored={play.mirrored}
           isSaving={isSaving}
           selectedPlayerId={selectedPlayerId}
+          selectedPlayerLabel={
+            selectedPlayerId
+              ? (play.players.find((player) => player.id === selectedPlayerId)?.label ?? '')
+              : ''
+          }
           playerNotes={play.playerNotes}
           onPlayerNotesChange={handlePlayerNotesChange}
+          onPlayerLabelChange={handlePlayerLabelChange}
           playNotes={play.notes}
           onPlayNotesChange={handleNotesChange}
         />

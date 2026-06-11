@@ -99,6 +99,18 @@
   pointer-events: none;
 }
 
+/* 10-yard endzones — same 1 unit = 1 yard scale as yard lines. */
+.field-endzone {
+  fill: var(--field-endzone);
+  pointer-events: none;
+}
+
+.goal-line {
+  stroke: var(--field-goal-line);
+  stroke-width: 0.45;
+  pointer-events: none;
+}
+
 .yard-line {
   stroke: var(--field-line);
   pointer-events: none;

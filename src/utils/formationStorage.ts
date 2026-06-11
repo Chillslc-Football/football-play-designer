@@ -11,6 +11,8 @@ export type CustomFormation = {
   id: string
   label: string
   positions: Record<PlayerLabel, Position>
+  /** Optional per-slot display labels (max 3 chars); missing keys fall back to slot id. */
+  positionLabels?: Partial<Record<PlayerLabel, string>>
 }
 
 export function getCustomFormations(): CustomFormation[] {

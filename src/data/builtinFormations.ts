@@ -20,6 +20,7 @@ export type FormationDefinition = {
   id: string
   label: string
   positions: Record<PlayerLabel, Position>
+  positionLabels?: Partial<Record<PlayerLabel, string>>
   isBuiltin: boolean
 }
 

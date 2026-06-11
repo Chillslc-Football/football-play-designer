@@ -1,6 +1,11 @@
 import type { Player, PlayerLabel, Position } from '../types/player'
 import type { CustomFormation } from './formationStorage'
-import { isCustomFormationId, positionsFromPlayers } from './formationUtils'
+import {
+  isCustomFormationId,
+  labelForFormationSlot,
+  positionsFromPlayers,
+} from './formationUtils'
+import { normalizePositionLabel } from '../types/player'
 import { clampOffensePosition } from './losClamp'
 
 function positionsComparable(positions: Record<PlayerLabel, Position>): string {
@@ -27,5 +32,21 @@ export function hasFormationPositionChanges(
     })),
   )
 
-  return positionsComparable(currentPositions) !== positionsComparable(formation.positions)
+  if (positionsComparable(currentPositions) !== positionsComparable(formation.positions)) {
+    return true
+  }
+
+  const slotIds = Object.keys(formation.positions).sort() as PlayerLabel[]
+  const storedLabels = Object.fromEntries(
+    slotIds.map((id) => [id, labelForFormationSlot(id, formation.positionLabels)]),
+  )
+  const currentLabels = Object.fromEntries(
+    slotIds.map((id) => {
+      const player = players.find((entry) => entry.id === id)
+      const raw = player?.label ?? id
+      return [id, raw === '' ? '' : normalizePositionLabel(raw)]
+    }),
+  )
+
+  return JSON.stringify(storedLabels) !== JSON.stringify(currentLabels)
 }
