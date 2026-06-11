@@ -29,15 +29,28 @@ export type YardLabel = {
   label: string
 }
 
+/**
+ * Maps an absolute field yard (0–100) into view Y coordinates.
+ *
+ * The 50-yard window scrolls with drive start: view Y = 0 is the north edge of
+ * the visible field at absolute yard `viewStartYard`. Sideline labels, yard
+ * lines, and the line of scrimmage all use this same formula.
+ */
+export function absoluteYardToViewY(absoluteYard: number, viewStartYard: number): number {
+  return absoluteYard - viewStartYard
+}
+
 export function getFieldViewBounds(driveStart: DriveStartYardLine): FieldViewBounds {
   const losYard = getLosYardForDriveStart(driveStart)
+  // Keep LOS at a fixed view Y (12 yards of backfield south) while the window scrolls.
   const viewStartYard = losYard - LOS_VIEW_Y
 
   return {
     losYard,
     viewStartYard,
     viewEndYard: viewStartYard + FIELD_VIEW_LENGTH,
-    losViewY: LOS_VIEW_Y,
+    // Same coordinate system as yard lines and sideline numbers.
+    losViewY: absoluteYardToViewY(losYard, viewStartYard),
   }
 }
 
@@ -53,14 +66,21 @@ function isInsideViewBox(viewY: number): boolean {
   return viewY > 0 && viewY < FIELD_VIEW_LENGTH
 }
 
-/** Horizontal yard lines every 5 yards across the 50-yard view. */
-export function getYardLines(): YardLine[] {
+/** Horizontal yard lines every 5 absolute yards visible in the current drive-start window. */
+export function getYardLines(bounds: FieldViewBounds): YardLine[] {
   const lines: YardLine[] = []
+  const { viewStartYard } = bounds
+  const viewEndYard = viewStartYard + FIELD_VIEW_LENGTH
 
-  for (let viewY = 5; viewY <= FIELD_VIEW_LENGTH; viewY += 5) {
+  for (let absoluteYard = 5; absoluteYard <= viewEndYard; absoluteYard += 5) {
+    if (absoluteYard <= viewStartYard) continue
+
+    const viewY = absoluteYardToViewY(absoluteYard, viewStartYard)
+    if (!isInsideViewBox(viewY)) continue
+
     lines.push({
       viewY,
-      isMajor: viewY % 10 === 0,
+      isMajor: absoluteYard % 10 === 0,
     })
   }
 
@@ -76,7 +96,7 @@ export function getMajorYardLabels(bounds: FieldViewBounds): YardLabel[] {
   for (let absoluteYard = 10; absoluteYard <= 90; absoluteYard += 10) {
     if (absoluteYard < viewStartYard || absoluteYard > viewEndYard) continue
 
-    const viewY = absoluteYard - viewStartYard
+    const viewY = absoluteYardToViewY(absoluteYard, viewStartYard)
     if (!isInsideViewBox(viewY)) continue
 
     const label = formatAbsoluteYardLabel(absoluteYard)

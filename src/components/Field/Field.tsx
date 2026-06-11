@@ -199,7 +199,7 @@ export function Field({
     () => getFieldViewBounds(driveStartYardLine),
     [driveStartYardLine],
   )
-  const yardLines = useMemo(() => getYardLines(), [])
+  const yardLines = useMemo(() => getYardLines(viewBounds), [viewBounds])
   const hashMarks = useMemo(() => getHashMarks(), [])
   const yardLabels = useMemo(
     () => getMajorYardLabels(viewBounds),
