@@ -5,47 +5,14 @@
   overflow: hidden;
 }
 
-.main-app-nav {
-  display: flex;
-  gap: 4px;
-  padding: 6px 12px;
-  background: var(--header-bg);
-  border-bottom: 1px solid var(--header-border);
-  flex-shrink: 0;
-}
-
-.main-app-nav-btn {
-  min-height: 30px;
-  padding: 4px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  border: 1px solid var(--header-border);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--header-text);
-  cursor: pointer;
-}
-
-.main-app-nav-btn.is-active {
-  background: var(--surface);
-  color: var(--text-on-surface);
-  border-color: var(--border-strong);
-}
-
 .main-app > .app,
 .main-app > .wristband-page {
   flex: 1;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .main-app > .wristband-page {
-  height: auto;
-  min-height: 0;
   overflow: auto;
-}
-
-@media print {
-  .main-app-nav {
-    display: none !important;
-  }
 }

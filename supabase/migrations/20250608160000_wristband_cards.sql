@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.wristband_cards (
   right_heading     text NOT NULL DEFAULT '',
   left_play_ids     uuid[] NOT NULL DEFAULT '{}',
   right_play_ids    uuid[] NOT NULL DEFAULT '{}',
-  created_by        uuid REFERENCES public.profiles (id) ON DELETE SET NULL,
+  created_by        uuid REFERENCES auth.users (id) ON DELETE SET NULL DEFAULT auth.uid(),
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now()
 );

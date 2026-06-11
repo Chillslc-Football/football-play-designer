@@ -17,11 +17,20 @@ export type WristbandCard = {
 export type WristbandCardDraft = Omit<
   WristbandCard,
   'team_id' | 'created_by' | 'created_at' | 'updated_at'
-> & {
-  team_id?: string
-  created_by?: string | null
-  created_at?: string
-  updated_at?: string
+>
+
+export function cardToDraft(card: WristbandCard): WristbandCardDraft {
+  return {
+    id: card.id,
+    name: card.name,
+    wristband_width: card.wristband_width,
+    wristband_height: card.wristband_height,
+    size_unit: card.size_unit,
+    left_heading: card.left_heading,
+    right_heading: card.right_heading,
+    left_play_ids: card.left_play_ids,
+    right_play_ids: card.right_play_ids,
+  }
 }
 
 export function createEmptyWristbandCardDraft(): WristbandCardDraft {

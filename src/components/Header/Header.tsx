@@ -7,6 +7,7 @@ import { TEAM_ROLE_LABELS } from '../../utils/roleLabels'
 import { DeleteTeamDialog } from '../DeleteTeamDialog/DeleteTeamDialog'
 import { FeedbackDialog } from '../FeedbackDialog/FeedbackDialog'
 import { InviteMemberDialog } from '../InviteMemberDialog/InviteMemberDialog'
+import { AppShellNav } from '../AppShellNav/AppShellNav'
 import { PlayTypeSelector } from '../PlayTypeSelector/PlayTypeSelector'
 import './Header.css'
 
@@ -125,6 +126,8 @@ export function Header({
         <div className="header-brand">
           <h1 className="header-title">Football Play Designer MVP</h1>
         </div>
+
+        <AppShellNav />
 
         <PlayTypeSelector
           playType={playType}

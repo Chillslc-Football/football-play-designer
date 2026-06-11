@@ -1,0 +1,31 @@
+.app-shell-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.app-shell-nav-btn {
+  min-height: 30px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--header-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--header-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.app-shell-nav-btn.is-active {
+  background: var(--play-type-selector-bg, var(--surface));
+  color: var(--header-title-color);
+  border-color: var(--border-strong);
+}
+
+@media print {
+  .app-shell-nav {
+    display: none !important;
+  }
+}

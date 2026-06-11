@@ -25,6 +25,8 @@ export function SignupPage({
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState(defaultEmail)
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -33,6 +35,22 @@ export function SignupPage({
     event.preventDefault()
     setError(null)
     setMessage(null)
+
+    if (!password) {
+      setError('Password is required.')
+      return
+    }
+
+    if (!confirmPassword) {
+      setError('Confirm password is required.')
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+
     setSubmitting(true)
 
     const result = await signUp(email, password, displayName, { emailRedirectTo })
@@ -96,7 +114,7 @@ export function SignupPage({
             <input
               id="signup-password"
               className="input-field"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               required
               minLength={6}
@@ -104,6 +122,31 @@ export function SignupPage({
               onChange={(event) => setPassword(event.target.value)}
             />
           </div>
+
+          <div className="form-group">
+            <label className="field-label" htmlFor="signup-confirm-password">
+              Confirm password
+            </label>
+            <input
+              id="signup-confirm-password"
+              className="input-field"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              required
+              minLength={6}
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+            />
+          </div>
+
+          <label className="auth-show-password">
+            <input
+              type="checkbox"
+              checked={showPassword}
+              onChange={(event) => setShowPassword(event.target.checked)}
+            />
+            Show password
+          </label>
 
           <button type="submit" className="btn btn-primary" disabled={submitting}>
             {submitting ? 'Creating account…' : 'Sign up'}

@@ -17,6 +17,24 @@ type WristbandCardRow = {
   updated_at: string
 }
 
+/** Columns sent on INSERT — created_by is set by DB default auth.uid(). */
+export type WristbandCardInsertPayload = {
+  id: string
+  team_id: string
+  name: string
+  wristband_width: number
+  wristband_height: number
+  size_unit: 'inches'
+  left_heading: string
+  right_heading: string
+  left_play_ids: string[]
+  right_play_ids: string[]
+}
+
+type WristbandCardUpdatePayload = Omit<WristbandCardInsertPayload, 'id' | 'team_id'> & {
+  updated_at: string
+}
+
 const COLUMNS =
   'id, team_id, name, wristband_width, wristband_height, size_unit, left_heading, right_heading, left_play_ids, right_play_ids, created_by, created_at, updated_at'
 
@@ -42,19 +60,38 @@ function rowToCard(row: WristbandCardRow): WristbandCard {
   }
 }
 
-function draftToRow(draft: WristbandCardDraft, teamId: string, userId?: string) {
+function draftToInsertPayload(draft: WristbandCardDraft, teamId: string): WristbandCardInsertPayload {
+  const {
+    id,
+    name,
+    wristband_width,
+    wristband_height,
+    left_heading,
+    right_heading,
+    left_play_ids,
+    right_play_ids,
+  } = draft
+
   return {
-    id: draft.id,
+    id,
     team_id: teamId,
-    name: draft.name.trim(),
-    wristband_width: draft.wristband_width,
-    wristband_height: draft.wristband_height,
+    name: name.trim(),
+    wristband_width,
+    wristband_height,
     size_unit: 'inches',
-    left_heading: draft.left_heading.trim(),
-    right_heading: draft.right_heading.trim(),
-    left_play_ids: draft.left_play_ids,
-    right_play_ids: draft.right_play_ids,
-    ...(userId ? { created_by: userId } : {}),
+    left_heading: left_heading.trim(),
+    right_heading: right_heading.trim(),
+    left_play_ids,
+    right_play_ids,
+  }
+}
+
+function draftToUpdatePayload(draft: WristbandCardDraft, teamId: string): WristbandCardUpdatePayload {
+  const insertPayload = draftToInsertPayload(draft, teamId)
+  const { id: _id, team_id: _teamId, ...rest } = insertPayload
+
+  return {
+    ...rest,
     updated_at: new Date().toISOString(),
   }
 }
@@ -76,13 +113,40 @@ export async function getWristbandCardsByTeam(teamId: string): Promise<Wristband
 export async function upsertWristbandCard(
   teamId: string,
   draft: WristbandCardDraft,
-  userId?: string,
 ): Promise<WristbandCard> {
-  const row = draftToRow(draft, teamId, userId)
+  const { data: existing, error: lookupError } = await supabase
+    .from('wristband_cards')
+    .select('id')
+    .eq('id', draft.id)
+    .eq('team_id', teamId)
+    .maybeSingle()
+
+  if (lookupError) {
+    throw new Error(`Failed to save wristband card: ${lookupError.message}`)
+  }
+
+  if (existing) {
+    const updatePayload = draftToUpdatePayload(draft, teamId)
+    const { data, error } = await supabase
+      .from('wristband_cards')
+      .update(updatePayload)
+      .eq('id', draft.id)
+      .eq('team_id', teamId)
+      .select(COLUMNS)
+      .single()
+
+    if (error) {
+      throw new Error(`Failed to save wristband card: ${error.message}`)
+    }
+
+    return rowToCard(data as WristbandCardRow)
+  }
+
+  const insertPayload = draftToInsertPayload(draft, teamId)
 
   const { data, error } = await supabase
     .from('wristband_cards')
-    .upsert(row, { onConflict: 'id' })
+    .insert(insertPayload)
     .select(COLUMNS)
     .single()
 

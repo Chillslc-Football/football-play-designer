@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog/ConfirmDialog'
+import { AppShellNav } from '../components/AppShellNav/AppShellNav'
 import { WristbandCardFace } from '../components/WristbandCardFace/WristbandCardFace'
 import { WristbandPlaySelector } from '../components/WristbandPlaySelector/WristbandPlaySelector'
 import { WristbandPrintSheet } from '../components/WristbandPrintSheet/WristbandPrintSheet'
 import { APP_DISPLAY_THEME } from '../constants/appDisplayTheme'
-import { useAuth } from '../hooks/useAuth'
 import { useCanEdit } from '../hooks/useCanEdit'
 import { useTeam } from '../hooks/useTeam'
 import * as playRepository from '../repositories/playRepository'
 import * as wristbandRepository from '../repositories/wristbandCardRepository'
 import type { Play } from '../types/play'
 import {
+  cardToDraft,
   createEmptyWristbandCardDraft,
   type WristbandCard,
   type WristbandCardDraft,
@@ -22,7 +23,6 @@ import './WristbandCardsPage.css'
 type ViewMode = 'list' | 'edit' | 'print'
 
 export function WristbandCardsPage() {
-  const { user } = useAuth()
   const { team, activeTeamId } = useTeam()
   const canEdit = useCanEdit()
 
@@ -79,7 +79,7 @@ export function WristbandCardsPage() {
   }
 
   function openEdit(card: WristbandCard) {
-    setDraft({ ...card })
+    setDraft(cardToDraft(card))
     setView('edit')
     setError(null)
   }
@@ -102,11 +102,10 @@ export function WristbandCardsPage() {
     setError(null)
 
     try {
-      const saved = await wristbandRepository.upsertWristbandCard(
-        activeTeamId,
-        { ...draft, name: trimmedName },
-        user?.id,
-      )
+      const saved = await wristbandRepository.upsertWristbandCard(activeTeamId, {
+        ...draft,
+        name: trimmedName,
+      })
       setDraft(saved)
       await loadData()
       setView('list')
@@ -147,7 +146,8 @@ export function WristbandCardsPage() {
 
       <div className="wristband-page-screen no-print">
         <header className="wristband-page-header">
-          <div>
+          <div className="wristband-page-header-main">
+            <AppShellNav />
             <h1>Wristband Cards</h1>
             <p className="wristband-page-subtitle">{team?.name ?? 'Team'}</p>
           </div>
