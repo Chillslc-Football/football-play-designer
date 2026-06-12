@@ -1,16 +1,33 @@
-import { LOS_VIEW_Y } from '../constants/field'
+import { LOS_VIEW_Y, PLAYBOOK_MARKER_RADIUS_Y } from '../constants/field'
 import type { PlayerLabel, Position } from '../types/player'
 import type { Play } from '../types/play'
 import { clampViewPosition } from './fieldView'
+
+/** Minimum gap (yards) between the LOS and the visible player icon edge — 1 field unit = 1 yard. */
+export const LOS_PLAYER_BUFFER_YARDS = 0.95
+
+/**
+ * Southernmost y offense center may occupy.
+ * Icon north edge stays LOS_PLAYER_BUFFER_YARDS south of the LOS.
+ */
+export const OFFENSE_MAX_Y =
+  LOS_VIEW_Y + LOS_PLAYER_BUFFER_YARDS + PLAYBOOK_MARKER_RADIUS_Y
+
+/**
+ * Northernmost y defense center may occupy.
+ * Icon south edge stays LOS_PLAYER_BUFFER_YARDS north of the LOS.
+ */
+export const DEFENSE_MIN_Y =
+  LOS_VIEW_Y - LOS_PLAYER_BUFFER_YARDS - PLAYBOOK_MARKER_RADIUS_Y
 
 /** Maximum offensive players allowed behind the line of scrimmage. */
 export const MAX_BACKFIELD_PLAYERS = 5
 
 type PlayerLike = { id: PlayerLabel; position: Position }
 
-/** True when the player is behind the LOS (not on the line). */
+/** True when the player is behind the LOS buffer (in the backfield). */
 export function isInBackfield(position: Position): boolean {
-  return position.y > LOS_VIEW_Y + 0.01
+  return position.y > OFFENSE_MAX_Y + 0.01
 }
 
 export function countBackfieldPlayers(players: Pick<PlayerLike, 'position'>[]): number {
@@ -40,15 +57,15 @@ export function isBackfieldPlacementAllowed(
   return backfieldCountAfterMove(players, playerId, proposedPosition) <= MAX_BACKFIELD_PLAYERS
 }
 
-/** Offense stays on or behind the line of scrimmage (south side, higher y). */
+/** Offense stays behind the line of scrimmage, outside the LOS buffer (south side, higher y). */
 export function clampOffensePosition(position: Position): Position {
   const clamped = clampViewPosition(position)
-  return { x: clamped.x, y: Math.max(LOS_VIEW_Y, clamped.y) }
+  return { x: clamped.x, y: Math.max(OFFENSE_MAX_Y, clamped.y) }
 }
 
 /**
  * Clamps offense position and enforces the backfield player limit.
- * Blocks entering the backfield when full; keeps on LOS at the same x.
+ * Blocks entering the backfield when full; keeps at the LOS buffer line at the same x.
  * Keeps the prior spot when a move would increase an already-illegal backfield count.
  */
 export function resolveOffensePlayerPosition(
@@ -67,17 +84,17 @@ export function resolveOffensePlayerPosition(
     return current.position
   }
 
-  return { x: clamped.x, y: LOS_VIEW_Y }
+  return { x: clamped.x, y: OFFENSE_MAX_Y }
 }
 
 export function isBackfieldLimitExceeded(players: Pick<PlayerLike, 'position'>[]): boolean {
   return countBackfieldPlayers(players) > MAX_BACKFIELD_PLAYERS
 }
 
-/** Defense stays on or in front of the line of scrimmage (north side, lower y). */
+/** Defense stays in front of the line of scrimmage, outside the LOS buffer (north side, lower y). */
 export function clampDefensePosition(position: Position): Position {
   const clamped = clampViewPosition(position)
-  return { x: clamped.x, y: Math.min(LOS_VIEW_Y, clamped.y) }
+  return { x: clamped.x, y: Math.min(DEFENSE_MIN_Y, clamped.y) }
 }
 
 /** Ensures every player and defender respects their side of the ball. */

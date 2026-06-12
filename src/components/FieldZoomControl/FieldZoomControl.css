@@ -1,0 +1,63 @@
+.field-zoom-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px;
+  border: 1px solid var(--field-card-border, rgba(255, 255, 255, 0.16));
+  border-radius: var(--radius-sm, 4px);
+  background: var(--field-card-bg, rgba(20, 32, 22, 0.9));
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.2));
+}
+
+.app-theme-light .field-zoom-control {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.field-zoom-control-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--field-card-border, rgba(255, 255, 255, 0.2));
+  border-radius: var(--radius-sm, 4px);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--field-hint-color, #edf5ed);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.app-theme-light .field-zoom-control-btn {
+  background: #f3f5f3;
+  color: #2f3b30;
+  border-color: rgba(0, 0, 0, 0.14);
+}
+
+.field-zoom-control-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.app-theme-light .field-zoom-control-btn:hover:not(:disabled) {
+  background: #e8ece8;
+}
+
+.field-zoom-control-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.field-zoom-control-value {
+  min-width: 3rem;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--field-hint-color, #edf5ed);
+  user-select: none;
+}
+
+.app-theme-light .field-zoom-control-value {
+  color: #2f3b30;
+}

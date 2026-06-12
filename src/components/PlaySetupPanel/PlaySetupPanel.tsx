@@ -5,7 +5,7 @@ import { PlayerAssignmentPanel } from '../PlayerAssignmentPanel/PlayerAssignment
 import { Toolbar } from '../Toolbar/Toolbar'
 import { DrawingModeSelector, type DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
 import type { MotionType } from '../../types/motion'
-import type { PlayerLabel } from '../../types/player'
+import type { Player, PlayerLabel } from '../../types/player'
 import type { PlayerNotes } from '../../types/playerNotes'
 import type { DriveStartYardLine } from '../../types/driveStart'
 import type { Play } from '../../types/play'
@@ -73,6 +73,8 @@ type PlaySetupPanelProps = {
   isSaving?: boolean
   selectedPlayerId: PlayerLabel | null
   selectedPlayerLabel: string
+  players: Player[]
+  onSelectPlayer: (playerId: PlayerLabel) => void
   playerNotes: PlayerNotes
   onPlayerNotesChange: (playerId: PlayerLabel, notes: string) => void
   onPlayerLabelChange: (playerId: PlayerLabel, label: string) => void
@@ -127,6 +129,8 @@ export function PlaySetupPanel({
   isSaving = false,
   selectedPlayerId,
   selectedPlayerLabel,
+  players,
+  onSelectPlayer,
   playerNotes,
   onPlayerNotesChange,
   onPlayerLabelChange,
@@ -239,6 +243,8 @@ export function PlaySetupPanel({
           <PlayerAssignmentPanel
             selectedPlayerId={selectedPlayerId}
             selectedPlayerLabel={selectedPlayerLabel}
+            players={players}
+            onSelectPlayer={onSelectPlayer}
             playerNotes={playerNotes}
             canEdit={canEdit}
             onPlayerNotesChange={onPlayerNotesChange}

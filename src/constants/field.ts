@@ -51,11 +51,23 @@ export const FIELD_CENTER_X = LOS_VIEW_Y
 /** O / X symbol font size in SVG yards (~1 yard on the coaching board). */
 export const PLAYBOOK_SYMBOL_SIZE = 1.65
 
+/** Visible half-height of O/X markers from position center — used for LOS edge clearance. */
+export const PLAYBOOK_MARKER_RADIUS_Y = PLAYBOOK_SYMBOL_SIZE / 2
+
 /** Distance from symbol center to position label below. */
 export const PLAYBOOK_LABEL_OFFSET = 1.05
 
 /** Invisible hit area half-width for dragging symbols. */
 export const PLAYBOOK_HIT_SIZE = 1.1
+
+/** Click radius for nearest-player selection (SVG yards). */
+export const PLAYER_SELECTION_RADIUS = PLAYBOOK_HIT_SIZE
+
+/** Minimum visible gap between player icon edges (SVG yards). */
+export const MIN_PLAYER_GAP_YARDS = 0.2
+
+/** Minimum center-to-center spacing so icons do not touch. */
+export const MIN_PLAYER_CENTER_SPACING = PLAYBOOK_SYMBOL_SIZE + MIN_PLAYER_GAP_YARDS
 
 /** Hash-mark columns — sideline lanes and college hash positions. */
 export const HASH_MARK_X_LEFT = 17

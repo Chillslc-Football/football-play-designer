@@ -8,6 +8,7 @@ import {
   PLAYBOOK_HIT_SIZE,
   PLAYBOOK_LABEL_OFFSET,
   PLAYBOOK_SYMBOL_SIZE,
+  PLAYER_SELECTION_RADIUS,
   VIEWBOX_HEIGHT,
   VIEWBOX_WIDTH,
   YARD_NUMBER_SIDELINE_INSET,
@@ -67,6 +68,7 @@ import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog'
 import type { DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
 import { PlayerMarker } from '../PlayerMarker/PlayerMarker'
 import { RouteLine } from '../RouteLine/RouteLine'
+import { findNearestByPosition } from '../../utils/playerSelection'
 import { FIELD_DISPLAY_THEME } from '../../constants/fieldDisplayTheme'
 import './Field.css'
 
@@ -162,6 +164,22 @@ export function Field({
   const motionsEditable = offenseEditable
   const blocksEditable = offenseEditable
   const defenderRoutesEditable = defenseEditable
+
+  const orderedPlayers = useMemo(() => {
+    if (!selectedPlayerId) return players
+    return [
+      ...players.filter((player) => player.id !== selectedPlayerId),
+      ...players.filter((player) => player.id === selectedPlayerId),
+    ]
+  }, [players, selectedPlayerId])
+
+  const orderedDefenders = useMemo(() => {
+    if (!selectedDefenderId) return defenders
+    return [
+      ...defenders.filter((defender) => defender.id !== selectedDefenderId),
+      ...defenders.filter((defender) => defender.id === selectedDefenderId),
+    ]
+  }, [defenders, selectedDefenderId])
   const svgRef = useRef<SVGSVGElement>(null)
   const draggingTargetRef = useRef<DragTarget | null>(null)
   const drawingModeRef = useRef<DrawingMode>(drawingMode)
@@ -867,18 +885,70 @@ export function Field({
     [],
   )
 
-  function handlePlayerPointerDown(playerId: PlayerLabel, event: React.MouseEvent) {
-    event.stopPropagation()
+  function beginOffensePointerSelection(event: React.MouseEvent, playerId: PlayerLabel) {
     if (!offenseEditable) return
+    event.stopPropagation()
     event.preventDefault()
-    pointerStartRef.current = { kind: 'offense', id: playerId, x: event.clientX, y: event.clientY }
+    const clickPosition = getSvgPosition(event.clientX, event.clientY)
+    const nearest = findNearestByPosition(clickPosition, players, PLAYER_SELECTION_RADIUS)
+    pointerStartRef.current = {
+      kind: 'offense',
+      id: nearest?.id ?? playerId,
+      x: event.clientX,
+      y: event.clientY,
+    }
+  }
+
+  function beginDefensePointerSelection(event: React.MouseEvent, defenderId: DefenderLabel) {
+    if (!defenseEditable) return
+    event.stopPropagation()
+    event.preventDefault()
+    const clickPosition = getSvgPosition(event.clientX, event.clientY)
+    const nearest = findNearestByPosition(clickPosition, defenders, PLAYER_SELECTION_RADIUS)
+    pointerStartRef.current = {
+      kind: 'defense',
+      id: nearest?.id ?? defenderId,
+      x: event.clientX,
+      y: event.clientY,
+    }
+  }
+
+  function tryBeginNearestOffenseSelection(event: React.MouseEvent): boolean {
+    if (!offenseEditable) return false
+    const clickPosition = getSvgPosition(event.clientX, event.clientY)
+    const nearest = findNearestByPosition(clickPosition, players, PLAYER_SELECTION_RADIUS)
+    if (!nearest) return false
+    pointerStartRef.current = {
+      kind: 'offense',
+      id: nearest.id,
+      x: event.clientX,
+      y: event.clientY,
+    }
+    event.preventDefault()
+    return true
+  }
+
+  function tryBeginNearestDefenseSelection(event: React.MouseEvent): boolean {
+    if (!defenseEditable) return false
+    const clickPosition = getSvgPosition(event.clientX, event.clientY)
+    const nearest = findNearestByPosition(clickPosition, defenders, PLAYER_SELECTION_RADIUS)
+    if (!nearest) return false
+    pointerStartRef.current = {
+      kind: 'defense',
+      id: nearest.id,
+      x: event.clientX,
+      y: event.clientY,
+    }
+    event.preventDefault()
+    return true
+  }
+
+  function handlePlayerPointerDown(playerId: PlayerLabel, event: React.MouseEvent) {
+    beginOffensePointerSelection(event, playerId)
   }
 
   function handleDefenderPointerDown(defenderId: DefenderLabel, event: React.MouseEvent) {
-    event.stopPropagation()
-    if (!defenseEditable) return
-    event.preventDefault()
-    pointerStartRef.current = { kind: 'defense', id: defenderId, x: event.clientX, y: event.clientY }
+    beginDefensePointerSelection(event, defenderId)
   }
 
   function handleFieldMouseDown(event: React.MouseEvent) {
@@ -905,6 +975,7 @@ export function Field({
       const anchor = resolveDrawAnchor()
       if (!anchor) {
         clearRouteEditSelection()
+        if (tryBeginNearestOffenseSelection(event)) return
         return
       }
 
@@ -924,6 +995,7 @@ export function Field({
       const anchor = resolveMotionDrawAnchor()
       if (!anchor) {
         clearMotionEditSelection()
+        if (tryBeginNearestOffenseSelection(event)) return
         return
       }
 
@@ -943,6 +1015,7 @@ export function Field({
       const anchor = resolveDefenderDrawAnchor()
       if (!anchor) {
         clearDefenderRouteEditSelection()
+        if (tryBeginNearestDefenseSelection(event)) return
         return
       }
 
@@ -962,6 +1035,7 @@ export function Field({
       const anchor = resolveBlockDrawAnchor()
       if (!anchor) {
         clearBlockEditSelection()
+        if (tryBeginNearestOffenseSelection(event)) return
         return
       }
 
@@ -974,6 +1048,15 @@ export function Field({
         screenY: event.clientY,
         startedDrag: false,
       }
+      return
+    }
+
+    if (playType === 'offensive' && tryBeginNearestOffenseSelection(event)) {
+      return
+    }
+
+    if (playType === 'defensive' && tryBeginNearestDefenseSelection(event)) {
+      return
     }
   }
 
@@ -1927,7 +2010,7 @@ export function Field({
               />
             )}
 
-            {defenders.map((defender) => (
+            {orderedDefenders.map((defender) => (
               <g
                 key={defender.id}
                 className={`defender-marker ${selectedDefenderId === defender.id ? 'defender-marker-selected' : ''} ${!defenseEditable ? 'defender-marker-locked' : ''}`}
@@ -1955,7 +2038,7 @@ export function Field({
               </g>
             ))}
 
-            {players.map((player) => (
+            {orderedPlayers.map((player) => (
               <PlayerMarker
                 key={player.id}
                 player={player}

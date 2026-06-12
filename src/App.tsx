@@ -7,6 +7,7 @@ import * as cloudPlayRepository from './repositories/playRepository'
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog'
 import { Header } from './components/Header/Header'
 import { Field } from './components/Field/Field'
+import { FieldZoomControl } from './components/FieldZoomControl/FieldZoomControl'
 import { APP_DISPLAY_THEME } from './constants/appDisplayTheme'
 import { PlaySetupPanel } from './components/PlaySetupPanel/PlaySetupPanel'
 import { type DrawingMode } from './components/DrawingModeSelector/DrawingModeSelector'
@@ -33,6 +34,8 @@ import {
   type CustomFormation,
 } from './utils/formationStorage'
 import { DEFAULT_FORMATION_ID } from './data/builtinFormations'
+import { applyPlayerSpacing } from './utils/playerSpacing'
+import { loadFieldZoom, saveFieldZoom, type FieldZoomValue } from './utils/fieldZoom'
 import { DEFAULT_FRONT_ID } from './data/builtinFronts'
 import {
   ALL_CATEGORIES_FILTER,
@@ -139,7 +142,27 @@ function App() {
   const [dialog, setDialog] = useState<DialogState>(null)
   const [deletingCategory, setDeletingCategory] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [fieldZoom, setFieldZoom] = useState<FieldZoomValue>(() => loadFieldZoom())
+  const fieldWorkspaceRef = useRef<HTMLDivElement>(null)
   const isSavingRef = useRef(false)
+
+  useEffect(() => {
+    const workspace = fieldWorkspaceRef.current
+    if (!workspace) return
+
+    let frame = 0
+    const centerScroll = () => {
+      workspace.scrollLeft = Math.max(0, (workspace.scrollWidth - workspace.clientWidth) / 2)
+      workspace.scrollTop = Math.max(0, (workspace.scrollHeight - workspace.clientHeight) / 2)
+    }
+
+    frame = requestAnimationFrame(() => {
+      centerScroll()
+      requestAnimationFrame(centerScroll)
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [fieldZoom])
 
   const showSaveMessage = useCallback((message: string) => {
     setSaveMessage(message)
@@ -1056,7 +1079,8 @@ function App() {
 
     setPlay((current) => {
       const previous = current.players.find((player) => player.id === playerId)?.position
-      const nextPosition = resolveOffensePlayerPosition(current.players, playerId, position)
+      const spacedPosition = applyPlayerSpacing(current.players, playerId, position)
+      const nextPosition = resolveOffensePlayerPosition(current.players, playerId, spacedPosition)
 
       blockedBackfieldEntry =
         Boolean(previous) &&
@@ -1080,13 +1104,17 @@ function App() {
   function handleDefenderMove(defenderId: DefenderLabel, position: Position) {
     if (!canEdit || play.playType !== 'defensive') return
 
-    const clamped = clampDefensePosition(position)
-    setPlay((current) => ({
-      ...current,
-      defenders: current.defenders.map((defender) =>
-        defender.id === defenderId ? { ...defender, position: clamped } : defender,
-      ),
-    }))
+    setPlay((current) => {
+      const spacedPosition = applyPlayerSpacing(current.defenders, defenderId, position)
+      const nextPosition = clampDefensePosition(spacedPosition)
+
+      return {
+        ...current,
+        defenders: current.defenders.map((defender) =>
+          defender.id === defenderId ? { ...defender, position: nextPosition } : defender,
+        ),
+      }
+    })
   }
 
   function handleRouteComplete(route: Route) {
@@ -1241,6 +1269,8 @@ function App() {
               ? (play.players.find((player) => player.id === selectedPlayerId)?.label ?? '')
               : ''
           }
+          players={play.players}
+          onSelectPlayer={handleSelectPlayer}
           playerNotes={play.playerNotes}
           onPlayerNotesChange={handlePlayerNotesChange}
           onPlayerLabelChange={handlePlayerLabelChange}
@@ -1260,31 +1290,51 @@ function App() {
           )}
 
           <div className="field-stage">
-            <div className="field-column">
-              <Field
-                playType={play.playType}
-                viewOnly={!canEdit}
-                players={play.players}
-                defenders={play.defenders}
-                routes={play.routes}
-                defenderRoutes={play.defenderRoutes}
-                blocks={play.blocks}
-                motions={play.motions ?? []}
-                playerNotes={play.playerNotes}
-                drawingMode={drawingMode}
-                motionType={motionType}
-                driveStartYardLine={play.driveStartYardLine}
-                selectedPlayerId={selectedPlayerId}
-                selectedDefenderId={selectedDefenderId}
-                onSelectPlayer={handleSelectPlayer}
-                onSelectDefender={handleSelectDefender}
-                onPlayerMove={handlePlayerMove}
-                onDefenderMove={handleDefenderMove}
-                onRouteComplete={handleRouteComplete}
-                onDefenderRouteComplete={handleDefenderRouteComplete}
-                onBlockComplete={handleBlockComplete}
-                onMotionComplete={handleMotionComplete}
-              />
+            <div className="field-workspace">
+              <div className="field-column" ref={fieldWorkspaceRef}>
+                <div className="field-zoom-workspace">
+                  <div
+                    className="field-zoom-slot"
+                    style={{ '--field-zoom': fieldZoom } as React.CSSProperties}
+                  >
+                    <div className="field-zoom-scaler">
+                      <Field
+                        playType={play.playType}
+                        viewOnly={!canEdit}
+                        players={play.players}
+                        defenders={play.defenders}
+                        routes={play.routes}
+                        defenderRoutes={play.defenderRoutes}
+                        blocks={play.blocks}
+                        motions={play.motions ?? []}
+                        playerNotes={play.playerNotes}
+                        drawingMode={drawingMode}
+                        motionType={motionType}
+                        driveStartYardLine={play.driveStartYardLine}
+                        selectedPlayerId={selectedPlayerId}
+                        selectedDefenderId={selectedDefenderId}
+                        onSelectPlayer={handleSelectPlayer}
+                        onSelectDefender={handleSelectDefender}
+                        onPlayerMove={handlePlayerMove}
+                        onDefenderMove={handleDefenderMove}
+                        onRouteComplete={handleRouteComplete}
+                        onDefenderRouteComplete={handleDefenderRouteComplete}
+                        onBlockComplete={handleBlockComplete}
+                        onMotionComplete={handleMotionComplete}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="field-workspace-status">
+                <FieldZoomControl
+                  value={fieldZoom}
+                  onChange={(zoom) => {
+                    setFieldZoom(zoom)
+                    saveFieldZoom(zoom)
+                  }}
+                />
+              </div>
             </div>
           </div>
         </main>

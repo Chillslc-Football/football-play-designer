@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import type { PlayerLabel } from '../../types/player'
+import type { Player, PlayerLabel } from '../../types/player'
+import { resolvePlayerDisplayLabel } from '../../types/player'
 import type { PlayerNotes } from '../../types/playerNotes'
 import './PlayerAssignmentPanel.css'
 
 type PlayerAssignmentPanelProps = {
   selectedPlayerId: PlayerLabel | null
   selectedPlayerLabel: string
+  players: Player[]
+  onSelectPlayer: (playerId: PlayerLabel) => void
   playerNotes: PlayerNotes
   canEdit?: boolean
   onPlayerNotesChange: (playerId: PlayerLabel, notes: string) => void
@@ -15,6 +18,8 @@ type PlayerAssignmentPanelProps = {
 export function PlayerAssignmentPanel({
   selectedPlayerId,
   selectedPlayerLabel,
+  players,
+  onSelectPlayer,
   playerNotes,
   canEdit = true,
   onPlayerNotesChange,
@@ -43,9 +48,32 @@ export function PlayerAssignmentPanel({
 
       {isOpen && (
         <div className="assignment-panel-body">
+          <label htmlFor="assignment-player-picker" className="assignment-field-label">
+            Select player
+          </label>
+          <select
+            id="assignment-player-picker"
+            className="select-field assignment-player-picker"
+            value={selectedPlayerId ?? ''}
+            onChange={(event) => {
+              const playerId = event.target.value as PlayerLabel
+              if (playerId) onSelectPlayer(playerId)
+            }}
+            disabled={!canEdit}
+            aria-label="Select player on field"
+          >
+            <option value="">Choose player…</option>
+            {players.map((player) => (
+              <option key={player.id} value={player.id}>
+                {resolvePlayerDisplayLabel(player.id, player.label)}
+              </option>
+            ))}
+          </select>
+
           {!selectedPlayerId ? (
             <p className="assignment-placeholder">
-              Click a player on the field to edit position label and assignment notes.
+              Choose a player above or click on the field to edit position label and assignment
+              notes.
             </p>
           ) : (
             <>
