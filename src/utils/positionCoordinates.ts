@@ -1,5 +1,6 @@
 import { FIELD_VIEW_LENGTH, FIELD_WIDTH } from '../constants/field'
 import type { Play, PositionFormat } from '../types/play'
+import type { PlayerActionChains } from '../types/playerAction'
 import type { Position } from '../types/player'
 
 export type NormalizedPosition = {
@@ -63,6 +64,32 @@ function dbPathToRender(points: Position[]): Position[] {
   return points.map(dbPointToRender)
 }
 
+function renderPlayerActionsToDb(chains: PlayerActionChains): PlayerActionChains {
+  const converted: PlayerActionChains = {}
+
+  for (const playerId of Object.keys(chains) as Array<keyof PlayerActionChains>) {
+    converted[playerId] = (chains[playerId] ?? []).map((action) => ({
+      ...action,
+      points: renderPathToDb(action.points),
+    }))
+  }
+
+  return converted
+}
+
+function dbPlayerActionsToRender(chains: PlayerActionChains): PlayerActionChains {
+  const converted: PlayerActionChains = {}
+
+  for (const playerId of Object.keys(chains) as Array<keyof PlayerActionChains>) {
+    converted[playerId] = (chains[playerId] ?? []).map((action) => ({
+      ...action,
+      points: dbPathToRender(action.points),
+    }))
+  }
+
+  return converted
+}
+
 /**
  * Save boundary: copy render-space play → database-space play.
  * Never mutates the input; skips conversion if already database format.
@@ -107,6 +134,7 @@ export function renderPlayToDbPlay(play: Play): Play {
       ...motion,
       points: renderPathToDb(motion.points),
     })),
+    playerActions: renderPlayerActionsToDb(play.playerActions ?? {}),
     defenderRoutes: play.defenderRoutes.map((route) => ({
       ...route,
       points: renderPathToDb(route.points),
@@ -169,6 +197,7 @@ export function dbPlayToRenderPlay(play: Play): Play {
       ...motion,
       points: dbPathToRender(motion.points),
     })),
+    playerActions: dbPlayerActionsToRender(play.playerActions ?? {}),
     defenderRoutes: play.defenderRoutes.map((route) => ({
       ...route,
       points: dbPathToRender(route.points),

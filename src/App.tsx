@@ -11,20 +11,21 @@ import { FieldZoomControl } from './components/FieldZoomControl/FieldZoomControl
 import { APP_DISPLAY_THEME } from './constants/appDisplayTheme'
 import { PlaySetupPanel } from './components/PlaySetupPanel/PlaySetupPanel'
 import { type DrawingMode } from './components/DrawingModeSelector/DrawingModeSelector'
-import { createEmptyMotions, type Motion, type MotionType } from './types/motion'
+import { createEmptyMotions, type MotionType } from './types/motion'
 import type { DefenderLabel } from './types/defender'
 import type { DefenderRoute } from './types/defenderRoute'
 import { createEmptyDefenderRoutes } from './types/defenderRoute'
 import type { PlayType } from './types/playType'
 import type { DriveStartYardLine } from './types/driveStart'
-import { createEmptyBlocks, type Block } from './types/block'
+import { createEmptyBlocks } from './types/block'
 import { createEmptyPlay, type Play } from './types/play'
 import {
   normalizePositionLabel,
   type PlayerLabel,
   type Position,
 } from './types/player'
-import { createEmptyRoutes, type Route } from './types/route'
+import type { PlayerAction } from './types/playerAction'
+import { createEmptyPlayerActionChains } from './types/playerAction'
 import {
   addCustomFormation,
   createCustomFormationId,
@@ -35,7 +36,9 @@ import {
 } from './utils/formationStorage'
 import { DEFAULT_FORMATION_ID } from './data/builtinFormations'
 import { applyPlayerSpacing } from './utils/playerSpacing'
+import { ensurePlayPlayerActions, upsertPlayerAction } from './utils/playerActionChains'
 import { loadFieldZoom, saveFieldZoom, type FieldZoomValue } from './utils/fieldZoom'
+import { createEmptyRoutes } from './types/route'
 import { DEFAULT_FRONT_ID } from './data/builtinFronts'
 import {
   ALL_CATEGORIES_FILTER,
@@ -742,6 +745,7 @@ function App() {
         routes: createEmptyRoutes(),
         blocks: createEmptyBlocks(),
         motions: createEmptyMotions(),
+        playerActions: createEmptyPlayerActionChains(),
         defenderRoutes: createEmptyDefenderRoutes(),
         notes: current.notes,
         playerNotes: current.playerNotes,
@@ -1117,17 +1121,15 @@ function App() {
     })
   }
 
-  function handleRouteComplete(route: Route) {
+  function handlePlayerActionComplete(playerId: PlayerLabel, action: PlayerAction) {
     if (!canEdit || play.playType !== 'offensive') return
 
-    setPlay((current) => {
-      const otherRoutes = current.routes.filter((r) => r.playerId !== route.playerId)
-      return {
+    setPlay((current) =>
+      ensurePlayPlayerActions({
         ...current,
-        routes:
-          route.points.length === 0 ? otherRoutes : [...otherRoutes, route],
-      }
-    })
+        playerActions: upsertPlayerAction(current.playerActions ?? {}, playerId, action),
+      }),
+    )
   }
 
   function handleDefenderRouteComplete(route: DefenderRoute) {
@@ -1141,31 +1143,6 @@ function App() {
         ...current,
         defenderRoutes:
           route.points.length === 0 ? otherRoutes : [...otherRoutes, route],
-      }
-    })
-  }
-
-  function handleBlockComplete(block: Block) {
-    if (!canEdit || play.playType !== 'offensive') return
-
-    setPlay((current) => {
-      const otherBlocks = current.blocks.filter((b) => b.playerId !== block.playerId)
-      return {
-        ...current,
-        blocks: [...otherBlocks, block],
-      }
-    })
-  }
-
-  function handleMotionComplete(motion: Motion) {
-    if (!canEdit || play.playType !== 'offensive') return
-
-    setPlay((current) => {
-      const otherMotions = current.motions.filter((entry) => entry.playerId !== motion.playerId)
-      return {
-        ...current,
-        motions:
-          motion.points.length === 0 ? otherMotions : [...otherMotions, motion],
       }
     })
   }
@@ -1303,10 +1280,8 @@ function App() {
                         viewOnly={!canEdit}
                         players={play.players}
                         defenders={play.defenders}
-                        routes={play.routes}
                         defenderRoutes={play.defenderRoutes}
-                        blocks={play.blocks}
-                        motions={play.motions ?? []}
+                        playerActions={play.playerActions ?? {}}
                         playerNotes={play.playerNotes}
                         drawingMode={drawingMode}
                         motionType={motionType}
@@ -1317,10 +1292,8 @@ function App() {
                         onSelectDefender={handleSelectDefender}
                         onPlayerMove={handlePlayerMove}
                         onDefenderMove={handleDefenderMove}
-                        onRouteComplete={handleRouteComplete}
+                        onPlayerActionComplete={handlePlayerActionComplete}
                         onDefenderRouteComplete={handleDefenderRouteComplete}
-                        onBlockComplete={handleBlockComplete}
-                        onMotionComplete={handleMotionComplete}
                       />
                     </div>
                   </div>

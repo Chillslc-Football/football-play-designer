@@ -27,7 +27,7 @@
 }
 
 .motion-segment-jog {
-  stroke: #f97316;
+  stroke: #ffd700;
 }
 
 .motion-segment-sprint {
@@ -49,7 +49,7 @@
 }
 
 .motion-line-draft-jog {
-  stroke: #f97316;
+  stroke: #ffd700;
 }
 
 .motion-line-draft-sprint {
@@ -62,7 +62,7 @@
 }
 
 .motion-vertex-handle-jog {
-  fill: #f97316;
+  fill: #ffd700;
 }
 
 .motion-vertex-handle-sprint {
@@ -78,4 +78,16 @@
   opacity: 1;
   stroke: rgba(0, 0, 0, 0.35);
   stroke-width: 0.08px;
+}
+
+.motion-endpoint-marker {
+  pointer-events: none;
+}
+
+.motion-endpoint-marker-jog {
+  fill: #ffd700;
+}
+
+.motion-endpoint-marker-sprint {
+  fill: #22c55e;
 }

@@ -20,6 +20,7 @@ export function playToComparable(play: Play): string {
     routes: play.routes,
     blocks: play.blocks,
     motions: play.motions,
+    playerActions: play.playerActions,
     defenderRoutes: play.defenderRoutes,
     playerNotes: play.playerNotes,
     categories: [...play.categories].sort(),

@@ -32,8 +32,8 @@ function distanceToSegment(point: Position, start: Position, end: Position): num
 }
 
 export type RouteEditSelection =
-  | { playerId: PlayerLabel; kind: 'vertex'; vertexIndex: number }
-  | { playerId: PlayerLabel; kind: 'segment'; segmentIndex: number }
+  | { playerId: PlayerLabel; actionId: string; kind: 'vertex'; vertexIndex: number }
+  | { playerId: PlayerLabel; actionId: string; kind: 'segment'; segmentIndex: number }
 
 /** @deprecated Use RouteEditSelection with kind 'segment'. */
 export type SelectedRouteSegment = {

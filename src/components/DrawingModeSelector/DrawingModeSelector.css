@@ -127,8 +127,8 @@
 }
 
 .motion-type-toggle-btn-jog.motion-type-toggle-btn-active {
-  background: #f97316;
-  color: #fff;
+  background: #ffd700;
+  color: #1a1a1a;
 }
 
 .motion-type-toggle-btn-sprint.motion-type-toggle-btn-active {

@@ -16,6 +16,7 @@ import {
 } from '../utils/formationUtils'
 import { COORDINATE_SPACE_RENDER } from '../utils/positionCoordinates'
 import { createDefendersForFront, getDefaultFrontName } from '../utils/frontUtils'
+import { createEmptyPlayerActionChains, type PlayerActionChains } from './playerAction'
 import { clampPlayPositions } from '../utils/losClamp'
 
 /** How player/defender/path coordinates are stored in persistence. */
@@ -50,6 +51,7 @@ export type Play = {
   routes: Route[]
   blocks: Block[]
   motions: Motion[]
+  playerActions: PlayerActionChains
   defenderRoutes: DefenderRoute[]
   playerNotes: PlayerNotes
   /** Category tags for filtering (Run, Pass, custom labels, etc.). */
@@ -79,6 +81,7 @@ export function createEmptyPlay(playType: PlayType = DEFAULT_PLAY_TYPE): Play {
     routes: createEmptyRoutes(),
     blocks: createEmptyBlocks(),
     motions: createEmptyMotions(),
+    playerActions: createEmptyPlayerActionChains(),
     defenderRoutes: createEmptyDefenderRoutes(),
     playerNotes: createEmptyPlayerNotes(),
     categories: [],

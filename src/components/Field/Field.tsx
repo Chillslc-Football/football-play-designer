@@ -14,8 +14,7 @@ import {
   YARD_NUMBER_SIDELINE_INSET,
 } from '../../constants/field'
 import { LOS_VIEW_Y } from '../../constants/field'
-import type { Block } from '../../types/block'
-import type { Motion, MotionType } from '../../types/motion'
+import type { MotionType } from '../../types/motion'
 import type { Defender, DefenderLabel } from '../../types/defender'
 import type { DefenderRoute } from '../../types/defenderRoute'
 import type { DriveStartYardLine } from '../../types/driveStart'
@@ -23,8 +22,12 @@ import type { Player, PlayerLabel, Position } from '../../types/player'
 import { clampPosition } from '../../types/player'
 import type { PlayerNotes } from '../../types/playerNotes'
 import { playerHasNotes } from '../../types/playerNotes'
+import type {
+  PlayerAction,
+  PlayerActionChains,
+  PlayerActionType,
+} from '../../types/playerAction'
 import type { PlayType } from '../../types/playType'
-import type { Route } from '../../types/route'
 import {
   canDeleteDefenderRouteSegmentSelection,
   deleteDefenderRouteSegment,
@@ -34,13 +37,7 @@ import {
   getDeletableDefenderRouteSegmentIndex,
   type DefenderRouteEditSelection,
 } from '../../utils/defenderRouteEdit'
-import {
-  canDeleteBlockSegmentSelection,
-  deleteBlockSegment,
-  deleteEntireBlock,
-  extendBlockFromAnchor,
-  type BlockEditSelection,
-} from '../../utils/blockEdit'
+import { canDeleteBlockSegmentSelection, type BlockEditSelection } from '../../utils/blockEdit'
 import {
   getFieldViewBounds,
   getHashMarks,
@@ -53,17 +50,25 @@ import {
 } from '../../utils/fieldView'
 import { appendPathPoint } from '../../utils/pathUtils'
 import {
+  createPlayerAction,
+  findActionInChain,
+  getSortedChain,
+  NEW_ACTION_ID,
+} from '../../utils/playerActionChains'
+import {
   canDeleteRouteSegmentSelection,
-  deleteEntireRoute,
   deleteRouteSegment,
   extendRouteFromAnchor,
   getAnchorVertexIndex,
   getDeletableRouteSegmentIndex,
   type RouteEditSelection,
 } from '../../utils/routeEdit'
-import { motionToRoute, routeToMotion } from '../../utils/motionEdit'
 import { BlockLine } from '../BlockLine/BlockLine'
 import { MotionLine } from '../MotionLine/MotionLine'
+import {
+  getDraftStartPosition,
+  PlayerActionChainLines,
+} from '../PlayerActionChainLines/PlayerActionChainLines'
 import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog'
 import type { DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
 import { PlayerMarker } from '../PlayerMarker/PlayerMarker'
@@ -84,10 +89,8 @@ type FieldProps = {
   viewOnly?: boolean
   players: Player[]
   defenders: Defender[]
-  routes: Route[]
   defenderRoutes: DefenderRoute[]
-  blocks: Block[]
-  motions: Motion[]
+  playerActions: PlayerActionChains
   playerNotes: PlayerNotes
   drawingMode: DrawingMode
   motionType: MotionType
@@ -98,14 +101,13 @@ type FieldProps = {
   onSelectDefender: (defenderId: DefenderLabel) => void
   onPlayerMove: (playerId: PlayerLabel, position: Position) => void
   onDefenderMove: (defenderId: DefenderLabel, position: Position) => void
-  onRouteComplete: (route: Route) => void
+  onPlayerActionComplete: (playerId: PlayerLabel, action: PlayerAction) => void
   onDefenderRouteComplete: (route: DefenderRoute) => void
-  onBlockComplete: (block: Block) => void
-  onMotionComplete: (motion: Motion) => void
 }
 
 type RouteDragState = {
   playerId: PlayerLabel
+  actionId: string
   anchorVertexIndex: number
   dragPoints: Position[]
   screenX: number
@@ -115,6 +117,7 @@ type RouteDragState = {
 
 type FreehandDraft = {
   playerId: PlayerLabel
+  actionId: string
   anchorVertexIndex: number
   points: Position[]
 }
@@ -139,10 +142,8 @@ export function Field({
   viewOnly = false,
   players,
   defenders,
-  routes,
   defenderRoutes,
-  blocks,
-  motions,
+  playerActions,
   playerNotes,
   drawingMode,
   motionType,
@@ -153,10 +154,8 @@ export function Field({
   onSelectDefender,
   onPlayerMove,
   onDefenderMove,
-  onRouteComplete,
+  onPlayerActionComplete,
   onDefenderRouteComplete,
-  onBlockComplete,
-  onMotionComplete,
 }: FieldProps) {
   const offenseEditable = !viewOnly && playType === 'offensive'
   const defenseEditable = !viewOnly && playType === 'defensive'
@@ -326,12 +325,84 @@ export function Field({
     setDefenderRouteEditSelection(null)
   }, [])
 
-  const getRouteForPlayer = useCallback(
-    (playerId: PlayerLabel): Route => {
-      return routes.find((entry) => entry.playerId === playerId) ?? { playerId, points: [] }
+  const getSelectedAction = useCallback(
+    (
+      playerId: PlayerLabel,
+      actionId: string | undefined,
+      type: PlayerActionType,
+    ): PlayerAction | null => {
+      if (actionId) {
+        return findActionInChain(playerActions, playerId, actionId)
+      }
+
+      return (
+        getSortedChain(playerActions, playerId).find(
+          (entry) => entry.type === type && entry.points.length > 0,
+        ) ?? null
+      )
     },
-    [routes],
+    [playerActions],
   )
+
+  const resolveDrawAnchor = useCallback((): {
+    playerId: PlayerLabel
+    actionId: string
+    anchorVertexIndex: number
+  } | null => {
+    if (!routesEditable || drawingModeRef.current !== 'route') return null
+
+    if (routeEditSelectionRef.current) {
+      return {
+        playerId: routeEditSelectionRef.current.playerId,
+        actionId: routeEditSelectionRef.current.actionId,
+        anchorVertexIndex: getAnchorVertexIndex(routeEditSelectionRef.current),
+      }
+    }
+
+    if (!selectedPlayerId) return null
+
+    return { playerId: selectedPlayerId, actionId: NEW_ACTION_ID, anchorVertexIndex: 0 }
+  }, [selectedPlayerId, routesEditable])
+
+  const resolveBlockDrawAnchor = useCallback((): {
+    playerId: PlayerLabel
+    actionId: string
+    anchorVertexIndex: number
+  } | null => {
+    if (!blocksEditable || drawingModeRef.current !== 'block') return null
+
+    if (blockEditSelectionRef.current) {
+      return {
+        playerId: blockEditSelectionRef.current.playerId,
+        actionId: blockEditSelectionRef.current.actionId,
+        anchorVertexIndex: getAnchorVertexIndex(blockEditSelectionRef.current),
+      }
+    }
+
+    if (!selectedPlayerId) return null
+
+    return { playerId: selectedPlayerId, actionId: NEW_ACTION_ID, anchorVertexIndex: 0 }
+  }, [selectedPlayerId, blocksEditable])
+
+  const resolveMotionDrawAnchor = useCallback((): {
+    playerId: PlayerLabel
+    actionId: string
+    anchorVertexIndex: number
+  } | null => {
+    if (!motionsEditable || drawingModeRef.current !== 'motion') return null
+
+    if (motionEditSelectionRef.current) {
+      return {
+        playerId: motionEditSelectionRef.current.playerId,
+        actionId: motionEditSelectionRef.current.actionId,
+        anchorVertexIndex: getAnchorVertexIndex(motionEditSelectionRef.current),
+      }
+    }
+
+    if (!selectedPlayerId) return null
+
+    return { playerId: selectedPlayerId, actionId: NEW_ACTION_ID, anchorVertexIndex: 0 }
+  }, [selectedPlayerId, motionsEditable])
 
   const getDefenderRouteForDefender = useCallback(
     (defenderId: DefenderLabel): DefenderRoute => {
@@ -344,89 +415,6 @@ export function Field({
     },
     [defenderRoutes],
   )
-
-  const getMotionForPlayer = useCallback(
-    (playerId: PlayerLabel): Motion => {
-      return (
-        motions.find((entry) => entry.playerId === playerId) ?? {
-          playerId,
-          motionType: motionTypeRef.current,
-          points: [],
-        }
-      )
-    },
-    [motions],
-  )
-
-  const getBlockForPlayer = useCallback(
-    (playerId: PlayerLabel): Block => {
-      return blocks.find((entry) => entry.playerId === playerId) ?? { playerId, points: [] }
-    },
-    [blocks],
-  )
-
-  const resolveDrawAnchor = useCallback((): {
-    playerId: PlayerLabel
-    vertexIndex: number
-  } | null => {
-    if (!routesEditable || drawingModeRef.current !== 'route') return null
-
-    if (routeEditSelectionRef.current) {
-      return {
-        playerId: routeEditSelectionRef.current.playerId,
-        vertexIndex: getAnchorVertexIndex(routeEditSelectionRef.current),
-      }
-    }
-
-    if (!selectedPlayerId) return null
-
-    const existing = getRouteForPlayer(selectedPlayerId)
-    if (existing.points.length > 0) return null
-
-    return { playerId: selectedPlayerId, vertexIndex: 0 }
-  }, [selectedPlayerId, getRouteForPlayer, routesEditable])
-
-  const resolveBlockDrawAnchor = useCallback((): {
-    playerId: PlayerLabel
-    vertexIndex: number
-  } | null => {
-    if (!blocksEditable || drawingModeRef.current !== 'block') return null
-
-    if (blockEditSelectionRef.current) {
-      return {
-        playerId: blockEditSelectionRef.current.playerId,
-        vertexIndex: getAnchorVertexIndex(blockEditSelectionRef.current),
-      }
-    }
-
-    if (!selectedPlayerId) return null
-
-    const existing = getBlockForPlayer(selectedPlayerId)
-    if (existing.points.length > 0) return null
-
-    return { playerId: selectedPlayerId, vertexIndex: 0 }
-  }, [selectedPlayerId, getBlockForPlayer, blocksEditable])
-
-  const resolveMotionDrawAnchor = useCallback((): {
-    playerId: PlayerLabel
-    vertexIndex: number
-  } | null => {
-    if (!motionsEditable || drawingModeRef.current !== 'motion') return null
-
-    if (motionEditSelectionRef.current) {
-      return {
-        playerId: motionEditSelectionRef.current.playerId,
-        vertexIndex: getAnchorVertexIndex(motionEditSelectionRef.current),
-      }
-    }
-
-    if (!selectedPlayerId) return null
-
-    const existing = getMotionForPlayer(selectedPlayerId)
-    if (existing.points.length > 0) return null
-
-    return { playerId: selectedPlayerId, vertexIndex: 0 }
-  }, [selectedPlayerId, getMotionForPlayer, motionsEditable])
 
   const resolveDefenderDrawAnchor = useCallback((): {
     defenderId: DefenderLabel
@@ -449,56 +437,91 @@ export function Field({
     return { defenderId: selectedDefenderId, vertexIndex: 0 }
   }, [selectedDefenderId, getDefenderRouteForDefender, defenderRoutesEditable])
 
-  const commitRouteExtension = useCallback(
-    (playerId: PlayerLabel, anchorVertexIndex: number, newPoints: Position[]) => {
+  const commitActionExtension = useCallback(
+    (
+      type: PlayerActionType,
+      playerId: PlayerLabel,
+      actionId: string,
+      anchorVertexIndex: number,
+      newPoints: Position[],
+    ) => {
       if (newPoints.length === 0) return
 
-      const existing = getRouteForPlayer(playerId)
-      const updated = extendRouteFromAnchor(existing, anchorVertexIndex, newPoints)
-      onRouteComplete(updated)
+      let action: PlayerAction
+      if (actionId === NEW_ACTION_ID) {
+        const chain = getSortedChain(playerActions, playerId)
+        action = createPlayerAction(type, chain.length, motionTypeRef.current)
+      } else {
+        const existing = findActionInChain(playerActions, playerId, actionId)
+        if (!existing) return
+        action = existing
+      }
 
-      setRouteEditSelection({
+      const updatedRoute = extendRouteFromAnchor(
+        { playerId, points: action.points },
+        anchorVertexIndex,
+        newPoints,
+      )
+      const updatedAction: PlayerAction = {
+        ...action,
+        points: updatedRoute.points,
+        ...(type === 'motion' ? { motionType: motionTypeRef.current } : {}),
+      }
+
+      onPlayerActionComplete(playerId, updatedAction)
+
+      const selection: RouteEditSelection = {
         playerId,
+        actionId: updatedAction.id,
         kind: 'vertex',
-        vertexIndex: updated.points.length,
-      })
+        vertexIndex: updatedAction.points.length,
+      }
+
+      if (type === 'route') {
+        setRouteEditSelection(selection)
+      } else if (type === 'motion') {
+        setMotionEditSelection(selection)
+      } else {
+        setBlockEditSelection(selection)
+      }
     },
-    [getRouteForPlayer, onRouteComplete],
+    [playerActions, onPlayerActionComplete],
+  )
+
+  const commitRouteExtension = useCallback(
+    (
+      playerId: PlayerLabel,
+      actionId: string,
+      anchorVertexIndex: number,
+      newPoints: Position[],
+    ) => {
+      commitActionExtension('route', playerId, actionId, anchorVertexIndex, newPoints)
+    },
+    [commitActionExtension],
   )
 
   const commitMotionExtension = useCallback(
-    (playerId: PlayerLabel, anchorVertexIndex: number, newPoints: Position[]) => {
-      if (newPoints.length === 0) return
-
-      const existing = getMotionForPlayer(playerId)
-      const updatedRoute = extendRouteFromAnchor(motionToRoute(existing), anchorVertexIndex, newPoints)
-      const updated = routeToMotion(updatedRoute, motionTypeRef.current)
-      onMotionComplete(updated)
-
-      setMotionEditSelection({
-        playerId,
-        kind: 'vertex',
-        vertexIndex: updated.points.length,
-      })
+    (
+      playerId: PlayerLabel,
+      actionId: string,
+      anchorVertexIndex: number,
+      newPoints: Position[],
+    ) => {
+      commitActionExtension('motion', playerId, actionId, anchorVertexIndex, newPoints)
     },
-    [getMotionForPlayer, onMotionComplete],
+    [commitActionExtension],
   )
 
   const commitBlockExtension = useCallback(
-    (playerId: PlayerLabel, anchorVertexIndex: number, newPoints: Position[]) => {
-      if (newPoints.length === 0) return
-
-      const existing = getBlockForPlayer(playerId)
-      const updated = extendBlockFromAnchor(existing, anchorVertexIndex, newPoints)
-      onBlockComplete(updated)
-
-      setBlockEditSelection({
-        playerId,
-        kind: 'vertex',
-        vertexIndex: updated.points.length,
-      })
+    (
+      playerId: PlayerLabel,
+      actionId: string,
+      anchorVertexIndex: number,
+      newPoints: Position[],
+    ) => {
+      commitActionExtension('block', playerId, actionId, anchorVertexIndex, newPoints)
     },
-    [getBlockForPlayer, onBlockComplete],
+    [commitActionExtension],
   )
 
   const commitDefenderRouteExtension = useCallback(
@@ -525,59 +548,74 @@ export function Field({
     const segmentIndex = getDeletableRouteSegmentIndex(selected)
     if (segmentIndex === null) return
 
-    const route = routes.find((entry) => entry.playerId === selected.playerId)
-    if (!route) {
+    const action = findActionInChain(playerActions, selected.playerId, selected.actionId)
+    if (!action) {
       clearRouteEditSelection()
       return
     }
 
-    const updated = deleteRouteSegment(route, segmentIndex)
-    onRouteComplete(updated)
+    const updatedRoute = deleteRouteSegment(
+      { playerId: selected.playerId, points: action.points },
+      segmentIndex,
+    )
+    const updatedAction = { ...action, points: updatedRoute.points }
+    onPlayerActionComplete(selected.playerId, updatedAction)
 
-    if (updated.points.length === 0) {
+    if (updatedAction.points.length === 0) {
       clearRouteEditSelection()
       return
     }
 
     if (selected.kind === 'vertex') {
-      const nextVertexIndex = Math.min(selected.vertexIndex, updated.points.length)
+      const nextVertexIndex = Math.min(selected.vertexIndex, updatedAction.points.length)
       setRouteEditSelection({
         playerId: selected.playerId,
+        actionId: selected.actionId,
         kind: 'vertex',
         vertexIndex: nextVertexIndex,
       })
       return
     }
 
-    const nextSegmentIndex = Math.min(segmentIndex, updated.points.length - 1)
+    const nextSegmentIndex = Math.min(segmentIndex, updatedAction.points.length - 1)
     setRouteEditSelection({
       playerId: selected.playerId,
+      actionId: selected.actionId,
       kind: 'segment',
       segmentIndex: nextSegmentIndex,
     })
-  }, [routes, onRouteComplete, clearRouteEditSelection])
+  }, [playerActions, onPlayerActionComplete, clearRouteEditSelection])
 
   const executeDeleteEntireRoute = useCallback(() => {
-    const playerId = routeEditSelectionRef.current?.playerId ?? selectedPlayerId
+    const selection = routeEditSelectionRef.current
+    const playerId = selection?.playerId ?? selectedPlayerId
     if (!playerId || !routesEditable) return
 
-    const route = routes.find((entry) => entry.playerId === playerId)
-    if (!route || route.points.length === 0) return
+    const action = getSelectedAction(playerId, selection?.actionId, 'route')
+    if (!action || action.points.length === 0) return
 
-    onRouteComplete(deleteEntireRoute(route))
+    onPlayerActionComplete(playerId, { ...action, points: [] })
     clearRouteEditSelection()
     setDeleteEntireRouteOpen(false)
-  }, [selectedPlayerId, routes, routesEditable, onRouteComplete, clearRouteEditSelection])
+  }, [
+    selectedPlayerId,
+    routesEditable,
+    playerActions,
+    getSelectedAction,
+    onPlayerActionComplete,
+    clearRouteEditSelection,
+  ])
 
   const requestDeleteEntireRoute = useCallback(() => {
-    const playerId = routeEditSelectionRef.current?.playerId ?? selectedPlayerId
+    const selection = routeEditSelectionRef.current
+    const playerId = selection?.playerId ?? selectedPlayerId
     if (!playerId || !routesEditable) return
 
-    const route = routes.find((entry) => entry.playerId === playerId)
-    if (!route || route.points.length === 0) return
+    const action = getSelectedAction(playerId, selection?.actionId, 'route')
+    if (!action || action.points.length === 0) return
 
     setDeleteEntireRouteOpen(true)
-  }, [selectedPlayerId, routes, routesEditable])
+  }, [selectedPlayerId, routesEditable, getSelectedAction])
 
   const deleteSelectedMotionSegment = useCallback(() => {
     const selected = motionEditSelectionRef.current
@@ -586,60 +624,73 @@ export function Field({
     const segmentIndex = getDeletableRouteSegmentIndex(selected)
     if (segmentIndex === null) return
 
-    const motion = motions.find((entry) => entry.playerId === selected.playerId)
-    if (!motion) {
+    const action = findActionInChain(playerActions, selected.playerId, selected.actionId)
+    if (!action) {
       clearMotionEditSelection()
       return
     }
 
-    const updatedRoute = deleteRouteSegment(motionToRoute(motion), segmentIndex)
-    const updated = routeToMotion(updatedRoute, motion.motionType)
-    onMotionComplete(updated)
+    const updatedRoute = deleteRouteSegment(
+      { playerId: selected.playerId, points: action.points },
+      segmentIndex,
+    )
+    const updatedAction = { ...action, points: updatedRoute.points }
+    onPlayerActionComplete(selected.playerId, updatedAction)
 
-    if (updated.points.length === 0) {
+    if (updatedAction.points.length === 0) {
       clearMotionEditSelection()
       return
     }
 
     if (selected.kind === 'vertex') {
-      const nextVertexIndex = Math.min(selected.vertexIndex, updated.points.length)
+      const nextVertexIndex = Math.min(selected.vertexIndex, updatedAction.points.length)
       setMotionEditSelection({
         playerId: selected.playerId,
+        actionId: selected.actionId,
         kind: 'vertex',
         vertexIndex: nextVertexIndex,
       })
       return
     }
 
-    const nextSegmentIndex = Math.min(segmentIndex, updated.points.length - 1)
+    const nextSegmentIndex = Math.min(segmentIndex, updatedAction.points.length - 1)
     setMotionEditSelection({
       playerId: selected.playerId,
+      actionId: selected.actionId,
       kind: 'segment',
       segmentIndex: nextSegmentIndex,
     })
-  }, [motions, onMotionComplete, clearMotionEditSelection])
+  }, [playerActions, onPlayerActionComplete, clearMotionEditSelection])
 
   const executeDeleteEntireMotion = useCallback(() => {
-    const playerId = motionEditSelectionRef.current?.playerId ?? selectedPlayerId
+    const selection = motionEditSelectionRef.current
+    const playerId = selection?.playerId ?? selectedPlayerId
     if (!playerId || !motionsEditable) return
 
-    const motion = motions.find((entry) => entry.playerId === playerId)
-    if (!motion || motion.points.length === 0) return
+    const action = getSelectedAction(playerId, selection?.actionId, 'motion')
+    if (!action || action.points.length === 0) return
 
-    onMotionComplete(routeToMotion(deleteEntireRoute(motionToRoute(motion)), motion.motionType))
+    onPlayerActionComplete(playerId, { ...action, points: [] })
     clearMotionEditSelection()
     setDeleteEntireMotionOpen(false)
-  }, [selectedPlayerId, motions, motionsEditable, onMotionComplete, clearMotionEditSelection])
+  }, [
+    selectedPlayerId,
+    motionsEditable,
+    getSelectedAction,
+    onPlayerActionComplete,
+    clearMotionEditSelection,
+  ])
 
   const requestDeleteEntireMotion = useCallback(() => {
-    const playerId = motionEditSelectionRef.current?.playerId ?? selectedPlayerId
+    const selection = motionEditSelectionRef.current
+    const playerId = selection?.playerId ?? selectedPlayerId
     if (!playerId || !motionsEditable) return
 
-    const motion = motions.find((entry) => entry.playerId === playerId)
-    if (!motion || motion.points.length === 0) return
+    const action = getSelectedAction(playerId, selection?.actionId, 'motion')
+    if (!action || action.points.length === 0) return
 
     setDeleteEntireMotionOpen(true)
-  }, [selectedPlayerId, motions, motionsEditable])
+  }, [selectedPlayerId, motionsEditable, getSelectedAction])
 
   const deleteSelectedBlockSegment = useCallback(() => {
     const selected = blockEditSelectionRef.current
@@ -648,59 +699,73 @@ export function Field({
     const segmentIndex = getDeletableRouteSegmentIndex(selected)
     if (segmentIndex === null) return
 
-    const block = blocks.find((entry) => entry.playerId === selected.playerId)
-    if (!block) {
+    const action = findActionInChain(playerActions, selected.playerId, selected.actionId)
+    if (!action) {
       clearBlockEditSelection()
       return
     }
 
-    const updated = deleteBlockSegment(block, segmentIndex)
-    onBlockComplete(updated)
+    const updatedRoute = deleteRouteSegment(
+      { playerId: selected.playerId, points: action.points },
+      segmentIndex,
+    )
+    const updatedAction = { ...action, points: updatedRoute.points }
+    onPlayerActionComplete(selected.playerId, updatedAction)
 
-    if (updated.points.length === 0) {
+    if (updatedAction.points.length === 0) {
       clearBlockEditSelection()
       return
     }
 
     if (selected.kind === 'vertex') {
-      const nextVertexIndex = Math.min(selected.vertexIndex, updated.points.length)
+      const nextVertexIndex = Math.min(selected.vertexIndex, updatedAction.points.length)
       setBlockEditSelection({
         playerId: selected.playerId,
+        actionId: selected.actionId,
         kind: 'vertex',
         vertexIndex: nextVertexIndex,
       })
       return
     }
 
-    const nextSegmentIndex = Math.min(segmentIndex, updated.points.length - 1)
+    const nextSegmentIndex = Math.min(segmentIndex, updatedAction.points.length - 1)
     setBlockEditSelection({
       playerId: selected.playerId,
+      actionId: selected.actionId,
       kind: 'segment',
       segmentIndex: nextSegmentIndex,
     })
-  }, [blocks, onBlockComplete, clearBlockEditSelection])
+  }, [playerActions, onPlayerActionComplete, clearBlockEditSelection])
 
   const executeDeleteEntireBlock = useCallback(() => {
-    const playerId = blockEditSelectionRef.current?.playerId ?? selectedPlayerId
+    const selection = blockEditSelectionRef.current
+    const playerId = selection?.playerId ?? selectedPlayerId
     if (!playerId || !blocksEditable) return
 
-    const block = blocks.find((entry) => entry.playerId === playerId)
-    if (!block || block.points.length === 0) return
+    const action = getSelectedAction(playerId, selection?.actionId, 'block')
+    if (!action || action.points.length === 0) return
 
-    onBlockComplete(deleteEntireBlock(block))
+    onPlayerActionComplete(playerId, { ...action, points: [] })
     clearBlockEditSelection()
     setDeleteEntireBlockOpen(false)
-  }, [selectedPlayerId, blocks, blocksEditable, onBlockComplete, clearBlockEditSelection])
+  }, [
+    selectedPlayerId,
+    blocksEditable,
+    getSelectedAction,
+    onPlayerActionComplete,
+    clearBlockEditSelection,
+  ])
 
   const requestDeleteEntireBlock = useCallback(() => {
-    const playerId = blockEditSelectionRef.current?.playerId ?? selectedPlayerId
+    const selection = blockEditSelectionRef.current
+    const playerId = selection?.playerId ?? selectedPlayerId
     if (!playerId || !blocksEditable) return
 
-    const block = blocks.find((entry) => entry.playerId === playerId)
-    if (!block || block.points.length === 0) return
+    const action = getSelectedAction(playerId, selection?.actionId, 'block')
+    if (!action || action.points.length === 0) return
 
     setDeleteEntireBlockOpen(true)
-  }, [selectedPlayerId, blocks, blocksEditable])
+  }, [selectedPlayerId, blocksEditable, getSelectedAction])
 
   const deleteSelectedDefenderRouteSegment = useCallback(() => {
     const selected = defenderRouteEditSelectionRef.current
@@ -769,89 +834,107 @@ export function Field({
     setDeleteEntireDefenderRouteOpen(true)
   }, [selectedDefenderId, defenderRoutes, defenderRoutesEditable])
 
-  const toggleBlockSegmentSelection = useCallback((playerId: PlayerLabel, segmentIndex: number) => {
-    setBlockEditSelection((current) => {
-      if (
-        current?.playerId === playerId &&
-        current.kind === 'segment' &&
-        current.segmentIndex === segmentIndex
-      ) {
-        return null
-      }
-      return { playerId, kind: 'segment', segmentIndex }
-    })
-  }, [])
+  const toggleBlockSegmentSelection = useCallback(
+    (playerId: PlayerLabel, actionId: string, segmentIndex: number) => {
+      setBlockEditSelection((current) => {
+        if (
+          current?.playerId === playerId &&
+          current.actionId === actionId &&
+          current.kind === 'segment' &&
+          current.segmentIndex === segmentIndex
+        ) {
+          return null
+        }
+        return { playerId, actionId, kind: 'segment', segmentIndex }
+      })
+    },
+    [],
+  )
 
-  const toggleBlockVertexSelection = useCallback((playerId: PlayerLabel, vertexIndex: number) => {
-    setBlockEditSelection((current) => {
-      if (
-        current?.playerId === playerId &&
-        current.kind === 'vertex' &&
-        current.vertexIndex === vertexIndex
-      ) {
-        return null
-      }
-      return { playerId, kind: 'vertex', vertexIndex }
-    })
-  }, [])
+  const toggleBlockVertexSelection = useCallback(
+    (playerId: PlayerLabel, actionId: string, vertexIndex: number) => {
+      setBlockEditSelection((current) => {
+        if (
+          current?.playerId === playerId &&
+          current.actionId === actionId &&
+          current.kind === 'vertex' &&
+          current.vertexIndex === vertexIndex
+        ) {
+          return null
+        }
+        return { playerId, actionId, kind: 'vertex', vertexIndex }
+      })
+    },
+    [],
+  )
 
   const toggleSegmentSelection = useCallback(
-    (playerId: PlayerLabel, segmentIndex: number) => {
+    (playerId: PlayerLabel, actionId: string, segmentIndex: number) => {
       setRouteEditSelection((current) => {
         if (
           current?.playerId === playerId &&
+          current.actionId === actionId &&
           current.kind === 'segment' &&
           current.segmentIndex === segmentIndex
         ) {
           return null
         }
-        return { playerId, kind: 'segment', segmentIndex }
+        return { playerId, actionId, kind: 'segment', segmentIndex }
       })
     },
     [],
   )
 
-  const toggleVertexSelection = useCallback((playerId: PlayerLabel, vertexIndex: number) => {
-    setRouteEditSelection((current) => {
-      if (
-        current?.playerId === playerId &&
-        current.kind === 'vertex' &&
-        current.vertexIndex === vertexIndex
-      ) {
-        return null
-      }
-      return { playerId, kind: 'vertex', vertexIndex }
-    })
-  }, [])
+  const toggleVertexSelection = useCallback(
+    (playerId: PlayerLabel, actionId: string, vertexIndex: number) => {
+      setRouteEditSelection((current) => {
+        if (
+          current?.playerId === playerId &&
+          current.actionId === actionId &&
+          current.kind === 'vertex' &&
+          current.vertexIndex === vertexIndex
+        ) {
+          return null
+        }
+        return { playerId, actionId, kind: 'vertex', vertexIndex }
+      })
+    },
+    [],
+  )
 
   const toggleMotionSegmentSelection = useCallback(
-    (playerId: PlayerLabel, segmentIndex: number) => {
+    (playerId: PlayerLabel, actionId: string, segmentIndex: number) => {
       setMotionEditSelection((current) => {
         if (
           current?.playerId === playerId &&
+          current.actionId === actionId &&
           current.kind === 'segment' &&
           current.segmentIndex === segmentIndex
         ) {
           return null
         }
-        return { playerId, kind: 'segment', segmentIndex }
+        return { playerId, actionId, kind: 'segment', segmentIndex }
       })
     },
     [],
   )
 
-  const toggleMotionVertexSelection = useCallback((playerId: PlayerLabel, vertexIndex: number) => {
-    setMotionEditSelection((current) => {
-      if (
-        current?.playerId === playerId &&
-        current.kind === 'vertex' &&
-        current.vertexIndex === vertexIndex
-      ) {
-        return null
-      }
-      return { playerId, kind: 'vertex', vertexIndex }
-    })
-  }, [])
+  const toggleMotionVertexSelection = useCallback(
+    (playerId: PlayerLabel, actionId: string, vertexIndex: number) => {
+      setMotionEditSelection((current) => {
+        if (
+          current?.playerId === playerId &&
+          current.actionId === actionId &&
+          current.kind === 'vertex' &&
+          current.vertexIndex === vertexIndex
+        ) {
+          return null
+        }
+        return { playerId, actionId, kind: 'vertex', vertexIndex }
+      })
+    },
+    [],
+  )
 
   const toggleDefenderSegmentSelection = useCallback(
     (defenderId: DefenderLabel, segmentIndex: number) => {
@@ -982,7 +1065,8 @@ export function Field({
       event.preventDefault()
       routeDragRef.current = {
         playerId: anchor.playerId,
-        anchorVertexIndex: anchor.vertexIndex,
+        actionId: anchor.actionId,
+        anchorVertexIndex: anchor.anchorVertexIndex,
         dragPoints: [],
         screenX: event.clientX,
         screenY: event.clientY,
@@ -1002,7 +1086,8 @@ export function Field({
       event.preventDefault()
       motionDragRef.current = {
         playerId: anchor.playerId,
-        anchorVertexIndex: anchor.vertexIndex,
+        actionId: anchor.actionId,
+        anchorVertexIndex: anchor.anchorVertexIndex,
         dragPoints: [],
         screenX: event.clientX,
         screenY: event.clientY,
@@ -1042,7 +1127,8 @@ export function Field({
       event.preventDefault()
       blockDragRef.current = {
         playerId: anchor.playerId,
-        anchorVertexIndex: anchor.vertexIndex,
+        actionId: anchor.actionId,
+        anchorVertexIndex: anchor.anchorVertexIndex,
         dragPoints: [],
         screenX: event.clientX,
         screenY: event.clientY,
@@ -1136,6 +1222,7 @@ export function Field({
           routeDrag.dragPoints = appendPathPoint(routeDrag.dragPoints, position)
           setFreehandDraft({
             playerId: routeDrag.playerId,
+            actionId: routeDrag.actionId,
             anchorVertexIndex: routeDrag.anchorVertexIndex,
             points: routeDrag.dragPoints,
           })
@@ -1161,6 +1248,7 @@ export function Field({
           motionDrag.dragPoints = appendPathPoint(motionDrag.dragPoints, position)
           setMotionFreehandDraft({
             playerId: motionDrag.playerId,
+            actionId: motionDrag.actionId,
             anchorVertexIndex: motionDrag.anchorVertexIndex,
             points: motionDrag.dragPoints,
           })
@@ -1186,6 +1274,7 @@ export function Field({
           blockDrag.dragPoints = appendPathPoint(blockDrag.dragPoints, position)
           setBlockFreehandDraft({
             playerId: blockDrag.playerId,
+            actionId: blockDrag.actionId,
             anchorVertexIndex: blockDrag.anchorVertexIndex,
             points: blockDrag.dragPoints,
           })
@@ -1252,11 +1341,17 @@ export function Field({
             !last || Math.sqrt(dx * dx + dy * dy) >= CLICK_MIN_DISTANCE
 
           if (isDistinct) {
-            commitRouteExtension(routeDrag.playerId, routeDrag.anchorVertexIndex, [position])
+            commitRouteExtension(
+              routeDrag.playerId,
+              routeDrag.actionId,
+              routeDrag.anchorVertexIndex,
+              [position],
+            )
           }
         } else if (routeDrag.dragPoints.length > 0) {
           commitRouteExtension(
             routeDrag.playerId,
+            routeDrag.actionId,
             routeDrag.anchorVertexIndex,
             routeDrag.dragPoints,
           )
@@ -1277,11 +1372,17 @@ export function Field({
             !last || Math.sqrt(dx * dx + dy * dy) >= CLICK_MIN_DISTANCE
 
           if (isDistinct) {
-            commitMotionExtension(motionDrag.playerId, motionDrag.anchorVertexIndex, [position])
+            commitMotionExtension(
+              motionDrag.playerId,
+              motionDrag.actionId,
+              motionDrag.anchorVertexIndex,
+              [position],
+            )
           }
         } else if (motionDrag.dragPoints.length > 0) {
           commitMotionExtension(
             motionDrag.playerId,
+            motionDrag.actionId,
             motionDrag.anchorVertexIndex,
             motionDrag.dragPoints,
           )
@@ -1302,11 +1403,17 @@ export function Field({
             !last || Math.sqrt(dx * dx + dy * dy) >= CLICK_MIN_DISTANCE
 
           if (isDistinct) {
-            commitBlockExtension(blockDrag.playerId, blockDrag.anchorVertexIndex, [position])
+            commitBlockExtension(
+              blockDrag.playerId,
+              blockDrag.actionId,
+              blockDrag.anchorVertexIndex,
+              [position],
+            )
           }
         } else if (blockDrag.dragPoints.length > 0) {
           commitBlockExtension(
             blockDrag.playerId,
+            blockDrag.actionId,
             blockDrag.anchorVertexIndex,
             blockDrag.dragPoints,
           )
@@ -1365,12 +1472,14 @@ export function Field({
             routesEditable &&
             !routeDragRef.current
           ) {
-            const playerId = routeEditSelectionRef.current?.playerId ?? selectedPlayerId
-            const route = playerId
-              ? routes.find((entry) => entry.playerId === playerId)
-              : undefined
+            const selection = routeEditSelectionRef.current
+            const playerId = selection?.playerId ?? selectedPlayerId
+            const action =
+              playerId !== null && playerId !== undefined
+                ? getSelectedAction(playerId, selection?.actionId, 'route')
+                : null
 
-            if (route && route.points.length > 0) {
+            if (action && action.points.length > 0) {
               event.preventDefault()
               setDeleteEntireRouteOpen(true)
             }
@@ -1380,12 +1489,14 @@ export function Field({
             motionsEditable &&
             !motionDragRef.current
           ) {
-            const playerId = motionEditSelectionRef.current?.playerId ?? selectedPlayerId
-            const motion = playerId
-              ? motions.find((entry) => entry.playerId === playerId)
-              : undefined
+            const selection = motionEditSelectionRef.current
+            const playerId = selection?.playerId ?? selectedPlayerId
+            const action =
+              playerId !== null && playerId !== undefined
+                ? getSelectedAction(playerId, selection?.actionId, 'motion')
+                : null
 
-            if (motion && motion.points.length > 0) {
+            if (action && action.points.length > 0) {
               event.preventDefault()
               setDeleteEntireMotionOpen(true)
             }
@@ -1395,12 +1506,14 @@ export function Field({
             blocksEditable &&
             !blockDragRef.current
           ) {
-            const playerId = blockEditSelectionRef.current?.playerId ?? selectedPlayerId
-            const block = playerId
-              ? blocks.find((entry) => entry.playerId === playerId)
-              : undefined
+            const selection = blockEditSelectionRef.current
+            const playerId = selection?.playerId ?? selectedPlayerId
+            const action =
+              playerId !== null && playerId !== undefined
+                ? getSelectedAction(playerId, selection?.actionId, 'block')
+                : null
 
-            if (block && block.points.length > 0) {
+            if (action && action.points.length > 0) {
               event.preventDefault()
               setDeleteEntireBlockOpen(true)
             }
@@ -1475,11 +1588,10 @@ export function Field({
     defenseEditable,
     onPlayerMove,
     onDefenderMove,
-    onRouteComplete,
-    onBlockComplete,
+    onPlayerActionComplete,
     onSelectPlayer,
     onSelectDefender,
-    routes,
+    playerActions,
     selectedPlayerId,
     routesEditable,
     deleteSelectedRouteSegment,
@@ -1494,8 +1606,7 @@ export function Field({
     commitBlockExtension,
     commitMotionExtension,
     commitDefenderRouteExtension,
-    motions,
-    blocks,
+    getSelectedAction,
     blocksEditable,
     defenderRoutes,
     defenderRoutesEditable,
@@ -1506,51 +1617,83 @@ export function Field({
     if (!freehandDraft) return null
 
     const playerPosition = getPlayerPosition(freehandDraft.playerId)
-    const existing = getRouteForPlayer(freehandDraft.playerId)
+    const startPosition = getDraftStartPosition(
+      playerPosition,
+      playerActions,
+      freehandDraft.playerId,
+      freehandDraft.actionId,
+    )
+    const existingPoints =
+      freehandDraft.actionId === NEW_ACTION_ID
+        ? []
+        : (findActionInChain(playerActions, freehandDraft.playerId, freehandDraft.actionId)
+            ?.points ?? [])
     return {
       playerId: freehandDraft.playerId,
       points: extendRouteFromAnchor(
-        existing,
+        { playerId: freehandDraft.playerId, points: existingPoints },
         freehandDraft.anchorVertexIndex,
         freehandDraft.points,
       ).points,
-      playerPosition,
+      startPosition,
     }
-  }, [freehandDraft, getRouteForPlayer, players])
+  }, [freehandDraft, playerActions, players])
 
   const freehandBlockForDisplay = useMemo(() => {
     if (!blockFreehandDraft) return null
 
     const playerPosition = getPlayerPosition(blockFreehandDraft.playerId)
-    const existing = getBlockForPlayer(blockFreehandDraft.playerId)
+    const startPosition = getDraftStartPosition(
+      playerPosition,
+      playerActions,
+      blockFreehandDraft.playerId,
+      blockFreehandDraft.actionId,
+    )
+    const existingPoints =
+      blockFreehandDraft.actionId === NEW_ACTION_ID
+        ? []
+        : (findActionInChain(playerActions, blockFreehandDraft.playerId, blockFreehandDraft.actionId)
+            ?.points ?? [])
     return {
       playerId: blockFreehandDraft.playerId,
-      points: extendBlockFromAnchor(
-        existing,
+      points: extendRouteFromAnchor(
+        { playerId: blockFreehandDraft.playerId, points: existingPoints },
         blockFreehandDraft.anchorVertexIndex,
         blockFreehandDraft.points,
       ).points,
-      playerPosition,
+      startPosition,
     }
-  }, [blockFreehandDraft, getBlockForPlayer, players])
+  }, [blockFreehandDraft, playerActions, players])
 
   const freehandMotionForDisplay = useMemo(() => {
     if (!motionFreehandDraft) return null
 
     const playerPosition = getPlayerPosition(motionFreehandDraft.playerId)
-    const existing = getMotionForPlayer(motionFreehandDraft.playerId)
-    const updatedRoute = extendRouteFromAnchor(
-      motionToRoute(existing),
-      motionFreehandDraft.anchorVertexIndex,
-      motionFreehandDraft.points,
+    const startPosition = getDraftStartPosition(
+      playerPosition,
+      playerActions,
+      motionFreehandDraft.playerId,
+      motionFreehandDraft.actionId,
     )
+    const existingPoints =
+      motionFreehandDraft.actionId === NEW_ACTION_ID
+        ? []
+        : (findActionInChain(
+            playerActions,
+            motionFreehandDraft.playerId,
+            motionFreehandDraft.actionId,
+          )?.points ?? [])
     return {
       playerId: motionFreehandDraft.playerId,
       motionType: motionTypeRef.current,
-      points: updatedRoute.points,
-      playerPosition,
+      points: extendRouteFromAnchor(
+        { playerId: motionFreehandDraft.playerId, points: existingPoints },
+        motionFreehandDraft.anchorVertexIndex,
+        motionFreehandDraft.points,
+      ).points,
+      startPosition,
     }
-  }, [motionFreehandDraft, getMotionForPlayer, players, motionType])
+  }, [motionFreehandDraft, playerActions, players, motionType])
 
   const freehandDefenderRouteForDisplay = useMemo(() => {
     if (!defenderFreehandDraft) return null
@@ -1570,17 +1713,23 @@ export function Field({
 
   const selectedPlayerHasRoute = Boolean(
     selectedPlayerId &&
-      routes.find((entry) => entry.playerId === selectedPlayerId && entry.points.length > 0),
+      getSortedChain(playerActions, selectedPlayerId).some(
+        (entry) => entry.type === 'route' && entry.points.length > 0,
+      ),
   )
 
   const selectedPlayerHasMotion = Boolean(
     selectedPlayerId &&
-      motions.find((entry) => entry.playerId === selectedPlayerId && entry.points.length > 0),
+      getSortedChain(playerActions, selectedPlayerId).some(
+        (entry) => entry.type === 'motion' && entry.points.length > 0,
+      ),
   )
 
   const selectedPlayerHasBlock = Boolean(
     selectedPlayerId &&
-      blocks.find((entry) => entry.playerId === selectedPlayerId && entry.points.length > 0),
+      getSortedChain(playerActions, selectedPlayerId).some(
+        (entry) => entry.type === 'block' && entry.points.length > 0,
+      ),
   )
 
   const selectedDefenderHasRoute = Boolean(
@@ -2010,6 +2159,120 @@ export function Field({
               />
             )}
 
+            <PlayerActionChainLines
+              players={players}
+              playerActions={playerActions}
+              routesEditable={routesEditable}
+              motionsEditable={motionsEditable}
+              blocksEditable={blocksEditable}
+              routeEditSelection={routeEditSelection}
+              motionEditSelection={motionEditSelection}
+              blockEditSelection={blockEditSelection}
+              onRouteSegmentSelect={(playerId, actionId, segmentIndex) => {
+                if (!routesEditable || routeDragRef.current) return
+                toggleSegmentSelection(playerId, actionId, segmentIndex)
+              }}
+              onRouteVertexSelect={(playerId, actionId, vertexIndex) => {
+                if (!routesEditable || routeDragRef.current) return
+                toggleVertexSelection(playerId, actionId, vertexIndex)
+              }}
+              onMotionSegmentSelect={(playerId, actionId, segmentIndex) => {
+                if (!motionsEditable || motionDragRef.current) return
+                toggleMotionSegmentSelection(playerId, actionId, segmentIndex)
+              }}
+              onMotionVertexSelect={(playerId, actionId, vertexIndex) => {
+                if (!motionsEditable || motionDragRef.current) return
+                toggleMotionVertexSelection(playerId, actionId, vertexIndex)
+              }}
+              onBlockSegmentSelect={(playerId, actionId, segmentIndex) => {
+                if (!blocksEditable || blockDragRef.current) return
+                toggleBlockSegmentSelection(playerId, actionId, segmentIndex)
+              }}
+              onBlockVertexSelect={(playerId, actionId, vertexIndex) => {
+                if (!blocksEditable || blockDragRef.current) return
+                toggleBlockVertexSelection(playerId, actionId, vertexIndex)
+              }}
+            />
+
+            {defenderRoutes.map((route) => (
+              <RouteLine
+                key={`defender-route-${route.defenderId}`}
+                playerPosition={getDefenderPosition(route.defenderId)}
+                route={{
+                  playerId: route.defenderId as unknown as PlayerLabel,
+                  points: route.points,
+                }}
+                readOnly={!defenderRoutesEditable}
+                selectedSegmentIndex={
+                  defenderRouteEditSelection?.defenderId === route.defenderId &&
+                  defenderRouteEditSelection.kind === 'segment'
+                    ? defenderRouteEditSelection.segmentIndex
+                    : null
+                }
+                selectedVertexIndex={
+                  defenderRouteEditSelection?.defenderId === route.defenderId &&
+                  defenderRouteEditSelection.kind === 'vertex'
+                    ? defenderRouteEditSelection.vertexIndex
+                    : null
+                }
+                onSegmentSelect={(segmentIndex) => {
+                  if (!defenderRoutesEditable || defenderRouteDragRef.current) return
+                  toggleDefenderSegmentSelection(route.defenderId, segmentIndex)
+                }}
+                onVertexSelect={(vertexIndex) => {
+                  if (!defenderRoutesEditable || defenderRouteDragRef.current) return
+                  toggleDefenderVertexSelection(route.defenderId, vertexIndex)
+                }}
+              />
+            ))}
+
+            {freehandBlockForDisplay && drawingMode === 'block' && playType === 'offensive' && (
+              <BlockLine
+                playerPosition={freehandBlockForDisplay.startPosition}
+                block={{
+                  playerId: freehandBlockForDisplay.playerId,
+                  points: freehandBlockForDisplay.points,
+                }}
+                isDraft
+              />
+            )}
+
+            {freehandRouteForDisplay && drawingMode === 'route' && playType === 'offensive' && (
+              <RouteLine
+                playerPosition={freehandRouteForDisplay.startPosition}
+                route={{
+                  playerId: freehandRouteForDisplay.playerId,
+                  points: freehandRouteForDisplay.points,
+                }}
+                isDraft
+              />
+            )}
+
+            {freehandMotionForDisplay && drawingMode === 'motion' && playType === 'offensive' && (
+              <MotionLine
+                playerPosition={freehandMotionForDisplay.startPosition}
+                motion={{
+                  playerId: freehandMotionForDisplay.playerId,
+                  motionType: freehandMotionForDisplay.motionType,
+                  points: freehandMotionForDisplay.points,
+                }}
+                isDraft
+              />
+            )}
+
+            {freehandDefenderRouteForDisplay &&
+              drawingMode === 'route' &&
+              playType === 'defensive' && (
+                <RouteLine
+                  playerPosition={freehandDefenderRouteForDisplay.defenderPosition}
+                  route={{
+                    playerId: freehandDefenderRouteForDisplay.defenderId as unknown as PlayerLabel,
+                    points: freehandDefenderRouteForDisplay.points,
+                  }}
+                  isDraft
+                />
+              )}
+
             {orderedDefenders.map((defender) => (
               <g
                 key={defender.id}
@@ -2048,172 +2311,6 @@ export function Field({
                 onPointerDown={handlePlayerPointerDown}
               />
             ))}
-
-            {blocks.map((block) => (
-              <BlockLine
-                key={`block-${block.playerId}`}
-                playerPosition={getPlayerPosition(block.playerId)}
-                block={block}
-                readOnly={!blocksEditable}
-                selectedSegmentIndex={
-                  blockEditSelection?.playerId === block.playerId &&
-                  blockEditSelection.kind === 'segment'
-                    ? blockEditSelection.segmentIndex
-                    : null
-                }
-                selectedVertexIndex={
-                  blockEditSelection?.playerId === block.playerId &&
-                  blockEditSelection.kind === 'vertex'
-                    ? blockEditSelection.vertexIndex
-                    : null
-                }
-                onSegmentSelect={(segmentIndex) => {
-                  if (!blocksEditable || blockDragRef.current) return
-                  toggleBlockSegmentSelection(block.playerId, segmentIndex)
-                }}
-                onVertexSelect={(vertexIndex) => {
-                  if (!blocksEditable || blockDragRef.current) return
-                  toggleBlockVertexSelection(block.playerId, vertexIndex)
-                }}
-              />
-            ))}
-
-            {motions.map((motion) => (
-              <MotionLine
-                key={`motion-${motion.playerId}`}
-                playerPosition={getPlayerPosition(motion.playerId)}
-                motion={motion}
-                readOnly={!motionsEditable}
-                selectedSegmentIndex={
-                  motionEditSelection?.playerId === motion.playerId &&
-                  motionEditSelection.kind === 'segment'
-                    ? motionEditSelection.segmentIndex
-                    : null
-                }
-                selectedVertexIndex={
-                  motionEditSelection?.playerId === motion.playerId &&
-                  motionEditSelection.kind === 'vertex'
-                    ? motionEditSelection.vertexIndex
-                    : null
-                }
-                onSegmentSelect={(segmentIndex) => {
-                  if (!motionsEditable || motionDragRef.current) return
-                  toggleMotionSegmentSelection(motion.playerId, segmentIndex)
-                }}
-                onVertexSelect={(vertexIndex) => {
-                  if (!motionsEditable || motionDragRef.current) return
-                  toggleMotionVertexSelection(motion.playerId, vertexIndex)
-                }}
-              />
-            ))}
-
-            {routes.map((route) => (
-              <RouteLine
-                key={`route-${route.playerId}`}
-                playerPosition={getPlayerPosition(route.playerId)}
-                route={route}
-                readOnly={!routesEditable}
-                selectedSegmentIndex={
-                  routeEditSelection?.playerId === route.playerId &&
-                  routeEditSelection.kind === 'segment'
-                    ? routeEditSelection.segmentIndex
-                    : null
-                }
-                selectedVertexIndex={
-                  routeEditSelection?.playerId === route.playerId &&
-                  routeEditSelection.kind === 'vertex'
-                    ? routeEditSelection.vertexIndex
-                    : null
-                }
-                onSegmentSelect={(segmentIndex) => {
-                  if (!routesEditable || routeDragRef.current) return
-                  toggleSegmentSelection(route.playerId, segmentIndex)
-                }}
-                onVertexSelect={(vertexIndex) => {
-                  if (!routesEditable || routeDragRef.current) return
-                  toggleVertexSelection(route.playerId, vertexIndex)
-                }}
-              />
-            ))}
-
-            {defenderRoutes.map((route) => (
-              <RouteLine
-                key={`defender-route-${route.defenderId}`}
-                playerPosition={getDefenderPosition(route.defenderId)}
-                route={{
-                  playerId: route.defenderId as unknown as PlayerLabel,
-                  points: route.points,
-                }}
-                readOnly={!defenderRoutesEditable}
-                selectedSegmentIndex={
-                  defenderRouteEditSelection?.defenderId === route.defenderId &&
-                  defenderRouteEditSelection.kind === 'segment'
-                    ? defenderRouteEditSelection.segmentIndex
-                    : null
-                }
-                selectedVertexIndex={
-                  defenderRouteEditSelection?.defenderId === route.defenderId &&
-                  defenderRouteEditSelection.kind === 'vertex'
-                    ? defenderRouteEditSelection.vertexIndex
-                    : null
-                }
-                onSegmentSelect={(segmentIndex) => {
-                  if (!defenderRoutesEditable || defenderRouteDragRef.current) return
-                  toggleDefenderSegmentSelection(route.defenderId, segmentIndex)
-                }}
-                onVertexSelect={(vertexIndex) => {
-                  if (!defenderRoutesEditable || defenderRouteDragRef.current) return
-                  toggleDefenderVertexSelection(route.defenderId, vertexIndex)
-                }}
-              />
-            ))}
-
-            {freehandBlockForDisplay && drawingMode === 'block' && playType === 'offensive' && (
-              <BlockLine
-                playerPosition={freehandBlockForDisplay.playerPosition}
-                block={{
-                  playerId: freehandBlockForDisplay.playerId,
-                  points: freehandBlockForDisplay.points,
-                }}
-                isDraft
-              />
-            )}
-
-            {freehandRouteForDisplay && drawingMode === 'route' && playType === 'offensive' && (
-              <RouteLine
-                playerPosition={freehandRouteForDisplay.playerPosition}
-                route={{
-                  playerId: freehandRouteForDisplay.playerId,
-                  points: freehandRouteForDisplay.points,
-                }}
-                isDraft
-              />
-            )}
-
-            {freehandMotionForDisplay && drawingMode === 'motion' && playType === 'offensive' && (
-              <MotionLine
-                playerPosition={freehandMotionForDisplay.playerPosition}
-                motion={{
-                  playerId: freehandMotionForDisplay.playerId,
-                  motionType: freehandMotionForDisplay.motionType,
-                  points: freehandMotionForDisplay.points,
-                }}
-                isDraft
-              />
-            )}
-
-            {freehandDefenderRouteForDisplay &&
-              drawingMode === 'route' &&
-              playType === 'defensive' && (
-                <RouteLine
-                  playerPosition={freehandDefenderRouteForDisplay.defenderPosition}
-                  route={{
-                    playerId: freehandDefenderRouteForDisplay.defenderId as unknown as PlayerLabel,
-                    points: freehandDefenderRouteForDisplay.points,
-                  }}
-                  isDraft
-                />
-              )}
           </g>
         </svg>
       </div>

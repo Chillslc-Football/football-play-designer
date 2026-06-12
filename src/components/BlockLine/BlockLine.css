@@ -19,7 +19,7 @@
 .block-segment {
   fill: none;
   stroke: var(--block-orange, #c45c00);
-  stroke-width: 0.38;
+  stroke-width: 0.21;
   stroke-linecap: round;
   stroke-linejoin: round;
   pointer-events: stroke;
@@ -27,14 +27,14 @@
 }
 
 .block-segment-selected {
-  stroke-width: 0.5;
+  stroke-width: 0.34;
   filter: drop-shadow(0 0 0.35px var(--block-orange, #c45c00));
 }
 
 .block-line {
   fill: none;
   stroke: var(--block-orange, #c45c00);
-  stroke-width: 0.38;
+  stroke-width: 0.21;
   stroke-linecap: round;
   stroke-linejoin: round;
   pointer-events: none;

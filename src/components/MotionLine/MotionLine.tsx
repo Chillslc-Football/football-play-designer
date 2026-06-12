@@ -114,6 +114,15 @@ export function MotionLine({
         )
       })}
 
+      {vertices.length >= 2 && (
+        <circle
+          cx={vertices[vertices.length - 1].x}
+          cy={vertices[vertices.length - 1].y}
+          r={0.35}
+          className={`motion-endpoint-marker motion-endpoint-marker-${motion.motionType}`}
+        />
+      )}
+
       {!readOnly &&
         vertices.map((vertex, index) => {
           const isVertexSelected = selectedVertexIndex === index

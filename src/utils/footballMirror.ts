@@ -3,6 +3,10 @@ import type { Motion } from '../types/motion'
 import type { Play } from '../types/play'
 import type { Player, PlayerLabel, Position } from '../types/player'
 import { mirrorDefenderRoutes, mirrorDefenders } from './defenseMirror'
+import {
+  ensurePlayPlayerActions,
+  mirrorPlayerActionChains,
+} from './playerActionChains'
 import { clampPlayPositions } from './losClamp'
 import {
   ALL_PLAYER_LABELS,
@@ -158,6 +162,10 @@ export function mirrorFootballPlay(play: Play): Play {
   const routes: Route[] = mirrorAndReassignPaths(play.routes, centerX)
   const blocks: Block[] = mirrorAndReassignPaths(play.blocks, centerX)
   const motions: Motion[] = mirrorAndReassignPaths(play.motions ?? [], centerX)
+  const playerActions = mirrorPlayerActionChains(
+    play.playerActions ?? {},
+    centerX,
+  )
   const playerNotes = mirrorPlayerNotes(play.playerNotes)
 
   const mirrored: Play = {
@@ -169,10 +177,11 @@ export function mirrorFootballPlay(play: Play): Play {
     routes,
     blocks,
     motions,
+    playerActions,
     defenderRoutes: mirrorDefenderRoutes(play.defenderRoutes, centerX),
     playerNotes,
     notes: play.notes,
   }
 
-  return clampPlayPositions(mirrored)
+  return ensurePlayPlayerActions(clampPlayPositions(mirrored))
 }

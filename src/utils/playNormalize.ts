@@ -10,7 +10,8 @@ import { resolvePlayType, type PlayType } from '../types/playType'
 import { createEmptyRoutes } from '../types/route'
 import type { CustomFormation } from './formationStorage'
 import { migratePlayToFieldView } from './fieldView'
-import { clampPlayPositions } from './losClamp'
+import { createEmptyPlayerActionChains } from '../types/playerAction'
+import { ensurePlayPlayerActions } from './playerActionChains'
 import { normalizeCategories } from './categoryUtils'
 import {
   createDefendersForFront,
@@ -30,6 +31,7 @@ import {
   hasSavedDefenderPositions,
   hasSavedPlayerPositions,
 } from './positionCoordinates'
+import { clampPlayPositions } from './losClamp'
 
 export type LegacyPlay = Play & {
   formation?: string
@@ -79,6 +81,7 @@ export function normalizePlayRecord(
     routes: play.routes ?? createEmptyRoutes(),
     blocks: play.blocks ?? createEmptyBlocks(),
     motions: play.motions ?? createEmptyMotions(),
+    playerActions: play.playerActions ?? createEmptyPlayerActionChains(),
     playerNotes: {
       ...createEmptyPlayerNotes(),
       ...play.playerNotes,
@@ -93,8 +96,8 @@ export function normalizePlayRecord(
 
   const migrated = fromDatabase ? renderPlay : migratePlayToFieldView(renderPlay)
 
-  return {
+  return ensurePlayPlayerActions({
     ...clampPlayPositions(migrated),
     positionFormat: COORDINATE_SPACE_RENDER,
-  }
+  })
 }

@@ -9,6 +9,7 @@ type DbPlayType = 'offense' | 'defense'
 import { normalizePlayName } from '../utils/playStorage'
 import { renderPlayToDbPlay } from '../utils/positionCoordinates'
 import { normalizePlayRecord, type LegacyPlay } from '../utils/playNormalize'
+import { createEmptyPlayerActionChains } from '../types/playerAction'
 
 type PlayRow = {
   id: string
@@ -123,6 +124,7 @@ function rowToPlay(row: PlayRow, customFormations: CustomFormation[]): Play {
     routes: stored.routes ?? [],
     blocks: stored.blocks ?? [],
     motions: stored.motions ?? [],
+    playerActions: stored.playerActions ?? createEmptyPlayerActionChains(),
     defenderRoutes: stored.defenderRoutes ?? [],
     playerNotes: stored.playerNotes ?? {},
     categories: playCategories(stored as Play, row.categories),

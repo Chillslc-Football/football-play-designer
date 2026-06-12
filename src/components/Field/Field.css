@@ -166,9 +166,10 @@
   pointer-events: none;
 }
 
-/* ---- Offense markers ---- */
+/* ---- Offense markers (rendered above action lines for click priority) ---- */
 .player-marker {
   cursor: grab;
+  pointer-events: all;
 }
 
 .player-marker:active {
@@ -183,6 +184,7 @@
 .player-hit-area,
 .defender-hit-area {
   fill: transparent;
+  pointer-events: all;
 }
 
 .player-symbol {
@@ -240,9 +242,10 @@
   opacity: 1;
 }
 
-/* ---- Defense markers (rendered in Field.tsx) ---- */
+/* ---- Defense markers (rendered above action lines for click priority) ---- */
 .defender-marker {
   cursor: grab;
+  pointer-events: all;
 }
 
 .defender-marker:active {
@@ -278,10 +281,18 @@
   stroke: none;
 }
 
+.field-svg .block-segment {
+  stroke-width: 0.21;
+}
+
+.field-svg .block-segment-selected {
+  stroke-width: 0.34;
+}
+
 .field-svg .block-line {
   fill: none;
   stroke: #e87820;
-  stroke-width: 0.24;
+  stroke-width: 0.21;
   stroke-linecap: round;
   stroke-linejoin: round;
   pointer-events: none;
