@@ -11,7 +11,8 @@
   margin: 0;
 }
 
-.play-controls-manage-btn {
+.play-controls-manage-btn,
+.play-controls-library-btn {
   width: 100%;
 }
 

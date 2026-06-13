@@ -19,7 +19,12 @@ import {
   getDefaultFormationTemplateId,
   getDefaultFrontTemplateId,
 } from '../utils/schemeTemplateStore'
-import { createEmptyPlayerActionChains, type PlayerActionChains } from './playerAction'
+import {
+  createEmptyPlayerActionChains,
+  type PlayerAction,
+  type PlayerActionChains,
+} from './playerAction'
+import type { Position } from './player'
 import { clampPlayPositions } from '../utils/losClamp'
 
 /** How player/defender/path coordinates are stored in persistence. */
@@ -123,6 +128,73 @@ function copyDefenders(defenders: Defender[]): Defender[] {
     ...defender,
     position: { ...defender.position },
   }))
+}
+
+function copyPathPoints(points: Position[]): Position[] {
+  return points.map((point) => ({ ...point }))
+}
+
+function copyRoutes(routes: Route[]): Route[] {
+  return routes.map((route) => ({
+    ...route,
+    points: copyPathPoints(route.points),
+  }))
+}
+
+function copyBlocks(blocks: Block[]): Block[] {
+  return blocks.map((block) => ({
+    ...block,
+    points: copyPathPoints(block.points),
+  }))
+}
+
+function copyMotions(motions: Motion[]): Motion[] {
+  return motions.map((motion) => ({
+    ...motion,
+    points: copyPathPoints(motion.points),
+  }))
+}
+
+function copyPlayerActions(chains: PlayerActionChains): PlayerActionChains {
+  const copied = createEmptyPlayerActionChains()
+
+  for (const playerId of Object.keys(chains) as Array<keyof PlayerActionChains>) {
+    copied[playerId] = (chains[playerId] ?? []).map(
+      (action): PlayerAction => ({
+        ...action,
+        points: copyPathPoints(action.points),
+      }),
+    )
+  }
+
+  return copied
+}
+
+function copyDefenderRoutes(routes: DefenderRoute[]): DefenderRoute[] {
+  return routes.map((route) => ({
+    ...route,
+    points: copyPathPoints(route.points),
+  }))
+}
+
+/** Full copy of a play for Save As New — new id, keeps all drawing and metadata. */
+export function duplicatePlay(source: Play, name: string): Play {
+  return {
+    ...source,
+    id: crypto.randomUUID(),
+    name,
+    players: copyPlayers(source.players),
+    defenders: copyDefenders(source.defenders),
+    routes: copyRoutes(source.routes),
+    blocks: copyBlocks(source.blocks),
+    motions: copyMotions(source.motions),
+    playerActions: copyPlayerActions(source.playerActions),
+    defenderRoutes: copyDefenderRoutes(source.defenderRoutes),
+    playerNotes: { ...source.playerNotes },
+    categories: [...source.categories],
+    positionFormat: COORDINATE_SPACE_RENDER,
+    createdAt: new Date().toISOString(),
+  }
 }
 
 /** New blank play that keeps the current formation/front and optional opponent side. */

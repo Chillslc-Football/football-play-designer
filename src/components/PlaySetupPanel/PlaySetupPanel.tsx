@@ -65,6 +65,7 @@ type PlaySetupPanelProps = {
   categoryFilterOptions: CategoryFilterOption[]
   onCategoryFilterChange: (filterId: CategoryFilterId) => void
   filteredPlays: Play[]
+  libraryPlays: Play[]
   selectedLoadId: string
   onLoadPlay: (playId: string) => void
   onDeletePlay: () => void
@@ -129,6 +130,7 @@ export function PlaySetupPanel({
   categoryFilterOptions,
   onCategoryFilterChange,
   filteredPlays,
+  libraryPlays,
   selectedLoadId,
   onLoadPlay,
   onDeletePlay,
@@ -231,6 +233,7 @@ export function PlaySetupPanel({
             categoryFilterOptions={categoryFilterOptions}
             onCategoryFilterChange={onCategoryFilterChange}
             filteredPlays={filteredPlays}
+            libraryPlays={libraryPlays}
             selectedLoadId={selectedLoadId}
             onLoadPlay={onLoadPlay}
           />

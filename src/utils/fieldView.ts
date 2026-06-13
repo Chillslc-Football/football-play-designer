@@ -14,6 +14,7 @@ import { getLosYardForDriveStart } from '../types/driveStart'
 import type { Play } from '../types/play'
 import type { PlayerActionChains } from '../types/playerAction'
 import type { Player, Position } from '../types/player'
+import { migratePlayerActionChainPoints } from './playerActionChains'
 
 export type FieldViewBounds = {
   losYard: number
@@ -197,13 +198,17 @@ export function clampViewPosition(position: Position): Position {
 }
 
 function usesLegacyCoordinates(
-  play: Pick<Play, 'players' | 'routes' | 'blocks' | 'motions'>,
+  play: Pick<Play, 'players' | 'routes' | 'blocks' | 'motions' | 'playerActions'>,
 ): boolean {
+  const playerActionXs = Object.values(play.playerActions ?? {}).flatMap((chain) =>
+    (chain ?? []).flatMap((action) => action.points.map((point) => point.x)),
+  )
   const xs = [
     ...play.players.map((player) => player.position.x),
     ...play.routes.flatMap((route) => route.points.map((point) => point.x)),
     ...play.blocks.flatMap((block) => block.points.map((point) => point.x)),
     ...(play.motions ?? []).flatMap((motion) => motion.points.map((point) => point.x)),
+    ...playerActionXs,
   ]
 
   if (xs.length === 0) return false
@@ -268,6 +273,19 @@ function migratePathsToPortrait<T extends { points: Position[] }>(paths: T[]): T
   }))
 }
 
+function migratePlayerActionsToPortrait(chains: PlayerActionChains): PlayerActionChains {
+  const migrated: PlayerActionChains = {}
+
+  for (const playerId of Object.keys(chains) as Array<keyof PlayerActionChains>) {
+    migrated[playerId] = (chains[playerId] ?? []).map((action) => ({
+      ...action,
+      points: action.points.map(convertHorizontalToPortrait),
+    }))
+  }
+
+  return migrated
+}
+
 function migratePlayToPortrait(play: Play): Play {
   return {
     ...play,
@@ -282,6 +300,8 @@ function migratePlayToPortrait(play: Play): Play {
     routes: migratePathsToPortrait(play.routes),
     blocks: migratePathsToPortrait(play.blocks),
     motions: migratePathsToPortrait(play.motions ?? []),
+    playerActions: migratePlayerActionsToPortrait(play.playerActions ?? {}),
+    defenderRoutes: migratePathsToPortrait(play.defenderRoutes ?? []),
   }
 }
 
@@ -380,6 +400,11 @@ export function migratePlayToFieldView(play: Play): Play {
       routes: migratePaths(migrated.routes),
       blocks: migratePaths(migrated.blocks),
       motions: migratePaths(migrated.motions ?? []),
+      playerActions: migratePlayerActionChainPoints(
+        migrated.playerActions ?? {},
+        shiftLegacyPosition,
+      ),
+      defenderRoutes: migratePaths(migrated.defenderRoutes ?? []),
     }
   }
 

@@ -1,0 +1,150 @@
+@import '../../styles/fieldDisplayTheme.css';
+
+.play-field-preview {
+  width: 100%;
+  height: 100%;
+  display: block;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.play-field-preview-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.play-field-preview .field-play-area {
+  pointer-events: none;
+}
+
+.play-field-preview .player-marker,
+.play-field-preview .defender-marker {
+  pointer-events: none;
+  cursor: default;
+}
+
+.play-field-preview-path {
+  pointer-events: none;
+}
+
+.play-field-preview .field-viewbox-bg {
+  fill: var(--field-viewbox-bg);
+}
+
+.play-field-preview .field-turf {
+  fill: var(--field-turf);
+}
+
+.play-field-preview .turf-stripe-light {
+  fill: var(--field-turf-stripe-light);
+  opacity: var(--field-turf-stripe-light-opacity);
+}
+
+.play-field-preview .turf-stripe-dark {
+  fill: var(--field-turf-stripe-dark);
+  opacity: var(--field-turf-stripe-dark-opacity);
+}
+
+.play-field-preview .field-boundary {
+  fill: none;
+  stroke: var(--field-line);
+  stroke-width: 0.35;
+}
+
+.play-field-preview .field-endzone {
+  fill: var(--field-endzone);
+}
+
+.play-field-preview .goal-line {
+  stroke: var(--field-goal-line);
+  stroke-width: 0.45;
+}
+
+.play-field-preview .yard-line {
+  stroke: var(--field-line);
+}
+
+.play-field-preview .yard-line-minor {
+  stroke-width: 0.14;
+  opacity: 0.9;
+}
+
+.play-field-preview .yard-line-major {
+  stroke-width: 0.32;
+}
+
+.play-field-preview .hash-mark {
+  stroke: var(--field-line);
+  stroke-width: 0.1;
+  opacity: 0.85;
+}
+
+.play-field-preview .los-line {
+  stroke: var(--field-los);
+  stroke-width: 0.18;
+  stroke-dasharray: 0.5 0.45;
+}
+
+.play-field-preview .field-side-locked {
+  fill: var(--field-side-locked);
+}
+
+.play-field-preview .player-symbol {
+  fill: var(--field-player-symbol-fill);
+  stroke: var(--field-player-symbol-stroke);
+  stroke-width: var(--field-player-symbol-stroke-width, 0.12px);
+  paint-order: stroke fill;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 900;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.play-field-preview .player-label {
+  fill: var(--field-player-label-fill);
+  stroke: var(--field-player-label-stroke);
+  stroke-width: 0.08px;
+  paint-order: stroke fill;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 1.05px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: hanging;
+}
+
+.play-field-preview .defender-symbol {
+  fill: var(--field-defender-symbol-fill);
+  stroke: var(--field-defender-symbol-stroke);
+  stroke-width: var(--field-defender-symbol-stroke-width, 0.12px);
+  paint-order: stroke fill;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 900;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.play-field-preview .defender-label {
+  fill: var(--field-defender-label-fill);
+  stroke: var(--field-defender-label-stroke);
+  stroke-width: 0.08px;
+  paint-order: stroke fill;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 1.05px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: hanging;
+}
+
+.play-field-preview .route-arrow-head-filled {
+  fill: var(--field-route-arrow-fill, #111);
+}
+
+@media print {
+  .play-field-preview-svg {
+    width: 100%;
+    height: 100%;
+  }
+}

@@ -22,7 +22,12 @@ import { createEmptyDefenderRoutes } from './types/defenderRoute'
 import type { PlayType } from './types/playType'
 import type { DriveStartYardLine } from './types/driveStart'
 import { createEmptyBlocks } from './types/block'
-import { createEmptyPlay, createPlayFromCurrentScheme, type Play } from './types/play'
+import {
+  createEmptyPlay,
+  createPlayFromCurrentScheme,
+  duplicatePlay,
+  type Play,
+} from './types/play'
 import {
   normalizePositionLabel,
   type PlayerLabel,
@@ -193,11 +198,11 @@ function App() {
   const preparePlayForSave = useCallback(
     (current: Play): Play => {
       const categories = normalizeCategories(current.categories)
-      const renderPlay: Play = {
+      const renderPlay: Play = ensurePlayPlayerActions({
         ...current,
         positionFormat: COORDINATE_SPACE_RENDER,
         categories,
-      }
+      })
 
       if (current.playType === 'defensive') {
         return {
@@ -546,8 +551,6 @@ function App() {
     isSavingRef.current = true
     setIsSaving(true)
 
-    const clearedPlay = createPlayFromCurrentScheme(play)
-
     try {
       let nameToUse = play.name
       const findByName = useCloud
@@ -572,7 +575,9 @@ function App() {
 
         nameToUse = prompted.trim()
       }
-      const playToSave = preparePlayForSave({ ...clearedPlay, name: nameToUse })
+
+      const duplicatedPlay = duplicatePlay(play, nameToUse)
+      const playToSave = preparePlayForSave(duplicatedPlay)
 
       if (useCloud && activeTeamId) {
         const saved = await cloudPlayRepository.addNewPlay(
@@ -581,7 +586,7 @@ function App() {
           customFormations,
           user?.id,
         )
-        syncEditorAfterSave({ ...clearedPlay, name: nameToUse }, saved.id)
+        syncEditorAfterSave(duplicatedPlay, saved.id)
         setSelectedPlayerId(null)
         setSelectedDefenderId(null)
         await loadTeamData()
@@ -590,7 +595,7 @@ function App() {
       }
 
       const saved = addNewPlay(playToSave)
-      syncEditorAfterSave({ ...clearedPlay, name: nameToUse }, saved.id)
+      syncEditorAfterSave(duplicatedPlay, saved.id)
       setSelectedPlayerId(null)
       setSelectedDefenderId(null)
       setSavedPlays(getAllSavedPlays())
@@ -625,7 +630,7 @@ function App() {
         players: loaded.players.map((player) => ({ id: player.id, ...player.position })),
         defenders: loaded.defenders.map((defender) => ({ id: defender.id, ...defender.position })),
       })
-      setPlay(loaded)
+      setPlay(ensurePlayPlayerActions(loaded))
       setSelectedLoadId(playId)
       setActiveSavedPlayId(playId)
       setPlayFilterId(
@@ -1428,6 +1433,7 @@ function App() {
           categoryFilterOptions={categoryFilterOptions}
           onCategoryFilterChange={handleCategoryFilterChange}
           filteredPlays={filteredPlays}
+          libraryPlays={savedPlays}
           selectedLoadId={selectedLoadId}
           onLoadPlay={handleLoadPlay}
           onDeletePlay={handleDeletePlay}

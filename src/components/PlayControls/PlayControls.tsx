@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CategorySelector } from '../CategorySelector/CategorySelector'
 import { ManageCategoriesDialog } from '../ManageCategoriesDialog/ManageCategoriesDialog'
+import { PlayLibraryModal } from '../PlayLibraryModal/PlayLibraryModal'
 import type { Play } from '../../types/play'
 import type { PlayType } from '../../types/playType'
 import type { CategoryFilterId } from '../../utils/categoryUtils'
@@ -37,6 +38,7 @@ type PlayControlsProps = {
   categoryFilterOptions: CategoryFilterOption[]
   onCategoryFilterChange: (filterId: CategoryFilterId) => void
   filteredPlays: Play[]
+  libraryPlays: Play[]
   selectedLoadId: string
   onLoadPlay: (playId: string) => void
 }
@@ -60,10 +62,12 @@ export function PlayControls({
   categoryFilterOptions,
   onCategoryFilterChange,
   filteredPlays,
+  libraryPlays,
   selectedLoadId,
   onLoadPlay,
 }: PlayControlsProps) {
   const [manageOpen, setManageOpen] = useState(false)
+  const [libraryOpen, setLibraryOpen] = useState(false)
   const sortedPlays = [...filteredPlays].sort((a, b) => a.name.localeCompare(b.name))
 
   const defaultCategoryOptions = categoryFilterOptions.filter(
@@ -109,6 +113,14 @@ export function PlayControls({
         </select>
       </div>
 
+      <button
+        type="button"
+        className="btn sidebar-btn play-controls-library-btn"
+        onClick={() => setLibraryOpen(true)}
+      >
+        Play Library
+      </button>
+
       <CategorySelector
         playType={playType}
         canEdit={canEdit}
@@ -134,6 +146,13 @@ export function PlayControls({
         onAddCustomCategory={onAddCustomCategory}
         onDeleteCategory={onDeleteCustomCategory}
         onClose={() => setManageOpen(false)}
+      />
+
+      <PlayLibraryModal
+        open={libraryOpen}
+        plays={libraryPlays}
+        onLoadPlay={onLoadPlay}
+        onClose={() => setLibraryOpen(false)}
       />
 
       <div className="play-controls-filters">

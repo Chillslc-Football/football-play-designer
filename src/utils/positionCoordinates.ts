@@ -2,6 +2,7 @@ import { FIELD_VIEW_LENGTH, FIELD_WIDTH } from '../constants/field'
 import type { Play, PositionFormat } from '../types/play'
 import type { PlayerActionChains } from '../types/playerAction'
 import type { Position } from '../types/player'
+import { ensurePlayPlayerActions } from './playerActionChains'
 
 export type NormalizedPosition = {
   x: number
@@ -95,14 +96,16 @@ function dbPlayerActionsToRender(chains: PlayerActionChains): PlayerActionChains
  * Never mutates the input; skips conversion if already database format.
  */
 export function renderPlayToDbPlay(play: Play): Play {
+  const syncedPlay = ensurePlayPlayerActions(play)
+
   console.log('SAVE before conversion', {
-    positionFormat: play.positionFormat ?? COORDINATE_SPACE_RENDER,
-    players: play.players.map((player) => ({ id: player.id, ...player.position })),
-    defenders: play.defenders.map((defender) => ({ id: defender.id, ...defender.position })),
+    positionFormat: syncedPlay.positionFormat ?? COORDINATE_SPACE_RENDER,
+    players: syncedPlay.players.map((player) => ({ id: player.id, ...player.position })),
+    defenders: syncedPlay.defenders.map((defender) => ({ id: defender.id, ...defender.position })),
   })
 
-  if (play.positionFormat === COORDINATE_SPACE_DB) {
-    const copy = { ...play }
+  if (syncedPlay.positionFormat === COORDINATE_SPACE_DB) {
+    const copy = { ...syncedPlay }
     console.log('SAVE payload to Supabase', {
       positionFormat: copy.positionFormat,
       players: copy.players.map((player) => ({ id: player.id, ...player.position })),
@@ -112,30 +115,30 @@ export function renderPlayToDbPlay(play: Play): Play {
   }
 
   const dbPlay: Play = {
-    ...play,
+    ...syncedPlay,
     positionFormat: COORDINATE_SPACE_DB,
-    players: play.players.map((player) => ({
+    players: syncedPlay.players.map((player) => ({
       ...player,
       position: renderPointToDb(player.position),
     })),
-    defenders: play.defenders.map((defender) => ({
+    defenders: syncedPlay.defenders.map((defender) => ({
       ...defender,
       position: renderPointToDb(defender.position),
     })),
-    routes: play.routes.map((route) => ({
+    routes: syncedPlay.routes.map((route) => ({
       ...route,
       points: renderPathToDb(route.points),
     })),
-    blocks: play.blocks.map((block) => ({
+    blocks: syncedPlay.blocks.map((block) => ({
       ...block,
       points: renderPathToDb(block.points),
     })),
-    motions: play.motions.map((motion) => ({
+    motions: syncedPlay.motions.map((motion) => ({
       ...motion,
       points: renderPathToDb(motion.points),
     })),
-    playerActions: renderPlayerActionsToDb(play.playerActions ?? {}),
-    defenderRoutes: play.defenderRoutes.map((route) => ({
+    playerActions: renderPlayerActionsToDb(syncedPlay.playerActions ?? {}),
+    defenderRoutes: syncedPlay.defenderRoutes.map((route) => ({
       ...route,
       points: renderPathToDb(route.points),
     })),

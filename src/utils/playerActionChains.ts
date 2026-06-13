@@ -248,11 +248,35 @@ function normalizePlayerActionChains(chains: PlayerActionChains): PlayerActionCh
   return normalized
 }
 
+export function hasPlayerActionChainData(chains: PlayerActionChains): boolean {
+  for (const playerId of Object.keys(chains) as PlayerLabel[]) {
+    for (const action of chains[playerId] ?? []) {
+      if (action.points.length > 0) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+function hasLegacyActionData(
+  play: Pick<Play, 'routes' | 'blocks' | 'motions'>,
+): boolean {
+  return (
+    play.routes.some((route) => route.points.length > 0) ||
+    play.blocks.some((block) => block.points.length > 0) ||
+    (play.motions ?? []).some((motion) => motion.points.length > 0)
+  )
+}
+
 export function ensurePlayPlayerActions(play: Play): Play {
-  const rawChains =
-    play.playerActions && Object.keys(play.playerActions).length > 0
-      ? play.playerActions
-      : migrateLegacyToPlayerActions(play.routes, play.blocks, play.motions ?? [])
+  const storedChains = play.playerActions ?? {}
+  const rawChains = hasPlayerActionChainData(storedChains)
+    ? storedChains
+    : hasLegacyActionData(play)
+      ? migrateLegacyToPlayerActions(play.routes, play.blocks, play.motions ?? [])
+      : storedChains
   const chains = normalizePlayerActionChains(rawChains)
 
   const legacy = flattenPlayerActionsToLegacy(chains)
