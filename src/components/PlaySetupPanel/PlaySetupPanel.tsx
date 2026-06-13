@@ -41,6 +41,14 @@ type PlaySetupPanelProps = {
   onDriveStartChange: (driveStart: DriveStartYardLine) => void
   onSaveCurrentFormation: () => void
   onDeleteCustomFormation: () => void
+  hasDefendersOnField: boolean
+  hasOffenseOnField: boolean
+  onOpponentFrontChange: (frontId: string) => void
+  onOpponentFormationChange: (formationId: string) => void
+  onLoadDefensiveFront: () => void
+  onLoadOffensiveFormation: () => void
+  onRemoveDefensiveFront: () => void
+  onRemoveOffensiveFormation: () => void
   playName: string
   onPlayNameChange: (name: string) => void
   playCategories: string[]
@@ -97,6 +105,14 @@ export function PlaySetupPanel({
   onDriveStartChange,
   onSaveCurrentFormation,
   onDeleteCustomFormation,
+  hasDefendersOnField,
+  hasOffenseOnField,
+  onOpponentFrontChange,
+  onOpponentFormationChange,
+  onLoadDefensiveFront,
+  onLoadOffensiveFormation,
+  onRemoveDefensiveFront,
+  onRemoveOffensiveFormation,
   playName,
   onPlayNameChange,
   playCategories,
@@ -183,6 +199,14 @@ export function PlaySetupPanel({
             onDriveStartChange={onDriveStartChange}
             onSaveCurrentFormation={onSaveCurrentFormation}
             onDeleteCustomFormation={onDeleteCustomFormation}
+            hasDefendersOnField={hasDefendersOnField}
+            hasOffenseOnField={hasOffenseOnField}
+            onOpponentFrontChange={onOpponentFrontChange}
+            onOpponentFormationChange={onOpponentFormationChange}
+            onLoadDefensiveFront={onLoadDefensiveFront}
+            onLoadOffensiveFormation={onLoadOffensiveFormation}
+            onRemoveDefensiveFront={onRemoveDefensiveFront}
+            onRemoveOffensiveFormation={onRemoveOffensiveFormation}
           />
         </section>
 

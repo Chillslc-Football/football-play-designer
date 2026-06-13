@@ -39,6 +39,8 @@
   --field-hint-color: rgba(255, 255, 255, 0.75);
   --field-hint-bg: rgba(0, 0, 0, 0.25);
   --field-controls-bg: rgba(0, 0, 0, 0.3);
+  --field-alignment-grid-minor: rgba(220, 220, 220, 0.26);
+  --field-alignment-grid-major: rgba(195, 195, 195, 0.5);
 }
 
 /* ---- White field with black lines, numbers, players, and routes ---- */
@@ -76,4 +78,6 @@
   --field-hint-color: rgba(0, 0, 0, 0.7);
   --field-hint-bg: rgba(0, 0, 0, 0.06);
   --field-controls-bg: rgba(0, 0, 0, 0.06);
+  --field-alignment-grid-minor: rgba(130, 130, 130, 0.2);
+  --field-alignment-grid-major: rgba(90, 90, 90, 0.42);
 }

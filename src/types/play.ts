@@ -1,5 +1,3 @@
-import { DEFAULT_FORMATION_ID } from '../data/builtinFormations'
-import { DEFAULT_FRONT_ID } from '../data/builtinFronts'
 import { createEmptyBlocks, type Block } from './block'
 import { createEmptyMotions, type Motion } from './motion'
 import type { Defender } from './defender'
@@ -15,7 +13,12 @@ import {
   getDefaultFormationName,
 } from '../utils/formationUtils'
 import { COORDINATE_SPACE_RENDER } from '../utils/positionCoordinates'
+import { LOS_ANCHOR_VERSION } from '../constants/field'
 import { createDefendersForFront, getDefaultFrontName } from '../utils/frontUtils'
+import {
+  getDefaultFormationTemplateId,
+  getDefaultFrontTemplateId,
+} from '../utils/schemeTemplateStore'
 import { createEmptyPlayerActionChains, type PlayerActionChains } from './playerAction'
 import { clampPlayPositions } from '../utils/losClamp'
 
@@ -58,26 +61,29 @@ export type Play = {
   categories: string[]
   /** Runtime uses yards; persisted plays may use normalized 0–100 percentages. */
   positionFormat?: PositionFormat
+  /** LOS anchor epoch — used to migrate saved coordinates when the default LOS moves. */
+  losAnchorVersion?: number
   createdAt: string
 }
 
 /** Creates a fresh play for the given mode. */
 export function createEmptyPlay(playType: PlayType = DEFAULT_PLAY_TYPE): Play {
-  return clampPlayPositions({
+  const defaultFormationId = getDefaultFormationTemplateId()
+  const defaultFrontId = getDefaultFrontTemplateId()
+
+  const shared = {
     id: crypto.randomUUID(),
     name: 'Untitled Play',
     notes: '',
-    formationId: DEFAULT_FORMATION_ID,
+    formationId: defaultFormationId,
     formationName: getDefaultFormationName(),
-    frontId: DEFAULT_FRONT_ID,
+    frontId: defaultFrontId,
     frontName: getDefaultFrontName(),
     opponentFormationId: null,
     opponentFormationName: null,
     driveStartYardLine: DEFAULT_DRIVE_START,
     mirrored: false,
     playType,
-    players: createPlayersForFormation(DEFAULT_FORMATION_ID, []),
-    defenders: createDefendersForFront(DEFAULT_FRONT_ID),
     routes: createEmptyRoutes(),
     blocks: createEmptyBlocks(),
     motions: createEmptyMotions(),
@@ -86,6 +92,75 @@ export function createEmptyPlay(playType: PlayType = DEFAULT_PLAY_TYPE): Play {
     playerNotes: createEmptyPlayerNotes(),
     categories: [],
     positionFormat: COORDINATE_SPACE_RENDER,
+    losAnchorVersion: LOS_ANCHOR_VERSION,
+    createdAt: new Date().toISOString(),
+  }
+
+  if (playType === 'defensive') {
+    return clampPlayPositions({
+      ...shared,
+      players: [],
+      defenders: createDefendersForFront(defaultFrontId),
+    })
+  }
+
+  return clampPlayPositions({
+    ...shared,
+    players: createPlayersForFormation(defaultFormationId, []),
+    defenders: [],
+  })
+}
+
+function copyPlayers(players: Player[]): Player[] {
+  return players.map((player) => ({
+    ...player,
+    position: { ...player.position },
+  }))
+}
+
+function copyDefenders(defenders: Defender[]): Defender[] {
+  return defenders.map((defender) => ({
+    ...defender,
+    position: { ...defender.position },
+  }))
+}
+
+/** New blank play that keeps the current formation/front and optional opponent side. */
+export function createPlayFromCurrentScheme(source: Play): Play {
+  const isOffense = source.playType === 'offensive'
+
+  return clampPlayPositions({
+    id: crypto.randomUUID(),
+    name: 'Untitled Play',
+    notes: '',
+    formationId: source.formationId,
+    formationName: source.formationName,
+    frontId: source.frontId,
+    frontName: source.frontName,
+    opponentFormationId: source.opponentFormationId,
+    opponentFormationName: source.opponentFormationName,
+    driveStartYardLine: source.driveStartYardLine,
+    mirrored: false,
+    playType: source.playType,
+    players: isOffense
+      ? copyPlayers(source.players)
+      : source.players.length > 0
+        ? copyPlayers(source.players)
+        : [],
+    defenders: isOffense
+      ? source.defenders.length > 0
+        ? copyDefenders(source.defenders)
+        : []
+      : copyDefenders(source.defenders),
+    routes: createEmptyRoutes(),
+    blocks: createEmptyBlocks(),
+    motions: createEmptyMotions(),
+    playerActions: createEmptyPlayerActionChains(),
+    defenderRoutes: createEmptyDefenderRoutes(),
+    playerNotes: createEmptyPlayerNotes(),
+    categories: [],
+    positionFormat: COORDINATE_SPACE_RENDER,
+    losAnchorVersion: LOS_ANCHOR_VERSION,
     createdAt: new Date().toISOString(),
   })
 }

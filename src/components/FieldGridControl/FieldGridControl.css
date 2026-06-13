@@ -1,0 +1,41 @@
+.field-grid-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--field-card-border, rgba(255, 255, 255, 0.16));
+  border-radius: var(--radius-sm, 4px);
+  background: var(--field-card-bg, rgba(20, 32, 22, 0.9));
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.2));
+  color: var(--field-hint-color, #edf5ed);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.app-theme-light .field-grid-control {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #2f3b30;
+}
+
+.field-grid-control:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.app-theme-light .field-grid-control:hover {
+  background: #e8ece8;
+}
+
+.field-grid-control.is-active {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.app-theme-light .field-grid-control.is-active {
+  background: #dce8dc;
+  border-color: rgba(0, 0, 0, 0.22);
+}

@@ -63,6 +63,7 @@ import {
   getDeletableRouteSegmentIndex,
   type RouteEditSelection,
 } from '../../utils/routeEdit'
+import { FieldAlignmentGrid } from '../FieldAlignmentGrid/FieldAlignmentGrid'
 import { BlockLine } from '../BlockLine/BlockLine'
 import { MotionLine } from '../MotionLine/MotionLine'
 import {
@@ -72,8 +73,10 @@ import {
 import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog'
 import type { DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
 import { PlayerMarker } from '../PlayerMarker/PlayerMarker'
+import { PlayerAlignmentGuides } from '../PlayerAlignmentGuides/PlayerAlignmentGuides'
 import { RouteLine } from '../RouteLine/RouteLine'
 import { findNearestByPosition } from '../../utils/playerSelection'
+import { getPlayerAlignmentGuides } from '../../utils/playerAlignmentGuides'
 import { FIELD_DISPLAY_THEME } from '../../constants/fieldDisplayTheme'
 import './Field.css'
 
@@ -87,6 +90,10 @@ type DragTarget =
 type FieldProps = {
   playType: PlayType
   viewOnly?: boolean
+  /** When true, only player/defender positions can be edited (no routes/motions/blocks). */
+  schemePositionsOnly?: boolean
+  /** Visual alignment grid overlay — does not affect coordinates or interaction. */
+  showAlignmentGrid?: boolean
   players: Player[]
   defenders: Defender[]
   defenderRoutes: DefenderRoute[]
@@ -140,6 +147,8 @@ type DefenderFreehandDraft = {
 export function Field({
   playType,
   viewOnly = false,
+  schemePositionsOnly = false,
+  showAlignmentGrid = false,
   players,
   defenders,
   defenderRoutes,
@@ -159,10 +168,10 @@ export function Field({
 }: FieldProps) {
   const offenseEditable = !viewOnly && playType === 'offensive'
   const defenseEditable = !viewOnly && playType === 'defensive'
-  const routesEditable = offenseEditable
-  const motionsEditable = offenseEditable
-  const blocksEditable = offenseEditable
-  const defenderRoutesEditable = defenseEditable
+  const routesEditable = offenseEditable && !schemePositionsOnly
+  const motionsEditable = offenseEditable && !schemePositionsOnly
+  const blocksEditable = offenseEditable && !schemePositionsOnly
+  const defenderRoutesEditable = defenseEditable && !schemePositionsOnly
 
   const orderedPlayers = useMemo(() => {
     if (!selectedPlayerId) return players
@@ -179,6 +188,8 @@ export function Field({
       ...defenders.filter((defender) => defender.id === selectedDefenderId),
     ]
   }, [defenders, selectedDefenderId])
+  const [draggingOffensePlayerId, setDraggingOffensePlayerId] = useState<PlayerLabel | null>(null)
+  const [pointerOffensePlayerId, setPointerOffensePlayerId] = useState<PlayerLabel | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const draggingTargetRef = useRef<DragTarget | null>(null)
   const drawingModeRef = useRef<DrawingMode>(drawingMode)
@@ -192,6 +203,14 @@ export function Field({
   const blockEditSelectionRef = useRef<BlockEditSelection | null>(null)
   const defenderRouteDragRef = useRef<DefenderRouteDragState | null>(null)
   const defenderRouteEditSelectionRef = useRef<DefenderRouteEditSelection | null>(null)
+
+  const activeOffensePlayerId =
+    draggingOffensePlayerId ?? pointerOffensePlayerId ?? selectedPlayerId
+
+  const playerAlignmentGuides = useMemo(() => {
+    if (!activeOffensePlayerId || !offenseEditable) return []
+    return getPlayerAlignmentGuides(activeOffensePlayerId, players)
+  }, [activeOffensePlayerId, offenseEditable, players])
 
   const [freehandDraft, setFreehandDraft] = useState<FreehandDraft | null>(null)
   const [blockFreehandDraft, setBlockFreehandDraft] = useState<FreehandDraft | null>(null)
@@ -980,6 +999,7 @@ export function Field({
       x: event.clientX,
       y: event.clientY,
     }
+    setPointerOffensePlayerId(nearest?.id ?? playerId)
   }
 
   function beginDefensePointerSelection(event: React.MouseEvent, defenderId: DefenderLabel) {
@@ -1026,7 +1046,95 @@ export function Field({
     return true
   }
 
+  function startRouteDrag(
+    event: React.MouseEvent,
+    anchor: { playerId: PlayerLabel; actionId: string; anchorVertexIndex: number },
+  ) {
+    event.preventDefault()
+    routeDragRef.current = {
+      playerId: anchor.playerId,
+      actionId: anchor.actionId,
+      anchorVertexIndex: anchor.anchorVertexIndex,
+      dragPoints: [],
+      screenX: event.clientX,
+      screenY: event.clientY,
+      startedDrag: false,
+    }
+  }
+
+  function startMotionDrag(
+    event: React.MouseEvent,
+    anchor: { playerId: PlayerLabel; actionId: string; anchorVertexIndex: number },
+  ) {
+    event.preventDefault()
+    motionDragRef.current = {
+      playerId: anchor.playerId,
+      actionId: anchor.actionId,
+      anchorVertexIndex: anchor.anchorVertexIndex,
+      dragPoints: [],
+      screenX: event.clientX,
+      screenY: event.clientY,
+      startedDrag: false,
+    }
+  }
+
+  function startBlockDrag(
+    event: React.MouseEvent,
+    anchor: { playerId: PlayerLabel; actionId: string; anchorVertexIndex: number },
+  ) {
+    event.preventDefault()
+    blockDragRef.current = {
+      playerId: anchor.playerId,
+      actionId: anchor.actionId,
+      anchorVertexIndex: anchor.anchorVertexIndex,
+      dragPoints: [],
+      screenX: event.clientX,
+      screenY: event.clientY,
+      startedDrag: false,
+    }
+  }
+
+  /** Start route/motion/block drag from the selected player marker (same flow as field mousedown). */
+  function tryBeginSelectedPlayerActionDrag(
+    event: React.MouseEvent,
+    playerId: PlayerLabel,
+  ): boolean {
+    if (playType !== 'offensive' || playerId !== selectedPlayerId || drawingMode === 'position') {
+      return false
+    }
+
+    if (drawingMode === 'route' && routesEditable) {
+      const anchor = resolveDrawAnchor()
+      if (anchor?.playerId === playerId) {
+        event.stopPropagation()
+        startRouteDrag(event, anchor)
+        return true
+      }
+    }
+
+    if (drawingMode === 'motion' && motionsEditable) {
+      const anchor = resolveMotionDrawAnchor()
+      if (anchor?.playerId === playerId) {
+        event.stopPropagation()
+        startMotionDrag(event, anchor)
+        return true
+      }
+    }
+
+    if (drawingMode === 'block' && blocksEditable) {
+      const anchor = resolveBlockDrawAnchor()
+      if (anchor?.playerId === playerId) {
+        event.stopPropagation()
+        startBlockDrag(event, anchor)
+        return true
+      }
+    }
+
+    return false
+  }
+
   function handlePlayerPointerDown(playerId: PlayerLabel, event: React.MouseEvent) {
+    if (tryBeginSelectedPlayerActionDrag(event, playerId)) return
     beginOffensePointerSelection(event, playerId)
   }
 
@@ -1054,6 +1162,16 @@ export function Field({
       return
     }
 
+    if (drawingMode === 'position') {
+      if (playType === 'offensive' && tryBeginNearestOffenseSelection(event)) {
+        return
+      }
+      if (playType === 'defensive' && tryBeginNearestDefenseSelection(event)) {
+        return
+      }
+      return
+    }
+
     if (drawingMode === 'route' && playType === 'offensive') {
       const anchor = resolveDrawAnchor()
       if (!anchor) {
@@ -1063,15 +1181,7 @@ export function Field({
       }
 
       event.preventDefault()
-      routeDragRef.current = {
-        playerId: anchor.playerId,
-        actionId: anchor.actionId,
-        anchorVertexIndex: anchor.anchorVertexIndex,
-        dragPoints: [],
-        screenX: event.clientX,
-        screenY: event.clientY,
-        startedDrag: false,
-      }
+      startRouteDrag(event, anchor)
       return
     }
 
@@ -1084,15 +1194,7 @@ export function Field({
       }
 
       event.preventDefault()
-      motionDragRef.current = {
-        playerId: anchor.playerId,
-        actionId: anchor.actionId,
-        anchorVertexIndex: anchor.anchorVertexIndex,
-        dragPoints: [],
-        screenX: event.clientX,
-        screenY: event.clientY,
-        startedDrag: false,
-      }
+      startMotionDrag(event, anchor)
       return
     }
 
@@ -1125,15 +1227,7 @@ export function Field({
       }
 
       event.preventDefault()
-      blockDragRef.current = {
-        playerId: anchor.playerId,
-        actionId: anchor.actionId,
-        anchorVertexIndex: anchor.anchorVertexIndex,
-        dragPoints: [],
-        screenX: event.clientX,
-        screenY: event.clientY,
-        startedDrag: false,
-      }
+      startBlockDrag(event, anchor)
       return
     }
 
@@ -1182,6 +1276,8 @@ export function Field({
         if (distance > DRAG_THRESHOLD) {
           if (pointerStart.kind === 'offense' && offenseEditable) {
             draggingTargetRef.current = { kind: 'offense', id: pointerStart.id }
+            setDraggingOffensePlayerId(pointerStart.id)
+            setPointerOffensePlayerId(null)
           } else if (pointerStart.kind === 'defense' && defenseEditable) {
             draggingTargetRef.current = { kind: 'defense', id: pointerStart.id }
           }
@@ -1452,6 +1548,8 @@ export function Field({
       }
 
       draggingTargetRef.current = null
+      setDraggingOffensePlayerId(null)
+      setPointerOffensePlayerId(null)
     }
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -2129,6 +2227,8 @@ export function Field({
               })}
             </g>
 
+            {showAlignmentGrid && <FieldAlignmentGrid />}
+
             <line
               x1={0}
               y1={viewBounds.losViewY}
@@ -2273,6 +2373,8 @@ export function Field({
                 />
               )}
 
+            <PlayerAlignmentGuides guides={playerAlignmentGuides} />
+
             {orderedDefenders.map((defender) => (
               <g
                 key={defender.id}
@@ -2311,6 +2413,7 @@ export function Field({
                 onPointerDown={handlePlayerPointerDown}
               />
             ))}
+
           </g>
         </svg>
       </div>

@@ -12,6 +12,7 @@ export type TeamContextValue = {
   memberships: TeamMembership[]
   loading: boolean
   profileLoaded: boolean
+  isAppAdmin: boolean
   needsOnboarding: boolean
   createTeam: (name: string) => Promise<TeamResult>
   switchTeam: (teamId: string) => Promise<TeamResult>

@@ -1,5 +1,3 @@
-import { BUILTIN_FORMATIONS } from '../../data/builtinFormations'
-import { BUILTIN_FRONTS } from '../../data/builtinFronts'
 import type { DriveStartYardLine } from '../../types/driveStart'
 import type { PlayType } from '../../types/playType'
 import type { CustomFormation } from '../../utils/formationStorage'
@@ -8,6 +6,10 @@ import {
   resolveFormationDisplayName,
 } from '../../utils/formationUtils'
 import { getFrontById, resolveFrontDisplayName } from '../../utils/frontUtils'
+import {
+  getResolvedFormationTemplates,
+  getResolvedFrontTemplates,
+} from '../../utils/schemeTemplateStore'
 import { DriveStartSelector } from '../DriveStartSelector/DriveStartSelector'
 import './FormationSelector.css'
 
@@ -25,6 +27,14 @@ type FormationSelectorProps = {
   onDriveStartChange: (driveStart: DriveStartYardLine) => void
   onSaveCurrentFormation: () => void
   onDeleteCustomFormation: () => void
+  hasDefendersOnField: boolean
+  hasOffenseOnField: boolean
+  onOpponentFrontChange: (frontId: string) => void
+  onOpponentFormationChange: (formationId: string) => void
+  onLoadDefensiveFront: () => void
+  onLoadOffensiveFormation: () => void
+  onRemoveDefensiveFront: () => void
+  onRemoveOffensiveFormation: () => void
 }
 
 export function FormationSelector({
@@ -41,6 +51,14 @@ export function FormationSelector({
   onDriveStartChange,
   onSaveCurrentFormation,
   onDeleteCustomFormation,
+  hasDefendersOnField,
+  hasOffenseOnField,
+  onOpponentFrontChange,
+  onOpponentFormationChange,
+  onLoadDefensiveFront,
+  onLoadOffensiveFormation,
+  onRemoveDefensiveFront,
+  onRemoveOffensiveFormation,
 }: FormationSelectorProps) {
   const isDefensive = playType === 'defensive'
   const schemeLabel = isDefensive ? 'Front' : 'Formation'
@@ -76,7 +94,7 @@ export function FormationSelector({
             disabled={!canEdit}
           >
             <optgroup label="Built-in Fronts">
-              {BUILTIN_FRONTS.map((front) => (
+              {getResolvedFrontTemplates().map((front) => (
                 <option key={front.id} value={front.id}>
                   {front.label}
                 </option>
@@ -93,7 +111,7 @@ export function FormationSelector({
             disabled={!canEdit}
           >
             <optgroup label="Built-in Formations">
-              {BUILTIN_FORMATIONS.map((formation) => (
+              {getResolvedFormationTemplates().map((formation) => (
                 <option key={formation.id} value={formation.id}>
                   {formation.label}
                 </option>
@@ -121,6 +139,82 @@ export function FormationSelector({
         disabled={!canEdit}
         compact
       />
+
+      {!isDefensive && (
+        <div className="formation-selector-opponent">
+          <p className="formation-selector-opponent-label field-label sidebar-field-label">
+            Opposing Defense
+          </p>
+          {!hasDefendersOnField && (
+            <select
+              id="opponent-front-select"
+              className="select-field sidebar-control"
+              value={frontId}
+              onChange={(e) => onOpponentFrontChange(e.target.value)}
+              disabled={!canEdit}
+            >
+              <optgroup label="Built-in Fronts">
+                {getResolvedFrontTemplates().map((front) => (
+                  <option key={front.id} value={front.id}>
+                    {front.label}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          )}
+          <button
+            type="button"
+            className="btn btn-secondary sidebar-btn"
+            onClick={hasDefendersOnField ? onRemoveDefensiveFront : onLoadDefensiveFront}
+            disabled={!canEdit}
+          >
+            {hasDefendersOnField ? 'Remove Defense' : 'Load Defense'}
+          </button>
+        </div>
+      )}
+
+      {isDefensive && (
+        <div className="formation-selector-opponent">
+          <p className="formation-selector-opponent-label field-label sidebar-field-label">
+            Opposing Offense
+          </p>
+          {!hasOffenseOnField && (
+            <select
+              id="opponent-formation-select"
+              className="select-field sidebar-control"
+              value={formationId}
+              onChange={(e) => onOpponentFormationChange(e.target.value)}
+              disabled={!canEdit}
+            >
+              <optgroup label="Built-in Formations">
+                {getResolvedFormationTemplates().map((formation) => (
+                  <option key={formation.id} value={formation.id}>
+                    {formation.label}
+                  </option>
+                ))}
+              </optgroup>
+
+              {customFormations.length > 0 && (
+                <optgroup label="Custom Formations">
+                  {customFormations.map((formation) => (
+                    <option key={formation.id} value={formation.id}>
+                      {formation.label}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          )}
+          <button
+            type="button"
+            className="btn btn-secondary sidebar-btn"
+            onClick={hasOffenseOnField ? onRemoveOffensiveFormation : onLoadOffensiveFormation}
+            disabled={!canEdit}
+          >
+            {hasOffenseOnField ? 'Remove Offense' : 'Load Offense'}
+          </button>
+        </div>
+      )}
 
       {!isDefensive && (
         <>

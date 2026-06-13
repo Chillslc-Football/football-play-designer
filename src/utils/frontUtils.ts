@@ -4,20 +4,39 @@ import {
   defendersFromFront,
   type FrontDefinition,
 } from '../data/builtinFronts'
+import type { Defender, DefenderLabel } from '../types/defender'
+import type { Position } from '../types/player'
+import {
+  getDefaultFrontTemplateId,
+  getResolvedFrontTemplates,
+} from './schemeTemplateStore'
 import { ALL_PLAYS_FILTER, type PlayFilterId } from './formationUtils'
 
+export function positionsFromDefenders(
+  defenders: Defender[],
+): Record<DefenderLabel, Position> {
+  return Object.fromEntries(defenders.map((defender) => [defender.id, defender.position])) as Record<
+    DefenderLabel,
+    Position
+  >
+}
+
 export function getFrontById(id: string): FrontDefinition | null {
-  return BUILTIN_FRONTS.find((front) => front.id === id) ?? null
+  return getResolvedFrontTemplates().find((front) => front.id === id) ?? null
 }
 
 export function createDefendersForFront(frontId: string) {
-  const front = getFrontById(frontId) ?? getFrontById(DEFAULT_FRONT_ID)
+  const front = getFrontById(frontId) ?? getFrontById(getDefaultFrontTemplateId())
   if (!front) return defendersFromFront(BUILTIN_FRONTS[0])
   return defendersFromFront(front)
 }
 
 export function getDefaultFrontName(): string {
-  return BUILTIN_FRONTS.find((front) => front.id === DEFAULT_FRONT_ID)?.label ?? '4-3'
+  return (
+    getResolvedFrontTemplates().find((front) => front.id === getDefaultFrontTemplateId())?.label ??
+    BUILTIN_FRONTS.find((front) => front.id === DEFAULT_FRONT_ID)?.label ??
+    '4-3'
+  )
 }
 
 export function getFrontLabel(frontId: string): string | null {
@@ -34,7 +53,7 @@ export function resolveFrontDisplayName(frontId: string, savedFrontName: string)
 export function getFrontFilterOptions(): { id: PlayFilterId; label: string }[] {
   return [
     { id: ALL_PLAYS_FILTER, label: 'All Plays' },
-    ...BUILTIN_FRONTS.map((front) => ({ id: front.id, label: front.label })),
+    ...getResolvedFrontTemplates().map((front) => ({ id: front.id, label: front.label })),
   ]
 }
 

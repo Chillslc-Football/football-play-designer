@@ -1,8 +1,10 @@
 import { useAppShell } from '../../context/AppShellContext'
+import { useAppAdmin } from '../../hooks/useAppAdmin'
 import './AppShellNav.css'
 
 export function AppShellNav() {
   const shell = useAppShell()
+  const isAppAdmin = useAppAdmin()
   if (!shell) return null
 
   const { view, setView } = shell
@@ -23,6 +25,15 @@ export function AppShellNav() {
       >
         Wristband Cards
       </button>
+      {isAppAdmin && (
+        <button
+          type="button"
+          className={`app-shell-nav-btn ${view === 'admin-templates' ? 'is-active' : ''}`}
+          onClick={() => setView('admin-templates')}
+        >
+          Admin Templates
+        </button>
+      )}
     </nav>
   )
 }

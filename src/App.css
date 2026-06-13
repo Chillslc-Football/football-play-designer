@@ -96,6 +96,7 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  gap: 8px;
   min-height: 28px;
   padding: 2px 8px 4px;
   border-top: 1px solid var(--field-card-border, rgba(255, 255, 255, 0.12));

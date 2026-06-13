@@ -133,6 +133,44 @@
   pointer-events: none;
 }
 
+.field-alignment-grid {
+  pointer-events: none;
+}
+
+.field-alignment-grid-line {
+  pointer-events: none;
+}
+
+.player-alignment-guides {
+  pointer-events: none;
+}
+
+.player-alignment-guide {
+  pointer-events: none;
+}
+
+.player-alignment-guide-horizontal,
+.player-alignment-guide-vertical {
+  stroke: var(--field-alignment-guide, rgba(220, 220, 220, 0.72));
+  stroke-width: 0.1;
+  stroke-dasharray: 0.55 0.45;
+}
+
+.app-theme-light .player-alignment-guide-horizontal,
+.app-theme-light .player-alignment-guide-vertical {
+  stroke: var(--field-alignment-guide, rgba(70, 70, 70, 0.55));
+}
+
+.field-alignment-grid-line-minor {
+  stroke: var(--field-alignment-grid-minor, rgba(220, 220, 220, 0.26));
+  stroke-width: 0.07;
+}
+
+.field-alignment-grid-line-major {
+  stroke: var(--field-alignment-grid-major, rgba(195, 195, 195, 0.5));
+  stroke-width: 0.15;
+}
+
 .yard-numbers-sideline {
   pointer-events: none;
 }

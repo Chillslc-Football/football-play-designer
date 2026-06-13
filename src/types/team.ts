@@ -16,4 +16,5 @@ export type Profile = {
   id: string
   display_name: string
   last_team_id: string | null
+  is_app_admin: boolean
 }

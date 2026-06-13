@@ -25,15 +25,49 @@ function parseTeamId(data: unknown): string {
 export async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, display_name, last_team_id')
+    .select('id, display_name, last_team_id, is_app_admin')
     .eq('id', userId)
     .maybeSingle()
 
   if (error) {
+    const missingAdminColumn =
+      error.message.includes('is_app_admin') ||
+      error.code === '42703' ||
+      error.code === 'PGRST204'
+
+    if (missingAdminColumn) {
+      console.warn(
+        '[TeamProvider] profiles.is_app_admin unavailable; loading profile without admin flag',
+        { userId, code: error.code, message: error.message },
+      )
+
+      const fallback = await supabase
+        .from('profiles')
+        .select('id, display_name, last_team_id')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (fallback.error) {
+        throw new Error(fallback.error.message)
+      }
+
+      if (!fallback.data) return null
+
+      return {
+        ...fallback.data,
+        is_app_admin: false,
+      }
+    }
+
     throw new Error(error.message)
   }
 
-  return data
+  if (!data) return null
+
+  return {
+    ...data,
+    is_app_admin: data.is_app_admin ?? false,
+  }
 }
 
 function logSupabaseError(context: string, error: {
@@ -115,65 +149,111 @@ export async function createTeam(name: string): Promise<string> {
 }
 
 export async function loadActiveTeamForUser(userId: string): Promise<ActiveTeamLoadResult> {
+  console.log('[TeamProvider] loadActiveTeamForUser start', { userId })
+
   const profile = await fetchProfile(userId)
-  console.log('[TeamProvider] profile loaded', profile)
+  console.log('[TeamProvider] profile row found', {
+    found: profile !== null,
+    profileId: profile?.id ?? null,
+    last_team_id: profile?.last_team_id ?? null,
+    is_app_admin: profile?.is_app_admin ?? false,
+  })
 
   const lastTeamId = profile?.last_team_id ?? null
-  console.log('[TeamProvider] last_team_id value', lastTeamId)
 
   const memberRows = await fetchMembershipRows(userId)
-  console.log('[TeamProvider] team_members rows', memberRows)
+  console.log('[TeamProvider] memberships returned', {
+    count: memberRows.length,
+    teamIds: memberRows.map((row) => row.team_id),
+    roles: memberRows.map((row) => row.role),
+  })
 
   const memberships: TeamMembership[] = []
   for (const row of memberRows) {
     const team = await fetchTeamById(row.team_id)
-    if (!team) continue
+    if (!team) {
+      console.warn('[TeamProvider] skipped membership list entry; team not loaded', {
+        teamId: row.team_id,
+      })
+      continue
+    }
     memberships.push({ role: row.role, team })
   }
 
-  const findMembership = (teamId: string): TeamMembership | null =>
-    memberships.find((entry) => entry.team.id === teamId) ?? null
-
   if (lastTeamId) {
-    const activeMembership = findMembership(lastTeamId)
-    console.log('[TeamProvider] active team fetch result', activeMembership?.team ?? null)
+    const membershipRow = memberRows.find((row) => row.team_id === lastTeamId) ?? null
+    const team = await fetchTeamById(lastTeamId)
 
-    if (activeMembership) {
+    console.log('[TeamProvider] last_team_id resolution', {
+      lastTeamId,
+      teamFound: team !== null,
+      membershipFound: membershipRow !== null,
+      role: membershipRow?.role ?? null,
+    })
+
+    if (team && membershipRow) {
+      const selected = {
+        activeTeamId: lastTeamId,
+        team,
+        role: membershipRow.role,
+      }
+      console.log('[TeamProvider] selected active team', selected)
+
       return {
         profile,
-        activeTeamId: lastTeamId,
-        team: activeMembership.team,
-        role: activeMembership.role,
+        ...selected,
         memberships,
         needsOnboarding: false,
       }
     }
-  }
 
-  if (memberships.length > 0) {
-    const fallback = memberships[0]
-    console.log('[TeamProvider] team_members fallback result', {
-      teamId: fallback.team.id,
-      team: fallback.team,
-      role: fallback.role,
+    console.warn('[TeamProvider] last_team_id is missing, invalid, or no longer accessible', {
+      lastTeamId,
     })
-
-    if (lastTeamId !== fallback.team.id) {
-      await updateLastTeamId(userId, fallback.team.id)
-    }
-
-    return {
-      profile,
-      activeTeamId: fallback.team.id,
-      team: fallback.team,
-      role: fallback.role,
-      memberships,
-      needsOnboarding: false,
-    }
   }
 
-  const needsOnboarding = memberRows.length === 0
-  console.log('[TeamProvider] needs onboarding', needsOnboarding)
+  if (memberRows.length > 0) {
+    for (const row of memberRows) {
+      const team = await fetchTeamById(row.team_id)
+      if (!team) {
+        console.warn('[TeamProvider] fallback skipped; team not loaded', { teamId: row.team_id })
+        continue
+      }
+
+      if (lastTeamId !== row.team_id) {
+        try {
+          await updateLastTeamId(userId, row.team_id)
+        } catch (updateError) {
+          console.warn('[TeamProvider] could not persist fallback last_team_id', {
+            teamId: row.team_id,
+            updateError,
+          })
+        }
+      }
+
+      const selected = {
+        activeTeamId: row.team_id,
+        team,
+        role: row.role,
+      }
+      console.log('[TeamProvider] selected active team (fallback)', selected)
+
+      return {
+        profile,
+        ...selected,
+        memberships,
+        needsOnboarding: false,
+      }
+    }
+
+    throw new Error('Team memberships exist but team records could not be loaded.')
+  }
+
+  console.log('[TeamProvider] showing Create Team reason', {
+    reason: 'no_team_memberships',
+    userId,
+    last_team_id: lastTeamId,
+  })
 
   return {
     profile,
@@ -181,7 +261,7 @@ export async function loadActiveTeamForUser(userId: string): Promise<ActiveTeamL
     team: null,
     role: null,
     memberships,
-    needsOnboarding,
+    needsOnboarding: true,
   }
 }
 

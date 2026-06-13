@@ -17,6 +17,7 @@ type HeaderProps = {
   onPlayTypeChange: (playType: PlayType) => void
   onTeamChange?: (teamId: string) => void
   onLogout?: () => void
+  hidePlayTypeSelector?: boolean
 }
 
 export function Header({
@@ -25,6 +26,7 @@ export function Header({
   onPlayTypeChange,
   onTeamChange,
   onLogout,
+  hidePlayTypeSelector = false,
 }: HeaderProps) {
   const { user, signOut } = useAuth()
   const { team, activeTeamId, memberships, role, deleteTeam } = useTeam()
@@ -129,11 +131,13 @@ export function Header({
 
         <AppShellNav />
 
-        <PlayTypeSelector
-          playType={playType}
-          canEdit={canEdit}
-          onChange={onPlayTypeChange}
-        />
+        {!hidePlayTypeSelector && (
+          <PlayTypeSelector
+            playType={playType}
+            canEdit={canEdit}
+            onChange={onPlayTypeChange}
+          />
+        )}
 
         {email && (
           <div className="header-actions">

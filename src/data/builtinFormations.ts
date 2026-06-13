@@ -8,6 +8,9 @@ import type { PlayerLabel, Position } from '../types/player'
  * Coordinates use the 50-yard portrait view (1 unit = 1 yard).
  * x = lateral, y = depth (offense at bottom attacks upward toward y = 0).
  * The line of scrimmage is at LOS_VIEW_Y.
+ *
+ * Slot ids (QB, RB, FB, X, Y, Z, OL) are fixed app keys.
+ * positionLabels show realistic personnel (TE, HB, WR, SL, etc.) on the field.
  */
 
 export type BuiltInFormationId =
@@ -24,27 +27,31 @@ export type FormationDefinition = {
   isBuiltin: boolean
 }
 
-const SPACING = {
+type FormationTemplate = {
+  positions: Record<PlayerLabel, Position>
+  positionLabels: Partial<Record<PlayerLabel, string>>
+}
+
+/** Shared template spacing — OL spans ~65% of inside-hash width; skill players clear 1.85 yd minimum. */
+const TEMPLATE = {
   LOS: LOS_VIEW_Y,
   CENTER_X: FIELD_WIDTH / 2,
-  /** Even splits between adjacent offensive linemen (yards). */
-  OL_GAP: 1.85,
-  QB_DEPTH: 2,
-  FB_DEPTH: 4.5,
-  RB_DEPTH: 7.5,
-  SHOTGUN_DEPTH: 4,
-  PRO_SET_DEPTH: 3,
-  PRO_SET_SPLIT: 2,
-  SINGLEBACK_DEPTH: 5,
-  HBACK_SPLIT: 2.25,
-  GUN_RB_SPLIT: 2.25,
-  WR_SIDELINE: 2.75,
-  TE_OUTSIDE_TACKLE: 1.5,
-  TRIPS_GAP: 1.85,
+  OL_GAP: ((FIELD_WIDTH - 17 - 17) * 0.65) / 4,
+  TE_OUTSIDE_RT: 2.1,
+  WR_SPLIT: 7,
+  UNDER_CENTER_QB: 2.75,
+  SHOTGUN_QB: 4.5,
+  GUN_RB_SPLIT: 3.25,
+  TRIPS_INNER: 35.5,
+  TRIPS_MID: 40.5,
+  TRIPS_WIDE: FIELD_WIDTH - 7,
+  HBACK_SPLIT: 3.25,
 } as const
 
-function offensiveLine(): Record<'LT' | 'LG' | 'C' | 'RG' | 'RT', Position> {
-  const { LOS, CENTER_X, OL_GAP } = SPACING
+type OffensiveLine = Record<'LT' | 'LG' | 'C' | 'RG' | 'RT', Position>
+
+function standardOffensiveLine(): OffensiveLine {
+  const { LOS, CENTER_X, OL_GAP } = TEMPLATE
   return {
     C: { x: CENTER_X, y: LOS },
     LG: { x: CENTER_X - OL_GAP, y: LOS },
@@ -54,19 +61,125 @@ function offensiveLine(): Record<'LT' | 'LG' | 'C' | 'RG' | 'RT', Position> {
   }
 }
 
-function wideReceivers(): Pick<Record<PlayerLabel, Position>, 'X' | 'Z'> {
-  const { LOS, WR_SIDELINE } = SPACING
+/**
+ * I Formation — 21 personnel look: QB, FB, HB, TE, 2 WR, 5 OL.
+ * Stacked FB/HB behind QB; TE attached right; split X/Z.
+ */
+function iFormationTemplate(): FormationTemplate {
+  const { LOS, CENTER_X, TE_OUTSIDE_RT, WR_SPLIT, UNDER_CENTER_QB } = TEMPLATE
+  const ol = standardOffensiveLine()
+
   return {
-    X: { x: WR_SIDELINE, y: LOS },
-    Z: { x: FIELD_WIDTH - WR_SIDELINE, y: LOS },
+    positions: {
+      ...ol,
+      Y: { x: ol.RT.x + TE_OUTSIDE_RT, y: LOS },
+      X: { x: WR_SPLIT, y: LOS },
+      Z: { x: FIELD_WIDTH - WR_SPLIT, y: LOS },
+      QB: { x: CENTER_X, y: LOS + UNDER_CENTER_QB },
+      FB: { x: CENTER_X, y: LOS + 5 },
+      RB: { x: CENTER_X, y: LOS + 7.25 },
+    },
+    positionLabels: {
+      Y: 'TE',
+      X: 'WR',
+      Z: 'WR',
+      FB: 'FB',
+      RB: 'HB',
+    },
   }
 }
 
-function tightEndOutsideTackle(): Pick<Record<PlayerLabel, Position>, 'Y'> {
-  const ol = offensiveLine()
-  const { LOS, TE_OUTSIDE_TACKLE } = SPACING
+/**
+ * Pro Set — 21 personnel: QB, FB, HB, TE, 2 WR, 5 OL.
+ * Offset FB/HB; TE attached right; wide splits.
+ */
+function proSetTemplate(): FormationTemplate {
+  const { LOS, CENTER_X, TE_OUTSIDE_RT, WR_SPLIT, UNDER_CENTER_QB, GUN_RB_SPLIT } = TEMPLATE
+  const ol = standardOffensiveLine()
+
   return {
-    Y: { x: ol.RT.x + TE_OUTSIDE_TACKLE, y: LOS },
+    positions: {
+      ...ol,
+      Y: { x: ol.RT.x + TE_OUTSIDE_RT, y: LOS },
+      X: { x: WR_SPLIT, y: LOS },
+      Z: { x: FIELD_WIDTH - WR_SPLIT, y: LOS },
+      QB: { x: CENTER_X, y: LOS + UNDER_CENTER_QB },
+      FB: { x: CENTER_X, y: LOS + 5.5 },
+      RB: { x: CENTER_X + GUN_RB_SPLIT, y: LOS + 4.25 },
+    },
+    positionLabels: {
+      Y: 'TE',
+      X: 'WR',
+      Z: 'WR',
+      FB: 'FB',
+      RB: 'HB',
+    },
+  }
+}
+
+/**
+ * Shotgun Trips Right — 11 personnel: QB, RB, 4 WR, 5 OL (no TE/FB).
+ * X isolated left; FB/Y/Z are the three trips receivers (slot, mid, wide).
+ */
+function shotgunTripsRightTemplate(): FormationTemplate {
+  const {
+    LOS,
+    CENTER_X,
+    WR_SPLIT,
+    SHOTGUN_QB,
+    GUN_RB_SPLIT,
+    TRIPS_INNER,
+    TRIPS_MID,
+    TRIPS_WIDE,
+  } = TEMPLATE
+  const ol = standardOffensiveLine()
+  const gunY = LOS + SHOTGUN_QB
+
+  return {
+    positions: {
+      ...ol,
+      X: { x: WR_SPLIT, y: LOS },
+      FB: { x: TRIPS_INNER, y: LOS },
+      Y: { x: TRIPS_MID, y: LOS },
+      Z: { x: TRIPS_WIDE, y: LOS },
+      QB: { x: CENTER_X, y: gunY },
+      RB: { x: CENTER_X - GUN_RB_SPLIT, y: gunY },
+    },
+    positionLabels: {
+      X: 'WR',
+      FB: 'SL',
+      Y: 'WR',
+      Z: 'WR',
+      RB: 'RB',
+    },
+  }
+}
+
+/**
+ * Singleback Ace — 12 personnel look: QB, RB, TE, H-back, 2 WR, 5 OL.
+ * One deep back; TE attached right; H-back flex left.
+ */
+function singlebackAceTemplate(): FormationTemplate {
+  const { LOS, CENTER_X, TE_OUTSIDE_RT, WR_SPLIT, UNDER_CENTER_QB, HBACK_SPLIT } = TEMPLATE
+  const ol = standardOffensiveLine()
+
+  return {
+    positions: {
+      ...ol,
+      Y: { x: ol.RT.x + TE_OUTSIDE_RT, y: LOS },
+      X: { x: WR_SPLIT, y: LOS },
+      Z: { x: FIELD_WIDTH - WR_SPLIT, y: LOS },
+      QB: { x: CENTER_X, y: LOS + UNDER_CENTER_QB },
+      RB: { x: CENTER_X, y: LOS + 5.25 },
+      FB: { x: CENTER_X - HBACK_SPLIT, y: LOS + UNDER_CENTER_QB },
+    },
+    positionLabels: {
+      Y: 'TE',
+      X: 'WR',
+      Z: 'WR',
+      RB: 'RB',
+      FB: 'H',
+    },
   }
 }
 
@@ -76,72 +189,25 @@ export const BUILTIN_FORMATIONS: FormationDefinition[] = [
     id: 'i-formation',
     label: 'I Formation',
     isBuiltin: true,
-    positions: {
-      ...offensiveLine(),
-      ...wideReceivers(),
-      ...tightEndOutsideTackle(),
-      QB: { x: SPACING.CENTER_X, y: SPACING.LOS + SPACING.QB_DEPTH },
-      FB: { x: SPACING.CENTER_X, y: SPACING.LOS + SPACING.FB_DEPTH },
-      RB: { x: SPACING.CENTER_X, y: SPACING.LOS + SPACING.RB_DEPTH },
-    },
+    ...iFormationTemplate(),
   },
   {
     id: 'pro-set',
     label: 'Pro Set',
     isBuiltin: true,
-    positions: {
-      ...offensiveLine(),
-      ...wideReceivers(),
-      ...tightEndOutsideTackle(),
-      QB: { x: SPACING.CENTER_X, y: SPACING.LOS + SPACING.QB_DEPTH },
-      FB: {
-        x: SPACING.CENTER_X - SPACING.PRO_SET_SPLIT,
-        y: SPACING.LOS + SPACING.PRO_SET_DEPTH,
-      },
-      RB: {
-        x: SPACING.CENTER_X + SPACING.PRO_SET_SPLIT,
-        y: SPACING.LOS + SPACING.PRO_SET_DEPTH,
-      },
-    },
+    ...proSetTemplate(),
   },
   {
     id: 'shotgun-trips-right',
     label: 'Shotgun Trips Right',
     isBuiltin: true,
-    positions: {
-      ...offensiveLine(),
-      QB: { x: SPACING.CENTER_X, y: SPACING.LOS + SPACING.SHOTGUN_DEPTH },
-      RB: {
-        x: SPACING.CENTER_X - SPACING.GUN_RB_SPLIT,
-        y: SPACING.LOS + SPACING.SHOTGUN_DEPTH,
-      },
-      X: { x: SPACING.WR_SIDELINE, y: LOS_VIEW_Y },
-      FB: {
-        x: offensiveLine().RT.x + SPACING.TE_OUTSIDE_TACKLE,
-        y: LOS_VIEW_Y,
-      },
-      Y: {
-        x: offensiveLine().RT.x + SPACING.TE_OUTSIDE_TACKLE + SPACING.TRIPS_GAP,
-        y: LOS_VIEW_Y,
-      },
-      Z: { x: FIELD_WIDTH - SPACING.WR_SIDELINE, y: LOS_VIEW_Y },
-    },
+    ...shotgunTripsRightTemplate(),
   },
   {
     id: 'singleback-ace',
     label: 'Singleback Ace',
     isBuiltin: true,
-    positions: {
-      ...offensiveLine(),
-      ...wideReceivers(),
-      ...tightEndOutsideTackle(),
-      QB: { x: SPACING.CENTER_X, y: SPACING.LOS + SPACING.QB_DEPTH },
-      RB: { x: SPACING.CENTER_X, y: SPACING.LOS + SPACING.SINGLEBACK_DEPTH },
-      FB: {
-        x: SPACING.CENTER_X - SPACING.HBACK_SPLIT,
-        y: SPACING.LOS + SPACING.QB_DEPTH,
-      },
-    },
+    ...singlebackAceTemplate(),
   },
 ]
 

@@ -9,7 +9,7 @@ import { createEmptyDefenderRoutes } from '../types/defenderRoute'
 import { resolvePlayType, type PlayType } from '../types/playType'
 import { createEmptyRoutes } from '../types/route'
 import type { CustomFormation } from './formationStorage'
-import { migratePlayToFieldView } from './fieldView'
+import { migratePlayToFieldView, migrateLosAnchorPlay } from './fieldView'
 import { createEmptyPlayerActionChains } from '../types/playerAction'
 import { ensurePlayPlayerActions } from './playerActionChains'
 import { normalizeCategories } from './categoryUtils'
@@ -28,7 +28,6 @@ import {
   COORDINATE_SPACE_DB,
   COORDINATE_SPACE_RENDER,
   dbPlayToRenderPlay,
-  hasSavedDefenderPositions,
   hasSavedPlayerPositions,
 } from './positionCoordinates'
 import { clampPlayPositions } from './losClamp'
@@ -53,7 +52,6 @@ export function normalizePlayRecord(
   const frontName = play.frontName ?? getFrontLabel(frontId) ?? getDefaultFrontName()
 
   const savedPlayers = hasSavedPlayerPositions(play.players)
-  const savedDefenders = hasSavedDefenderPositions(play.defenders)
 
   function normalizeLoadedPlayer(player: Player): Player {
     if (player.label === undefined || player.label === null) {
@@ -62,9 +60,15 @@ export function normalizePlayRecord(
     return { ...player, label: normalizePositionLabel(player.label) }
   }
 
-  const loadedPlayers = savedPlayers
-    ? play.players.map(normalizeLoadedPlayer)
+  const loadedPlayers = Array.isArray(play.players)
+    ? savedPlayers
+      ? play.players.map(normalizeLoadedPlayer)
+      : []
     : createPlayersForFormation(formationId, customFormations)
+
+  const loadedDefenders = Array.isArray(play.defenders)
+    ? play.defenders
+    : createDefendersForFront(frontId)
 
   const normalized: Play = {
     ...createEmptyPlay(playType),
@@ -77,7 +81,7 @@ export function normalizePlayRecord(
     opponentFormationName: play.opponentFormationName ?? null,
     driveStartYardLine: resolveDriveStartYardLine(play),
     players: loadedPlayers,
-    defenders: savedDefenders ? play.defenders : createDefendersForFront(frontId),
+    defenders: loadedDefenders,
     routes: play.routes ?? createEmptyRoutes(),
     blocks: play.blocks ?? createEmptyBlocks(),
     motions: play.motions ?? createEmptyMotions(),
@@ -94,7 +98,9 @@ export function normalizePlayRecord(
   const fromDatabase = normalized.positionFormat === COORDINATE_SPACE_DB
   const renderPlay = fromDatabase ? dbPlayToRenderPlay(normalized) : normalized
 
-  const migrated = fromDatabase ? renderPlay : migratePlayToFieldView(renderPlay)
+  const migrated = fromDatabase
+    ? migrateLosAnchorPlay(renderPlay)
+    : migratePlayToFieldView(renderPlay)
 
   return ensurePlayPlayerActions({
     ...clampPlayPositions(migrated),

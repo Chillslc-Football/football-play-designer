@@ -33,8 +33,14 @@ export const VIEWBOX_HEIGHT =
   FIELD_PLAY_AREA_Y + FIELD_VIEW_LENGTH + ENDZONE_DEPTH_YARDS + FIELD_PADDING_BOTTOM
 
 /** Line of scrimmage y — fixed so coaches always draw from the same spot. */
-export const BACKFIELD_YARDS = 12
+export const BACKFIELD_YARDS = 22
 export const LOS_VIEW_Y = FIELD_VIEW_LENGTH - BACKFIELD_YARDS
+
+/** Previous default LOS view Y before backfield was extended (12-yard backfield). */
+export const LEGACY_LOS_VIEW_Y = FIELD_VIEW_LENGTH - 12
+
+/** Saved plays/formations at or above this version use the current LOS anchor. */
+export const LOS_ANCHOR_VERSION = 2
 
 /** Downfield shown north of the LOS (toward y = 0). */
 export const DOWNFIELD_YARDS = LOS_VIEW_Y
@@ -43,7 +49,7 @@ export const DOWNFIELD_YARDS = LOS_VIEW_Y
 export const FIELD_LENGTH = FIELD_VIEW_LENGTH
 
 /** @deprecated Horizontal-era LOS constant — used only for coordinate migration. */
-export const LOS_VIEW_X = BACKFIELD_YARDS
+export const LOS_VIEW_X = 12
 
 /** @deprecated Use LOS_VIEW_Y — kept for any external references. */
 export const FIELD_CENTER_X = LOS_VIEW_Y

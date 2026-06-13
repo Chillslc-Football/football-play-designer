@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from './hooks/useAuth'
+import { useSchemeTemplates } from './context/SchemeTemplateProvider'
+import { useAppShell } from './context/AppShellContext'
 import { useCanEdit } from './hooks/useCanEdit'
 import { useTeam } from './hooks/useTeam'
 import * as formationRepository from './repositories/formationRepository'
 import * as cloudPlayRepository from './repositories/playRepository'
+import * as schemeTemplateRepository from './repositories/schemeTemplateRepository'
+import { AdminTemplateEditBar } from './components/AdminTemplateEditBar/AdminTemplateEditBar'
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog'
 import { Header } from './components/Header/Header'
 import { Field } from './components/Field/Field'
@@ -18,7 +22,7 @@ import { createEmptyDefenderRoutes } from './types/defenderRoute'
 import type { PlayType } from './types/playType'
 import type { DriveStartYardLine } from './types/driveStart'
 import { createEmptyBlocks } from './types/block'
-import { createEmptyPlay, type Play } from './types/play'
+import { createEmptyPlay, createPlayFromCurrentScheme, type Play } from './types/play'
 import {
   normalizePositionLabel,
   type PlayerLabel,
@@ -38,6 +42,8 @@ import { DEFAULT_FORMATION_ID } from './data/builtinFormations'
 import { applyPlayerSpacing } from './utils/playerSpacing'
 import { ensurePlayPlayerActions, upsertPlayerAction } from './utils/playerActionChains'
 import { loadFieldZoom, saveFieldZoom, type FieldZoomValue } from './utils/fieldZoom'
+import { loadFieldGrid, saveFieldGrid } from './utils/fieldGrid'
+import { FieldGridControl } from './components/FieldGridControl/FieldGridControl'
 import { createEmptyRoutes } from './types/route'
 import { DEFAULT_FRONT_ID } from './data/builtinFronts'
 import {
@@ -98,6 +104,10 @@ import {
   resolveOffensePlayerPosition,
 } from './utils/losClamp'
 import { COORDINATE_SPACE_RENDER } from './utils/positionCoordinates'
+import {
+  createPlayForAdminTemplateEdit,
+  positionsFromAdminTemplatePlay,
+} from './utils/adminTemplateEditPlay'
 import './App.css'
 
 type PendingAction =
@@ -122,8 +132,12 @@ const UNSAVED_MESSAGE = 'You have unsaved changes. Save before continuing?'
 
 function App() {
   const { user, signOut } = useAuth()
+  const shell = useAppShell()
+  const adminTemplateEdit = shell?.adminTemplateEdit ?? null
+  const { loading: schemeTemplatesLoading, refreshTemplates } = useSchemeTemplates()
   const { activeTeamId, switchTeam } = useTeam()
   const canEdit = useCanEdit()
+  const fieldCanEdit = canEdit || Boolean(adminTemplateEdit)
   const useCloud = Boolean(user?.id && activeTeamId)
 
   const [play, setPlay] = useState<Play>(createEmptyPlay)
@@ -137,7 +151,7 @@ function App() {
   const [saveMessage, setSaveMessage] = useState('')
   const [selectedPlayerId, setSelectedPlayerId] = useState<PlayerLabel | null>(null)
   const [selectedDefenderId, setSelectedDefenderId] = useState<DefenderLabel | null>(null)
-  const [drawingMode, setDrawingMode] = useState<DrawingMode>('route')
+  const [drawingMode, setDrawingMode] = useState<DrawingMode>('position')
   const [motionType, setMotionType] = useState<MotionType>('jog')
   const [setupPanelOpen, setSetupPanelOpen] = useState(true)
   const [dataLoading, setDataLoading] = useState(false)
@@ -145,7 +159,10 @@ function App() {
   const [dialog, setDialog] = useState<DialogState>(null)
   const [deletingCategory, setDeletingCategory] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [templateCreateLabel, setTemplateCreateLabel] = useState('')
+  const [templateSaving, setTemplateSaving] = useState(false)
   const [fieldZoom, setFieldZoom] = useState<FieldZoomValue>(() => loadFieldZoom())
+  const [fieldGridEnabled, setFieldGridEnabled] = useState(() => loadFieldGrid())
   const fieldWorkspaceRef = useRef<HTMLDivElement>(null)
   const isSavingRef = useRef(false)
 
@@ -270,9 +287,25 @@ function App() {
   }, [activeTeamId, showSaveMessage, userId])
 
   useEffect(() => {
-    resetEditor()
     void loadTeamData()
   }, [activeTeamId, userId])
+
+  useEffect(() => {
+    if (schemeTemplatesLoading || adminTemplateEdit) return
+    resetEditor()
+  }, [activeTeamId, userId, schemeTemplatesLoading, resetEditor, adminTemplateEdit])
+
+  useEffect(() => {
+    if (!adminTemplateEdit) return
+
+    setPlay(createPlayForAdminTemplateEdit(adminTemplateEdit))
+    setSetupPanelOpen(false)
+    setSelectedPlayerId(null)
+    setSelectedDefenderId(null)
+    setSelectedLoadId('')
+    setActiveSavedPlayId(null)
+    setTemplateCreateLabel(adminTemplateEdit.mode === 'create' ? '' : adminTemplateEdit.label)
+  }, [adminTemplateEdit])
 
   const playsForMode = useMemo(
     () => filterPlaysByPlayType(savedPlays, play.playType),
@@ -361,18 +394,14 @@ function App() {
   }
 
   function executeNewPlay() {
-    const empty = createEmptyPlay(play.playType)
-    console.log('CREATE NEW PLAY players', {
-      players: empty.players.map((player) => ({ id: player.id, ...player.position })),
-      defenders: empty.defenders.map((defender) => ({ id: defender.id, ...defender.position })),
-    })
-    setPlay(empty)
+    const next = createPlayFromCurrentScheme(play)
+    setPlay(next)
     setSelectedLoadId('')
     setActiveSavedPlayId(null)
     setSelectedPlayerId(null)
     setSelectedDefenderId(null)
     setSaveMessage('')
-    updatePlayBaseline(empty)
+    updatePlayBaseline(next)
   }
 
   function handleNewPlay() {
@@ -516,6 +545,8 @@ function App() {
     isSavingRef.current = true
     setIsSaving(true)
 
+    const clearedPlay = createPlayFromCurrentScheme(play)
+
     try {
       let nameToUse = play.name
       const findByName = useCloud
@@ -540,21 +571,27 @@ function App() {
 
         nameToUse = prompted.trim()
       }
+      const playToSave = preparePlayForSave({ ...clearedPlay, name: nameToUse })
+
       if (useCloud && activeTeamId) {
         const saved = await cloudPlayRepository.addNewPlay(
           activeTeamId,
-          preparePlayForSave({ ...play, name: nameToUse }),
+          playToSave,
           customFormations,
           user?.id,
         )
-        syncEditorAfterSave({ ...play, name: nameToUse }, saved.id)
+        syncEditorAfterSave({ ...clearedPlay, name: nameToUse }, saved.id)
+        setSelectedPlayerId(null)
+        setSelectedDefenderId(null)
         await loadTeamData()
         showSaveMessage('Play saved.')
         return
       }
 
-      const saved = addNewPlay(preparePlayForSave({ ...play, name: nameToUse }))
-      syncEditorAfterSave({ ...play, name: nameToUse }, saved.id)
+      const saved = addNewPlay(playToSave)
+      syncEditorAfterSave({ ...clearedPlay, name: nameToUse }, saved.id)
+      setSelectedPlayerId(null)
+      setSelectedDefenderId(null)
       setSavedPlays(getAllSavedPlays())
       showSaveMessage('Play saved.')
     } catch (error) {
@@ -688,7 +725,7 @@ function App() {
     setSelectedPlayerId(null)
     setSelectedDefenderId(null)
 
-    if (playType === 'defensive' && (drawingMode === 'block' || drawingMode === 'motion')) {
+    if (playType === 'defensive' && (drawingMode === 'block' || drawingMode === 'motion' || drawingMode === 'position')) {
       setDrawingMode('route')
     }
 
@@ -781,6 +818,79 @@ function App() {
       defenderRoutes: createEmptyDefenderRoutes(),
     }))
     setSelectedDefenderId(null)
+  }
+
+  function handleOpponentFrontChange(frontId: string) {
+    if (!canEdit) return
+    const front = getFrontById(frontId)
+    if (!front) return
+
+    setPlay((current) => ({
+      ...current,
+      frontId,
+      frontName: front.label,
+    }))
+  }
+
+  function handleOpponentFormationChange(formationId: string) {
+    if (!canEdit) return
+    const formation = getFormationById(formationId, customFormations)
+    if (!formation) return
+
+    setPlay((current) => ({
+      ...current,
+      formationId,
+      formationName: formation.label,
+    }))
+  }
+
+  function handleLoadDefensiveFront() {
+    if (!canEdit || play.playType !== 'offensive' || play.defenders.length > 0) return
+    executeFrontChange(play.frontId)
+  }
+
+  function executeLoadOpposingFormation() {
+    const formation = getFormationById(play.formationId, customFormations)
+    if (!formation) return
+
+    const players = createPlayersForFormation(play.formationId, customFormations).map((player) => ({
+      ...player,
+      position: clampOffensePosition(player.position),
+    }))
+
+    setPlay((current) => ({
+      ...current,
+      formationId: formation.id,
+      formationName: formation.label,
+      players,
+    }))
+    setSelectedPlayerId(null)
+  }
+
+  function handleLoadOffensiveFormation() {
+    if (!canEdit || play.playType !== 'defensive' || play.players.length > 0) return
+    executeLoadOpposingFormation()
+  }
+
+  function handleRemoveDefensiveFront() {
+    if (!canEdit || play.playType !== 'offensive' || play.defenders.length === 0) return
+
+    setPlay((current) => ({
+      ...current,
+      defenders: [],
+      defenderRoutes: createEmptyDefenderRoutes(),
+    }))
+    setSelectedDefenderId(null)
+  }
+
+  function handleRemoveOffensiveFormation() {
+    if (!canEdit || play.playType !== 'defensive' || play.players.length === 0) return
+
+    setPlay((current) => ({
+      ...current,
+      players: [],
+    }))
+    setSelectedPlayerId(null)
   }
 
   function handleFrontChange(frontId: string) {
@@ -1076,7 +1186,7 @@ function App() {
   }
 
   function handlePlayerMove(playerId: PlayerLabel, position: Position) {
-    if (!canEdit || play.playType !== 'offensive') return
+    if (!fieldCanEdit || play.playType !== 'offensive') return
 
     const clampedTarget = clampOffensePosition(position)
     let blockedBackfieldEntry = false
@@ -1106,7 +1216,7 @@ function App() {
   }
 
   function handleDefenderMove(defenderId: DefenderLabel, position: Position) {
-    if (!canEdit || play.playType !== 'defensive') return
+    if (!fieldCanEdit || play.playType !== 'defensive') return
 
     setPlay((current) => {
       const spacedPosition = applyPlayerSpacing(current.defenders, defenderId, position)
@@ -1122,7 +1232,7 @@ function App() {
   }
 
   function handlePlayerActionComplete(playerId: PlayerLabel, action: PlayerAction) {
-    if (!canEdit || play.playType !== 'offensive') return
+    if (!fieldCanEdit || play.playType !== 'offensive' || adminTemplateEdit) return
 
     setPlay((current) =>
       ensurePlayPlayerActions({
@@ -1133,7 +1243,7 @@ function App() {
   }
 
   function handleDefenderRouteComplete(route: DefenderRoute) {
-    if (!canEdit || play.playType !== 'defensive') return
+    if (!fieldCanEdit || play.playType !== 'defensive' || adminTemplateEdit) return
 
     setPlay((current) => {
       const otherRoutes = current.defenderRoutes.filter(
@@ -1145,6 +1255,74 @@ function App() {
           route.points.length === 0 ? otherRoutes : [...otherRoutes, route],
       }
     })
+  }
+
+  async function handleSaveAdminTemplate() {
+    if (!adminTemplateEdit || !shell) return
+
+    const label =
+      adminTemplateEdit.mode === 'create'
+        ? templateCreateLabel.trim()
+        : adminTemplateEdit.label.trim()
+
+    if (!label) {
+      showSaveMessage('Template name is required.')
+      return
+    }
+
+    setTemplateSaving(true)
+
+    try {
+      const extracted = positionsFromAdminTemplatePlay(play, adminTemplateEdit.kind)
+      const slug =
+        adminTemplateEdit.mode === 'edit' && adminTemplateEdit.slug
+          ? adminTemplateEdit.slug
+          : schemeTemplateRepository.slugifyTemplateLabel(label)
+
+      if (adminTemplateEdit.kind === 'formation') {
+        const input = {
+          slug,
+          label,
+          positions: extracted.positions as Record<PlayerLabel, Position>,
+          positionLabels:
+            extracted.positionLabels && Object.keys(extracted.positionLabels).length > 0
+              ? extracted.positionLabels
+              : undefined,
+        }
+
+        if (adminTemplateEdit.recordId) {
+          await schemeTemplateRepository.updateFormationTemplate(adminTemplateEdit.recordId, input)
+        } else {
+          await schemeTemplateRepository.createFormationTemplate(input, user?.id)
+        }
+      } else {
+        const input = {
+          slug,
+          label,
+          positions: extracted.positions as Record<DefenderLabel, Position>,
+        }
+
+        if (adminTemplateEdit.recordId) {
+          await schemeTemplateRepository.updateDefensiveFrontTemplate(adminTemplateEdit.recordId, input)
+        } else {
+          await schemeTemplateRepository.createDefensiveFrontTemplate(input, user?.id)
+        }
+      }
+
+      await refreshTemplates()
+      shell.setAdminTemplateEdit(null)
+      shell.setView('admin-templates')
+      showSaveMessage('Template saved.')
+    } catch (error) {
+      showSaveMessage(error instanceof Error ? error.message : 'Failed to save template.')
+    } finally {
+      setTemplateSaving(false)
+    }
+  }
+
+  function handleCancelAdminTemplate() {
+    shell?.setAdminTemplateEdit(null)
+    shell?.setView('admin-templates')
   }
 
   const dialogMessage =
@@ -1189,12 +1367,27 @@ function App() {
       <Header
         playType={play.playType}
         canEdit={canEdit}
+        hidePlayTypeSelector={Boolean(adminTemplateEdit)}
         onPlayTypeChange={handlePlayTypeChange}
         onTeamChange={handleTeamSwitchRequest}
         onLogout={handleLogoutRequest}
       />
 
-      <div className={`app-body ${setupPanelOpen ? '' : 'setup-collapsed'}`}>
+      {adminTemplateEdit && (
+        <AdminTemplateEditBar
+          kind={adminTemplateEdit.kind}
+          mode={adminTemplateEdit.mode}
+          label={adminTemplateEdit.label}
+          createLabel={templateCreateLabel}
+          saving={templateSaving}
+          onCreateLabelChange={setTemplateCreateLabel}
+          onSave={() => void handleSaveAdminTemplate()}
+          onCancel={handleCancelAdminTemplate}
+        />
+      )}
+
+      <div className={`app-body ${setupPanelOpen && !adminTemplateEdit ? '' : 'setup-collapsed'}`}>
+        {!adminTemplateEdit && (
         <PlaySetupPanel
           canEdit={canEdit}
           isOpen={setupPanelOpen}
@@ -1210,6 +1403,14 @@ function App() {
           onDriveStartChange={handleDriveStartChange}
           onSaveCurrentFormation={handleSaveCurrentFormation}
           onDeleteCustomFormation={handleDeleteCustomFormation}
+          hasDefendersOnField={play.defenders.length > 0}
+          hasOffenseOnField={play.players.length > 0}
+          onOpponentFrontChange={handleOpponentFrontChange}
+          onOpponentFormationChange={handleOpponentFormationChange}
+          onLoadDefensiveFront={handleLoadDefensiveFront}
+          onLoadOffensiveFormation={handleLoadOffensiveFormation}
+          onRemoveDefensiveFront={handleRemoveDefensiveFront}
+          onRemoveOffensiveFormation={handleRemoveOffensiveFormation}
           playName={play.name}
           onPlayNameChange={handlePlayNameChange}
           playCategories={play.categories}
@@ -1254,6 +1455,7 @@ function App() {
           playNotes={play.notes}
           onPlayNotesChange={handleNotesChange}
         />
+        )}
 
         <main className="canvas-area">
           {(saveMessage || dataLoading) && (
@@ -1262,7 +1464,7 @@ function App() {
             </p>
           )}
 
-          {!canEdit && !dataLoading && !saveMessage && (
+          {!canEdit && !adminTemplateEdit && !dataLoading && !saveMessage && (
             <p className="save-message save-message-readonly">View only — contact your coach to edit.</p>
           )}
 
@@ -1277,7 +1479,9 @@ function App() {
                     <div className="field-zoom-scaler">
                       <Field
                         playType={play.playType}
-                        viewOnly={!canEdit}
+                        viewOnly={!fieldCanEdit}
+                        schemePositionsOnly={Boolean(adminTemplateEdit)}
+                        showAlignmentGrid={fieldGridEnabled}
                         players={play.players}
                         defenders={play.defenders}
                         defenderRoutes={play.defenderRoutes}
@@ -1300,6 +1504,13 @@ function App() {
                 </div>
               </div>
               <div className="field-workspace-status">
+                <FieldGridControl
+                  enabled={fieldGridEnabled}
+                  onChange={(enabled) => {
+                    setFieldGridEnabled(enabled)
+                    saveFieldGrid(enabled)
+                  }}
+                />
                 <FieldZoomControl
                   value={fieldZoom}
                   onChange={(zoom) => {

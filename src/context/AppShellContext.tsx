@@ -1,10 +1,13 @@
 import { createContext, useContext, type ReactNode } from 'react'
+import type { AdminTemplateEditSession } from '../types/adminTemplateEdit'
 
-export type AppShellView = 'designer' | 'wristbands'
+export type AppShellView = 'designer' | 'wristbands' | 'admin-templates'
 
 type AppShellContextValue = {
   view: AppShellView
   setView: (view: AppShellView) => void
+  adminTemplateEdit: AdminTemplateEditSession | null
+  setAdminTemplateEdit: (session: AdminTemplateEditSession | null) => void
 }
 
 const AppShellContext = createContext<AppShellContextValue | null>(null)
@@ -12,12 +15,24 @@ const AppShellContext = createContext<AppShellContextValue | null>(null)
 type AppShellProviderProps = {
   view: AppShellView
   setView: (view: AppShellView) => void
+  adminTemplateEdit: AdminTemplateEditSession | null
+  setAdminTemplateEdit: (session: AdminTemplateEditSession | null) => void
   children: ReactNode
 }
 
-export function AppShellProvider({ view, setView, children }: AppShellProviderProps) {
+export function AppShellProvider({
+  view,
+  setView,
+  adminTemplateEdit,
+  setAdminTemplateEdit,
+  children,
+}: AppShellProviderProps) {
   return (
-    <AppShellContext.Provider value={{ view, setView }}>{children}</AppShellContext.Provider>
+    <AppShellContext.Provider
+      value={{ view, setView, adminTemplateEdit, setAdminTemplateEdit }}
+    >
+      {children}
+    </AppShellContext.Provider>
   )
 }
 

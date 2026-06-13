@@ -19,6 +19,11 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.drawing-mode-toggle-four {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 /* Route + Blocking on the first row; Motion gets a full-width second row. */
 .drawing-mode-toggle-three .drawing-mode-toggle-btn:nth-child(3) {
   grid-column: 1 / -1;
@@ -49,7 +54,16 @@
   border-right: none;
 }
 
-.drawing-mode-toggle:not(.drawing-mode-toggle-three) .drawing-mode-toggle-btn:last-child {
+.drawing-mode-toggle-four .drawing-mode-toggle-btn:nth-child(2n) {
+  border-right: none;
+}
+
+.drawing-mode-toggle-four .drawing-mode-toggle-btn:nth-child(n + 3) {
+  border-top: 1px solid var(--border-strong);
+}
+
+.drawing-mode-toggle:not(.drawing-mode-toggle-three):not(.drawing-mode-toggle-four)
+  .drawing-mode-toggle-btn:last-child {
   border-right: none;
 }
 

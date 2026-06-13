@@ -34,6 +34,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
   const [loading, setLoading] = useState(true)
   const [profileLoaded, setProfileLoaded] = useState(false)
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
+  const [isAppAdmin, setIsAppAdmin] = useState(false)
 
   const refreshTeam = useCallback(async () => {
     if (!user) {
@@ -42,6 +43,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
       setRole(null)
       setMemberships([])
       setProfileLoaded(false)
+      setIsAppAdmin(false)
       setNeedsOnboarding(false)
       setLoading(false)
       return
@@ -58,13 +60,27 @@ export function TeamProvider({ children }: TeamProviderProps) {
         setMemberships,
         setNeedsOnboarding,
       })
+      setIsAppAdmin(result.profile?.is_app_admin ?? false)
+      console.log('[TeamProvider] active team state applied', {
+        userId: user.id,
+        activeTeamId: result.activeTeamId,
+        teamId: result.team?.id ?? null,
+        teamName: result.team?.name ?? null,
+        role: result.role,
+        membershipCount: result.memberships.length,
+        needsOnboarding: result.needsOnboarding,
+      })
     } catch (error) {
-      console.error('[TeamProvider] failed to load active team', error)
+      console.error('[TeamProvider] failed to load active team', {
+        userId: user.id,
+        error,
+      })
       setActiveTeamId(null)
       setTeam(null)
       setRole(null)
       setMemberships([])
-      setNeedsOnboarding(true)
+      setIsAppAdmin(false)
+      setNeedsOnboarding(false)
     } finally {
       setProfileLoaded(true)
       setLoading(false)
@@ -212,6 +228,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
       memberships,
       loading,
       profileLoaded,
+      isAppAdmin,
       needsOnboarding,
       createTeam,
       switchTeam,
@@ -225,6 +242,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
       memberships,
       loading,
       profileLoaded,
+      isAppAdmin,
       needsOnboarding,
       createTeam,
       switchTeam,

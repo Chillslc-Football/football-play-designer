@@ -4,6 +4,10 @@ import {
   type FormationDefinition,
 } from '../data/builtinFormations'
 import {
+  getDefaultFormationTemplateId,
+  getResolvedFormationTemplates,
+} from './schemeTemplateStore'
+import {
   normalizePositionLabel,
   resolvePlayerDisplayLabel,
   type Player,
@@ -65,13 +69,13 @@ export function positionsFromPlayers(players: Player[]): Record<PlayerLabel, Pos
   >
 }
 
-/** Finds a built-in or custom formation by id. */
+/** Finds a global or custom formation by id. */
 export function getFormationById(
   id: string,
   customFormations: CustomFormation[],
 ): FormationDefinition | null {
-  const builtin = BUILTIN_FORMATIONS.find((f) => f.id === id)
-  if (builtin) return builtin
+  const global = getResolvedFormationTemplates().find((formation) => formation.id === id)
+  if (global) return global
 
   const custom = customFormations.find((f) => f.id === id)
   if (!custom) return null
@@ -92,7 +96,8 @@ export function createPlayersForFormation(
 ): Player[] {
   const formation = getFormationById(formationId, customFormations)
   if (!formation) {
-    return playersFromFormation(BUILTIN_FORMATIONS[0])
+    const fallback = getFormationById(getDefaultFormationTemplateId(), customFormations)
+    return playersFromFormation(fallback ?? BUILTIN_FORMATIONS[0])
   }
   return playersFromFormation(formation)
 }
@@ -132,8 +137,8 @@ export function isFormationNameTaken(
   const normalized = name.trim().toLowerCase()
   if (!normalized) return true
 
-  const builtinMatch = BUILTIN_FORMATIONS.some(
-    (f) => f.label.toLowerCase() === normalized,
+  const builtinMatch = getResolvedFormationTemplates().some(
+    (formation) => formation.label.toLowerCase() === normalized,
   )
   const customMatch = customFormations.some(
     (f) => f.label.toLowerCase() === normalized,
@@ -153,7 +158,7 @@ export function getAllFormations(
     positions: f.positions,
     isBuiltin: false,
   }))
-  return [...BUILTIN_FORMATIONS, ...customAsDefinitions]
+  return [...getResolvedFormationTemplates(), ...customAsDefinitions]
 }
 
 /** Options for the Play Filter dropdown. */
@@ -162,7 +167,10 @@ export function getPlayFilterOptions(
 ): { id: PlayFilterId; label: string }[] {
   return [
     { id: ALL_PLAYS_FILTER, label: 'All Plays' },
-    ...BUILTIN_FORMATIONS.map((f) => ({ id: f.id, label: f.label })),
+    ...getResolvedFormationTemplates().map((formation) => ({
+      id: formation.id,
+      label: formation.label,
+    })),
     ...customFormations.map((f) => ({ id: f.id, label: f.label })),
   ]
 }
@@ -177,7 +185,7 @@ export function filterPlaysByFormation<T extends { formationId: string }>(
 }
 
 export function isBuiltinFormationId(formationId: string): boolean {
-  return BUILTIN_FORMATIONS.some((formation) => formation.id === formationId)
+  return getResolvedFormationTemplates().some((formation) => formation.id === formationId)
 }
 
 export function isCustomFormationId(
@@ -206,5 +214,8 @@ export function withFormationSnapshot(
 }
 
 export function getDefaultFormationName(): string {
-  return BUILTIN_FORMATIONS.find((f) => f.id === DEFAULT_FORMATION_ID)?.label ?? 'I Formation'
+  return (
+    getResolvedFormationTemplates().find((formation) => formation.id === getDefaultFormationTemplateId())
+      ?.label ?? BUILTIN_FORMATIONS.find((f) => f.id === DEFAULT_FORMATION_ID)?.label ?? 'I Formation'
+  )
 }

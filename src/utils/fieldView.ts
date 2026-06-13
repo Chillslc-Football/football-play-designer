@@ -3,13 +3,16 @@ import {
   FIELD_VIEW_LENGTH,
   FIELD_WIDTH,
   HASH_MARK_LANES,
+  LEGACY_LOS_VIEW_Y,
   LEGACY_LOS_X,
+  LOS_ANCHOR_VERSION,
   LOS_VIEW_X,
   LOS_VIEW_Y,
 } from '../constants/field'
 import type { DriveStartYardLine } from '../types/driveStart'
 import { getLosYardForDriveStart } from '../types/driveStart'
 import type { Play } from '../types/play'
+import type { PlayerActionChains } from '../types/playerAction'
 import type { Player, Position } from '../types/player'
 
 export type FieldViewBounds = {
@@ -100,7 +103,7 @@ export function getEndzoneRenderBounds(bounds: FieldViewBounds): EndzoneRenderBo
 
 export function getFieldViewBounds(driveStart: DriveStartYardLine): FieldViewBounds {
   const losYard = getLosYardForDriveStart(driveStart)
-  // Keep LOS at a fixed view Y (12 yards of backfield south) while the window scrolls.
+  // Keep LOS at a fixed view Y while the visible yard window scrolls with drive start.
   const viewStartYard = losYard - LOS_VIEW_Y
 
   return {
@@ -282,6 +285,83 @@ function migratePlayToPortrait(play: Play): Play {
   }
 }
 
+function shiftPositionY(position: Position, deltaY: number): Position {
+  return { ...position, y: position.y + deltaY }
+}
+
+function shiftPaths<T extends { points: Position[] }>(paths: T[], deltaY: number): T[] {
+  return paths.map((path) => ({
+    ...path,
+    points: path.points.map((point) => shiftPositionY(point, deltaY)),
+  }))
+}
+
+function shiftPlayerActions(chains: PlayerActionChains, deltaY: number): PlayerActionChains {
+  const shifted: PlayerActionChains = {}
+
+  for (const playerId of Object.keys(chains) as Array<keyof PlayerActionChains>) {
+    shifted[playerId] = (chains[playerId] ?? []).map((action) => ({
+      ...action,
+      points: action.points.map((point) => shiftPositionY(point, deltaY)),
+    }))
+  }
+
+  return shifted
+}
+
+export function getLosAnchorShiftY(): number {
+  return LOS_VIEW_Y - LEGACY_LOS_VIEW_Y
+}
+
+function usesLegacyLosAnchor(positions: Record<string, Position>): boolean {
+  const center = positions.C
+  if (center && Math.abs(center.y - LEGACY_LOS_VIEW_Y) < 2) {
+    return true
+  }
+
+  const lineDefender = positions.LE ?? positions.DT1
+  if (lineDefender && Math.abs(lineDefender.y - (LEGACY_LOS_VIEW_Y - 1)) < 2) {
+    return true
+  }
+
+  return false
+}
+
+export function shiftPlayLosAnchor(play: Play, deltaY: number): Play {
+  return {
+    ...play,
+    players: play.players.map((player) => ({
+      ...player,
+      position: shiftPositionY(player.position, deltaY),
+    })),
+    defenders: play.defenders.map((defender) => ({
+      ...defender,
+      position: shiftPositionY(defender.position, deltaY),
+    })),
+    routes: shiftPaths(play.routes, deltaY),
+    blocks: shiftPaths(play.blocks, deltaY),
+    motions: shiftPaths(play.motions ?? [], deltaY),
+    defenderRoutes: shiftPaths(play.defenderRoutes ?? [], deltaY),
+    playerActions: shiftPlayerActions(play.playerActions ?? {}, deltaY),
+  }
+}
+
+export function migrateLosAnchorPlay(play: Play): Play {
+  if ((play.losAnchorVersion ?? 1) >= LOS_ANCHOR_VERSION) {
+    return play
+  }
+
+  const deltaY = getLosAnchorShiftY()
+  if (deltaY === 0) {
+    return play
+  }
+
+  return {
+    ...shiftPlayLosAnchor(play, deltaY),
+    losAnchorVersion: LOS_ANCHOR_VERSION,
+  }
+}
+
 /** Shifts coordinates from the old 120-unit full field into the 50-yard LOS view. */
 export function migratePlayToFieldView(play: Play): Play {
   let migrated: Play = play
@@ -307,7 +387,7 @@ export function migratePlayToFieldView(play: Play): Play {
     migrated = migratePlayToPortrait(migrated)
   }
 
-  return migrated
+  return migrateLosAnchorPlay(migrated)
 }
 
 export function migrateFormationPositions(
@@ -330,6 +410,16 @@ export function migrateFormationPositions(
       Object.entries(migrated).map(([label, position]) => [
         label,
         convertHorizontalToPortrait(position),
+      ]),
+    ) as Record<string, Position>
+  }
+
+  if (usesLegacyLosAnchor(migrated)) {
+    const deltaY = getLosAnchorShiftY()
+    migrated = Object.fromEntries(
+      Object.entries(migrated).map(([label, position]) => [
+        label,
+        shiftPositionY(position, deltaY),
       ]),
     ) as Record<string, Position>
   }
