@@ -36,6 +36,7 @@ import {
   deleteEntireDefenderRoute,
   extendDefenderRouteFromAnchor,
   getDefenderAnchorVertexIndex,
+  getDefenderRouteVertices,
   getDeletableDefenderRouteSegmentIndex,
   type DefenderRouteEditSelection,
 } from '../../utils/defenderRouteEdit'
@@ -527,11 +528,8 @@ export function Field({
 
     if (!selectedDefenderId) return null
 
-    const existing = getDefenderRouteForDefender(selectedDefenderId)
-    if (existing.points.length > 0) return null
-
     return { defenderId: selectedDefenderId, vertexIndex: 0 }
-  }, [selectedDefenderId, getDefenderRouteForDefender, defenderRoutesEditable])
+  }, [selectedDefenderId, defenderRoutesEditable])
 
   const commitActionExtension = useCallback(
     (
@@ -1106,6 +1104,21 @@ export function Field({
     return true
   }
 
+  function startDefenderRouteDrag(
+    event: React.MouseEvent,
+    anchor: { defenderId: DefenderLabel; vertexIndex: number },
+  ) {
+    event.preventDefault()
+    defenderRouteDragRef.current = {
+      defenderId: anchor.defenderId,
+      anchorVertexIndex: anchor.vertexIndex,
+      dragPoints: [],
+      screenX: event.clientX,
+      screenY: event.clientY,
+      startedDrag: true,
+    }
+  }
+
   function startRouteDrag(
     event: React.MouseEvent,
     anchor: { playerId: PlayerLabel; actionId: string; anchorVertexIndex: number },
@@ -1270,6 +1283,30 @@ export function Field({
     return false
   }
 
+  /** Start defensive movement drag from the selected defender marker (same flow as offensive routes). */
+  function tryBeginSelectedDefenderActionDrag(
+    event: React.MouseEvent,
+    defenderId: DefenderLabel,
+  ): boolean {
+    if (
+      playType !== 'defensive' ||
+      defenderId !== selectedDefenderId ||
+      drawingMode !== 'route' ||
+      !defenderRoutesEditable
+    ) {
+      return false
+    }
+
+    const anchor = resolveDefenderDrawAnchor()
+    if (anchor?.defenderId === defenderId) {
+      event.stopPropagation()
+      startDefenderRouteDrag(event, anchor)
+      return true
+    }
+
+    return false
+  }
+
   function handleActionEndpointPointerDown(
     playerId: PlayerLabel,
     actionId: string,
@@ -1299,7 +1336,33 @@ export function Field({
   }
 
   function handleDefenderPointerDown(defenderId: DefenderLabel, event: React.MouseEvent) {
+    if (tryBeginSelectedDefenderActionDrag(event, defenderId)) return
     beginDefensePointerSelection(event, defenderId)
+  }
+
+  function handleDefenderRouteEndpointPointerDown(
+    defenderId: DefenderLabel,
+    event: React.MouseEvent,
+  ) {
+    if (
+      playType !== 'defensive' ||
+      defenderId !== selectedDefenderId ||
+      drawingMode !== 'route' ||
+      !defenderRoutesEditable
+    ) {
+      return
+    }
+
+    const route = getDefenderRouteForDefender(defenderId)
+    if (route.points.length === 0) return
+
+    const vertices = getDefenderRouteVertices(getDefenderPosition(defenderId), route)
+    event.stopPropagation()
+    event.preventDefault()
+    startDefenderRouteDrag(event, {
+      defenderId,
+      vertexIndex: vertices.length - 1,
+    })
   }
 
   function handleFieldMouseDown(event: React.MouseEvent) {
@@ -1370,14 +1433,7 @@ export function Field({
       }
 
       event.preventDefault()
-      defenderRouteDragRef.current = {
-        defenderId: anchor.defenderId,
-        anchorVertexIndex: anchor.vertexIndex,
-        dragPoints: [],
-        screenX: event.clientX,
-        screenY: event.clientY,
-        startedDrag: true,
-      }
+      startDefenderRouteDrag(event, anchor)
       return
     }
 
@@ -2580,6 +2636,9 @@ export function Field({
                 onVertexSelect={(vertexIndex) => {
                   if (!defenderRoutesEditable || defenderRouteDragRef.current) return
                   toggleDefenderVertexSelection(route.defenderId, vertexIndex)
+                }}
+                onEndpointPointerDown={(event) => {
+                  handleDefenderRouteEndpointPointerDown(route.defenderId, event)
                 }}
               />
             ))}
