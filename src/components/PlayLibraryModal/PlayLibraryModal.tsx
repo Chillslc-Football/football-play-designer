@@ -12,6 +12,13 @@ import {
   type PlayLibraryFilter,
   type PlayLibraryLayout,
 } from '../../utils/playLibraryLayout'
+import {
+  downloadPlaybookPdf,
+  emailPlaybookPdf,
+  endPlaybookPrint,
+  handlePlaybookAfterPrint,
+  printPlaybook,
+} from '../../utils/playbookPrint'
 import { PlayThumbnail } from '../PlayThumbnail/PlayThumbnail'
 import '../ConfirmDialog/ConfirmDialog.css'
 import './PlayLibraryModal.css'
@@ -19,6 +26,7 @@ import './PlayLibraryModal.css'
 type PlayLibraryModalProps = {
   open: boolean
   plays: Play[]
+  canSharePdf?: boolean
   onLoadPlay: (playId: string) => void
   onClose: () => void
 }
@@ -33,7 +41,13 @@ function sectionTitleForPlayType(playType: PlayType): string {
   return playType === 'offensive' ? 'Offensive Plays' : 'Defensive Plays'
 }
 
-export function PlayLibraryModal({ open, plays, onLoadPlay, onClose }: PlayLibraryModalProps) {
+export function PlayLibraryModal({
+  open,
+  plays,
+  canSharePdf = false,
+  onLoadPlay,
+  onClose,
+}: PlayLibraryModalProps) {
   const [layout, setLayout] = useState<PlayLibraryLayout>(DEFAULT_PLAY_LIBRARY_LAYOUT)
   const [playFilter, setPlayFilter] = useState<PlayLibraryFilter>(DEFAULT_PLAY_LIBRARY_FILTER)
   const [pageIndex, setPageIndex] = useState(0)
@@ -78,13 +92,13 @@ export function PlayLibraryModal({ open, plays, onLoadPlay, onClose }: PlayLibra
 
   useEffect(() => {
     function handleAfterPrint() {
-      document.body.classList.remove('play-library-printing')
+      handlePlaybookAfterPrint()
     }
 
     window.addEventListener('afterprint', handleAfterPrint)
     return () => {
       window.removeEventListener('afterprint', handleAfterPrint)
-      document.body.classList.remove('play-library-printing')
+      endPlaybookPrint()
     }
   }, [])
 
@@ -104,8 +118,15 @@ export function PlayLibraryModal({ open, plays, onLoadPlay, onClose }: PlayLibra
   }
 
   function handlePrint() {
-    document.body.classList.add('play-library-printing')
-    window.print()
+    printPlaybook()
+  }
+
+  function handleDownloadPdf() {
+    downloadPlaybookPdf()
+  }
+
+  function handleEmailPdf() {
+    emailPlaybookPdf()
   }
 
   function renderPageGrid(pagePlays: Play[]) {
@@ -212,6 +233,18 @@ export function PlayLibraryModal({ open, plays, onLoadPlay, onClose }: PlayLibra
               <button type="button" className="btn" onClick={handlePrint}>
                 Print Playbook
               </button>
+
+              {canSharePdf && (
+                <div className="play-library-share" aria-label="Share PDF">
+                  <span className="play-library-share-label">Share PDF</span>
+                  <button type="button" className="btn" onClick={handleDownloadPdf}>
+                    Download PDF
+                  </button>
+                  <button type="button" className="btn" onClick={handleEmailPdf}>
+                    Email PDF
+                  </button>
+                </div>
+              )}
 
               <button
                 type="button"

@@ -66,6 +66,22 @@
   min-width: 88px;
 }
 
+.play-library-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+}
+
+.play-library-share-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .play-library-section-title {
   grid-column: 1 / -1;
   margin: 0;

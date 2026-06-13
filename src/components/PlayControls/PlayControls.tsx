@@ -151,6 +151,7 @@ export function PlayControls({
       <PlayLibraryModal
         open={libraryOpen}
         plays={libraryPlays}
+        canSharePdf={canEdit}
         onLoadPlay={onLoadPlay}
         onClose={() => setLibraryOpen(false)}
       />

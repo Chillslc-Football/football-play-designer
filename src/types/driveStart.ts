@@ -29,7 +29,7 @@ export type DriveStartOption = {
 }
 
 export const DRIVE_START_OPTIONS: DriveStartOption[] = [
-  { id: 'own-1', label: 'Opp 1', losYard: 1 },
+  { id: 'own-1', label: 'Goal Line', losYard: 1 },
   { id: 'own-5', label: 'Opp 5', losYard: 5 },
   { id: 'own-10', label: 'Opp 10', losYard: 10 },
   { id: 'own-20', label: 'Opp 20', losYard: 20 },
@@ -48,14 +48,18 @@ export const DRIVE_START_OPTIONS: DriveStartOption[] = [
   { id: 'opp-15', label: 'Own 15', losYard: 85 },
   { id: 'opp-10', label: 'Own 10', losYard: 90 },
   { id: 'opp-5', label: 'Own 5', losYard: 95 },
-  { id: 'goal-line', label: 'Goal Line', losYard: 99 },
 ]
 
 export const DEFAULT_DRIVE_START: DriveStartYardLine = '50'
 
-const LOS_YARD_BY_ID = Object.fromEntries(
-  DRIVE_START_OPTIONS.map((option) => [option.id, option.losYard]),
-) as Record<DriveStartYardLine, number>
+const LOS_YARD_BY_ID = {
+  ...Object.fromEntries(DRIVE_START_OPTIONS.map((option) => [option.id, option.losYard])),
+  /** Legacy saved value — not offered in the selector; kept for backward compatibility. */
+  'goal-line': 99,
+} as Record<DriveStartYardLine, number>
+
+/** Canonical value saved when the user picks Goal Line in the selector. */
+export const CANONICAL_GOAL_LINE_DRIVE_START: DriveStartYardLine = 'own-1'
 
 /** Legacy fieldPosition ids from older saves. */
 const LEGACY_FIELD_POSITION_MAP: Record<string, DriveStartYardLine> = {
@@ -71,9 +75,17 @@ export function getLosYardForDriveStart(driveStart: DriveStartYardLine): number 
 }
 
 export function getDriveStartLabel(driveStart: DriveStartYardLine): string {
+  if (driveStart === 'goal-line' || driveStart === 'own-1') {
+    return 'Goal Line'
+  }
   return (
     DRIVE_START_OPTIONS.find((option) => option.id === driveStart)?.label ?? '50'
   )
+}
+
+/** Maps legacy stored values to the selector option shown in the dropdown. */
+export function getDriveStartSelectValue(driveStart: DriveStartYardLine): DriveStartYardLine {
+  return driveStart === 'goal-line' ? CANONICAL_GOAL_LINE_DRIVE_START : driveStart
 }
 
 export function resolveDriveStartYardLine(

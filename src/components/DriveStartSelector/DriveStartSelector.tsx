@@ -1,5 +1,6 @@
 import {
   DRIVE_START_OPTIONS,
+  getDriveStartSelectValue,
   type DriveStartYardLine,
 } from '../../types/driveStart'
 import './DriveStartSelector.css'
@@ -25,7 +26,7 @@ export function DriveStartSelector({
       <select
         id="drive-start"
         className={`select-field ${compact ? 'sidebar-control' : ''}`}
-        value={value}
+        value={getDriveStartSelectValue(value)}
         onChange={(e) => onChange(e.target.value as DriveStartYardLine)}
         disabled={disabled}
       >
