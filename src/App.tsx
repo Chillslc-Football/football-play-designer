@@ -45,7 +45,11 @@ import {
 } from './utils/formationStorage'
 import { DEFAULT_FORMATION_ID } from './data/builtinFormations'
 import { applyPlayerSpacing } from './utils/playerSpacing'
-import { ensurePlayPlayerActions, upsertPlayerAction } from './utils/playerActionChains'
+import {
+  ensurePlayPlayerActions,
+  flattenPlayerActionsToLegacy,
+  upsertPlayerAction,
+} from './utils/playerActionChains'
 import { loadFieldZoom, saveFieldZoom, type FieldZoomValue } from './utils/fieldZoom'
 import { loadFieldGrid, saveFieldGrid } from './utils/fieldGrid'
 import { FieldGridControl } from './components/FieldGridControl/FieldGridControl'
@@ -1240,12 +1244,22 @@ function App() {
   function handlePlayerActionComplete(playerId: PlayerLabel, action: PlayerAction) {
     if (!fieldCanEdit || play.playType !== 'offensive' || adminTemplateEdit) return
 
-    setPlay((current) =>
-      ensurePlayPlayerActions({
+    setPlay((current) => {
+      const updatedPlayerActions = upsertPlayerAction(
+        current.playerActions ?? {},
+        playerId,
+        action,
+      )
+      const legacy = flattenPlayerActionsToLegacy(updatedPlayerActions)
+
+      return ensurePlayPlayerActions({
         ...current,
-        playerActions: upsertPlayerAction(current.playerActions ?? {}, playerId, action),
-      }),
-    )
+        playerActions: updatedPlayerActions,
+        routes: legacy.routes,
+        blocks: legacy.blocks,
+        motions: legacy.motions,
+      })
+    })
   }
 
   function handleDefenderRouteComplete(route: DefenderRoute) {
