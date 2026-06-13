@@ -50,7 +50,6 @@ import {
   getOwnGoalLineViewY,
   getYardLines,
 } from '../../utils/fieldView'
-import { appendPathPoint } from '../../utils/pathUtils'
 import { resolveEndpointMarker } from '../../utils/endpointMarker'
 import {
   createPlayerAction,
@@ -67,6 +66,7 @@ import {
   getDeletableRouteSegmentIndex,
   type RouteEditSelection,
   reshapeActionPointsFromEndpointDrag,
+  updateFreehandDragPoints,
 } from '../../utils/routeEdit'
 import { EndpointMarkerSelector } from '../EndpointMarkerSelector/EndpointMarkerSelector'
 import { FieldAlignmentGrid } from '../FieldAlignmentGrid/FieldAlignmentGrid'
@@ -320,6 +320,65 @@ export function Field({
   function getDefenderPosition(defenderId: DefenderLabel): Position {
     const defender = defenders.find((entry) => entry.id === defenderId)
     return defender?.position ?? { x: 0, y: 0 }
+  }
+
+  function getFreehandDragStartPosition(
+    playerId: PlayerLabel,
+    actionId: string,
+    anchorVertexIndex: number,
+  ): Position {
+    const playerPosition = getPlayerPosition(playerId)
+
+    if (actionId === NEW_ACTION_ID) {
+      return getDraftStartPosition(playerPosition, playerActions, playerId, actionId)
+    }
+
+    const chain = getSortedChain(playerActions, playerId)
+    const actionIndex = chain.findIndex((entry) => entry.id === actionId)
+    if (actionIndex < 0) {
+      return playerPosition
+    }
+
+    const action = chain[actionIndex]
+    const actionStart = getActionStartPosition(playerPosition, chain, actionIndex)
+
+    if (anchorVertexIndex <= 0) {
+      return actionStart
+    }
+
+    const anchorPointIndex = anchorVertexIndex - 1
+    if (anchorPointIndex < action.points.length) {
+      return action.points[anchorPointIndex]
+    }
+
+    if (action.points.length > 0) {
+      return action.points[action.points.length - 1]
+    }
+
+    return actionStart
+  }
+
+  function getDefenderFreehandDragStartPosition(
+    defenderId: DefenderLabel,
+    anchorVertexIndex: number,
+  ): Position {
+    const defenderPosition = getDefenderPosition(defenderId)
+    const route = getDefenderRouteForDefender(defenderId)
+
+    if (anchorVertexIndex <= 0) {
+      return defenderPosition
+    }
+
+    const anchorPointIndex = anchorVertexIndex - 1
+    if (anchorPointIndex < route.points.length) {
+      return route.points[anchorPointIndex]
+    }
+
+    if (route.points.length > 0) {
+      return route.points[route.points.length - 1]
+    }
+
+    return defenderPosition
   }
 
   const clearRouteDrag = useCallback(() => {
@@ -1132,7 +1191,10 @@ export function Field({
 
     if (mode === 'route' && routesEditable) {
       const anchor = resolveDrawAnchor()
-      if (anchor && matchesEndpointDrawAnchor(anchor, playerId, actionId, actionType)) {
+      if (
+        anchor?.actionId === NEW_ACTION_ID &&
+        matchesEndpointDrawAnchor(anchor, playerId, actionId, actionType)
+      ) {
         event.stopPropagation()
         event.preventDefault()
         startRouteDrag(event, anchor)
@@ -1142,7 +1204,10 @@ export function Field({
 
     if (mode === 'motion' && motionsEditable) {
       const anchor = resolveMotionDrawAnchor()
-      if (anchor && matchesEndpointDrawAnchor(anchor, playerId, actionId, actionType)) {
+      if (
+        anchor?.actionId === NEW_ACTION_ID &&
+        matchesEndpointDrawAnchor(anchor, playerId, actionId, actionType)
+      ) {
         event.stopPropagation()
         event.preventDefault()
         startMotionDrag(event, anchor)
@@ -1152,7 +1217,10 @@ export function Field({
 
     if (mode === 'block' && blocksEditable) {
       const anchor = resolveBlockDrawAnchor()
-      if (anchor && matchesEndpointDrawAnchor(anchor, playerId, actionId, actionType)) {
+      if (
+        anchor?.actionId === NEW_ACTION_ID &&
+        matchesEndpointDrawAnchor(anchor, playerId, actionId, actionType)
+      ) {
         event.stopPropagation()
         event.preventDefault()
         startBlockDrag(event, anchor)
@@ -1458,7 +1526,16 @@ export function Field({
         }
 
         if (routeDrag.startedDrag) {
-          routeDrag.dragPoints = appendPathPoint(routeDrag.dragPoints, position)
+          const startPosition = getFreehandDragStartPosition(
+            routeDrag.playerId,
+            routeDrag.actionId,
+            routeDrag.anchorVertexIndex,
+          )
+          routeDrag.dragPoints = updateFreehandDragPoints(
+            startPosition,
+            routeDrag.dragPoints,
+            position,
+          )
           setFreehandDraft({
             playerId: routeDrag.playerId,
             actionId: routeDrag.actionId,
@@ -1485,7 +1562,16 @@ export function Field({
         }
 
         if (motionDrag.startedDrag) {
-          motionDrag.dragPoints = appendPathPoint(motionDrag.dragPoints, position)
+          const startPosition = getFreehandDragStartPosition(
+            motionDrag.playerId,
+            motionDrag.actionId,
+            motionDrag.anchorVertexIndex,
+          )
+          motionDrag.dragPoints = updateFreehandDragPoints(
+            startPosition,
+            motionDrag.dragPoints,
+            position,
+          )
           setMotionFreehandDraft({
             playerId: motionDrag.playerId,
             actionId: motionDrag.actionId,
@@ -1512,7 +1598,16 @@ export function Field({
         }
 
         if (blockDrag.startedDrag) {
-          blockDrag.dragPoints = appendPathPoint(blockDrag.dragPoints, position)
+          const startPosition = getFreehandDragStartPosition(
+            blockDrag.playerId,
+            blockDrag.actionId,
+            blockDrag.anchorVertexIndex,
+          )
+          blockDrag.dragPoints = updateFreehandDragPoints(
+            startPosition,
+            blockDrag.dragPoints,
+            position,
+          )
           setBlockFreehandDraft({
             playerId: blockDrag.playerId,
             actionId: blockDrag.actionId,
@@ -1541,7 +1636,12 @@ export function Field({
         }
 
         if (defenderRouteDrag.startedDrag) {
-          defenderRouteDrag.dragPoints = appendPathPoint(
+          const startPosition = getDefenderFreehandDragStartPosition(
+            defenderRouteDrag.defenderId,
+            defenderRouteDrag.anchorVertexIndex,
+          )
+          defenderRouteDrag.dragPoints = updateFreehandDragPoints(
+            startPosition,
             defenderRouteDrag.dragPoints,
             position,
           )

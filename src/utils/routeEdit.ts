@@ -1,5 +1,6 @@
 import type { PlayerLabel, Position } from '../types/player'
 import type { Route } from '../types/route'
+import { appendPathPoint } from './pathUtils'
 
 const DENSE_ROUTE_AVG_SEGMENT_LENGTH = 1.25
 
@@ -144,6 +145,29 @@ export function reshapeActionPointsFromEndpointDrag(
   const segmentIndex = findClosestSegmentIndex(vertices, dragPosition)
 
   return [...points.slice(0, segmentIndex), dragPosition]
+}
+
+/**
+ * Updates in-progress freehand drag points: appends while drawing forward,
+ * trims only when the cursor moves backward along the draft path.
+ */
+export function updateFreehandDragPoints(
+  startPosition: Position,
+  dragPoints: Position[],
+  dragPosition: Position,
+  minDistance = 0.8,
+): Position[] {
+  if (dragPoints.length === 0) return [dragPosition]
+
+  const vertices = [startPosition, ...dragPoints]
+  const lastSegmentIndex = vertices.length - 2
+  const closestSegment = findClosestSegmentIndex(vertices, dragPosition)
+
+  if (closestSegment < lastSegmentIndex) {
+    return [...dragPoints.slice(0, closestSegment), dragPosition]
+  }
+
+  return appendPathPoint(dragPoints, dragPosition, minDistance)
 }
 
 export function getAnchorVertexIndex(selection: RouteEditSelection): number {

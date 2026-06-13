@@ -36,6 +36,18 @@
   font-weight: 700;
 }
 
+.wristband-card-number-col {
+  width: 2ch;
+  max-width: 2ch;
+  min-width: 2ch;
+  padding-left: 1px;
+  padding-right: 1px;
+}
+
+.wristband-card-name-col {
+  width: auto;
+}
+
 .wristband-card-cut-buffer {
   box-sizing: content-box;
   padding: 0.5in;
