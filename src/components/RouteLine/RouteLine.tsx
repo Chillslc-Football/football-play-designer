@@ -1,5 +1,9 @@
+import { ActionEndpointMarker } from '../ActionEndpointMarker/ActionEndpointMarker'
+import { PLAYBOOK_HIT_SIZE } from '../../constants/field'
 import type { Position } from '../../types/player'
+import type { EndpointMarker } from '../../types/playerAction'
 import type { Route } from '../../types/route'
+import { lastSegmentUsesArrowMarker } from '../../utils/endpointMarker'
 import {
   findNearestSegmentIndex,
   getRouteVertices,
@@ -12,6 +16,7 @@ import './RouteLine.css'
 type RouteLineProps = {
   playerPosition: Position
   route: Route
+  endpointMarker?: EndpointMarker
   /** Dashed style while the user is actively freehand dragging. */
   isDraft?: boolean
   /** When true, route is visible but segments and handles are not interactive. */
@@ -20,6 +25,7 @@ type RouteLineProps = {
   selectedVertexIndex?: number | null
   onSegmentSelect?: (segmentIndex: number) => void
   onVertexSelect?: (vertexIndex: number) => void
+  onEndpointPointerDown?: (event: React.MouseEvent) => void
 }
 
 /**
@@ -28,12 +34,14 @@ type RouteLineProps = {
 export function RouteLine({
   playerPosition,
   route,
+  endpointMarker = 'arrow',
   isDraft = false,
   readOnly = false,
   selectedSegmentIndex = null,
   selectedVertexIndex = null,
   onSegmentSelect,
   onVertexSelect,
+  onEndpointPointerDown,
 }: RouteLineProps) {
   if (route.points.length === 0) return null
 
@@ -53,6 +61,7 @@ export function RouteLine({
   const segmentCount = vertices.length - 1
   const denseRoute = isDenseRoute(vertices)
   const polylinePoints = vertices.map((vertex) => `${vertex.x},${vertex.y}`).join(' ')
+  const endpoint = vertices[vertices.length - 1]
 
   function handlePathSelect(event: React.MouseEvent<SVGPolylineElement>) {
     event.stopPropagation()
@@ -91,7 +100,11 @@ export function RouteLine({
               x2={end.x}
               y2={end.y}
               className={isSelected ? 'route-segment route-segment-selected' : 'route-segment'}
-              markerEnd={isLast ? 'url(#route-arrow)' : undefined}
+              markerEnd={
+                isLast && lastSegmentUsesArrowMarker(endpointMarker)
+                  ? 'url(#route-arrow)'
+                  : undefined
+              }
               onMouseDown={
                 readOnly
                   ? undefined
@@ -143,6 +156,27 @@ export function RouteLine({
             />
           )
         })}
+
+      {vertices.length >= 2 && (
+        <ActionEndpointMarker
+          vertices={vertices}
+          endpointMarker={endpointMarker}
+          variant="route"
+        />
+      )}
+
+      {!readOnly && onEndpointPointerDown && (
+        <circle
+          cx={endpoint.x}
+          cy={endpoint.y}
+          r={PLAYBOOK_HIT_SIZE}
+          className="route-endpoint-handle-hit"
+          onMouseDown={(event) => {
+            event.stopPropagation()
+            onEndpointPointerDown(event)
+          }}
+        />
+      )}
     </g>
   )
 }

@@ -1,5 +1,9 @@
+import { ActionEndpointMarker } from '../ActionEndpointMarker/ActionEndpointMarker'
+import { PLAYBOOK_HIT_SIZE } from '../../constants/field'
 import type { Position } from '../../types/player'
+import type { EndpointMarker } from '../../types/playerAction'
 import type { Motion, MotionType } from '../../types/motion'
+import { lastSegmentUsesArrowMarker } from '../../utils/endpointMarker'
 import {
   findNearestSegmentIndex,
   getRouteVertices,
@@ -12,12 +16,14 @@ import './MotionLine.css'
 type MotionLineProps = {
   playerPosition: Position
   motion: Motion
+  endpointMarker?: EndpointMarker
   isDraft?: boolean
   readOnly?: boolean
   selectedSegmentIndex?: number | null
   selectedVertexIndex?: number | null
   onSegmentSelect?: (segmentIndex: number) => void
   onVertexSelect?: (vertexIndex: number) => void
+  onEndpointPointerDown?: (event: React.MouseEvent) => void
 }
 
 function motionTypeClass(motionType: MotionType, prefix: string): string {
@@ -27,12 +33,14 @@ function motionTypeClass(motionType: MotionType, prefix: string): string {
 export function MotionLine({
   playerPosition,
   motion,
+  endpointMarker = 'filled-circle',
   isDraft = false,
   readOnly = false,
   selectedSegmentIndex = null,
   selectedVertexIndex = null,
   onSegmentSelect,
   onVertexSelect,
+  onEndpointPointerDown,
 }: MotionLineProps) {
   if (motion.points.length === 0) return null
 
@@ -88,6 +96,7 @@ export function MotionLine({
         const start = vertices[index]
         const end = vertices[index + 1]
         const isSelected = selectedSegmentIndex === index
+        const isLast = index === segmentCount - 1
 
         return (
           <g key={`segment-${index}`} className="motion-segment-group">
@@ -100,6 +109,11 @@ export function MotionLine({
                 isSelected
                   ? `motion-segment ${typeClass} motion-segment-selected`
                   : `motion-segment ${typeClass}`
+              }
+              markerEnd={
+                isLast && lastSegmentUsesArrowMarker(endpointMarker)
+                  ? 'url(#route-arrow)'
+                  : undefined
               }
               onMouseDown={
                 readOnly
@@ -115,11 +129,24 @@ export function MotionLine({
       })}
 
       {vertices.length >= 2 && (
+        <ActionEndpointMarker
+          vertices={vertices}
+          endpointMarker={endpointMarker}
+          variant="motion"
+          motionType={motion.motionType}
+        />
+      )}
+
+      {!readOnly && onEndpointPointerDown && vertices.length >= 2 && (
         <circle
           cx={vertices[vertices.length - 1].x}
           cy={vertices[vertices.length - 1].y}
-          r={0.35}
-          className={`motion-endpoint-marker motion-endpoint-marker-${motion.motionType}`}
+          r={PLAYBOOK_HIT_SIZE}
+          className="motion-endpoint-handle-hit"
+          onMouseDown={(event) => {
+            event.stopPropagation()
+            onEndpointPointerDown(event)
+          }}
         />
       )}
 

@@ -231,11 +231,29 @@ export function upsertPlayerAction(
   }
 }
 
+function normalizePlayerAction(action: PlayerAction): PlayerAction {
+  return {
+    ...action,
+    endpointMarker: action.endpointMarker ?? defaultEndpointMarker(action.type),
+  }
+}
+
+function normalizePlayerActionChains(chains: PlayerActionChains): PlayerActionChains {
+  const normalized = createEmptyPlayerActionChains()
+
+  for (const playerId of Object.keys(chains) as PlayerLabel[]) {
+    normalized[playerId] = (chains[playerId] ?? []).map(normalizePlayerAction)
+  }
+
+  return normalized
+}
+
 export function ensurePlayPlayerActions(play: Play): Play {
-  const chains =
+  const rawChains =
     play.playerActions && Object.keys(play.playerActions).length > 0
       ? play.playerActions
       : migrateLegacyToPlayerActions(play.routes, play.blocks, play.motions ?? [])
+  const chains = normalizePlayerActionChains(rawChains)
 
   const legacy = flattenPlayerActionsToLegacy(chains)
 

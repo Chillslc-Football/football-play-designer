@@ -1,0 +1,43 @@
+.endpoint-marker-selector {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.endpoint-marker-selector-label {
+  font-size: 11px;
+  color: var(--field-hint-color);
+  white-space: nowrap;
+}
+
+.endpoint-marker-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.endpoint-marker-toggle-btn {
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 11px;
+  border: 1px solid var(--field-card-border, rgba(0, 0, 0, 0.15));
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.endpoint-marker-toggle-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.endpoint-marker-toggle-btn-active {
+  background: var(--field-controls-active-bg, rgba(0, 0, 0, 0.08));
+  border-color: var(--field-controls-active-border, rgba(0, 0, 0, 0.25));
+}
+
+.endpoint-marker-toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

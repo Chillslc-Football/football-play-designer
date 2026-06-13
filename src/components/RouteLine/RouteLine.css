@@ -58,3 +58,13 @@
   stroke: var(--field-route-vertex-stroke, rgba(0, 0, 0, 0.35));
   stroke-width: 0.08px;
 }
+
+.route-endpoint-handle-hit {
+  fill: transparent;
+  pointer-events: all;
+  cursor: grab;
+}
+
+.route-endpoint-handle-hit:active {
+  cursor: grabbing;
+}

@@ -163,6 +163,7 @@ function App() {
   const [templateSaving, setTemplateSaving] = useState(false)
   const [fieldZoom, setFieldZoom] = useState<FieldZoomValue>(() => loadFieldZoom())
   const [fieldGridEnabled, setFieldGridEnabled] = useState(() => loadFieldGrid())
+  const [fieldToolbarHost, setFieldToolbarHost] = useState<HTMLDivElement | null>(null)
   const fieldWorkspaceRef = useRef<HTMLDivElement>(null)
   const isSavingRef = useRef(false)
 
@@ -1476,8 +1477,7 @@ function App() {
                     className="field-zoom-slot"
                     style={{ '--field-zoom': fieldZoom } as React.CSSProperties}
                   >
-                    <div className="field-zoom-scaler">
-                      <Field
+                    <Field
                         playType={play.playType}
                         viewOnly={!fieldCanEdit}
                         schemePositionsOnly={Boolean(adminTemplateEdit)}
@@ -1498,26 +1498,29 @@ function App() {
                         onDefenderMove={handleDefenderMove}
                         onPlayerActionComplete={handlePlayerActionComplete}
                         onDefenderRouteComplete={handleDefenderRouteComplete}
-                      />
-                    </div>
+                        toolbarPortalTarget={fieldToolbarHost}
+                    />
                   </div>
                 </div>
               </div>
               <div className="field-workspace-status">
-                <FieldGridControl
-                  enabled={fieldGridEnabled}
-                  onChange={(enabled) => {
-                    setFieldGridEnabled(enabled)
-                    saveFieldGrid(enabled)
-                  }}
-                />
-                <FieldZoomControl
-                  value={fieldZoom}
-                  onChange={(zoom) => {
-                    setFieldZoom(zoom)
-                    saveFieldZoom(zoom)
-                  }}
-                />
+                <div className="field-workspace-toolbar-host" ref={setFieldToolbarHost} />
+                <div className="field-workspace-status-controls">
+                  <FieldGridControl
+                    enabled={fieldGridEnabled}
+                    onChange={(enabled) => {
+                      setFieldGridEnabled(enabled)
+                      saveFieldGrid(enabled)
+                    }}
+                  />
+                  <FieldZoomControl
+                    value={fieldZoom}
+                    onChange={(zoom) => {
+                      setFieldZoom(zoom)
+                      saveFieldZoom(zoom)
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>

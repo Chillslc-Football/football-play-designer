@@ -94,13 +94,35 @@
 .field-workspace-status {
   flex: 0 0 auto;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   min-height: 28px;
   padding: 2px 8px 4px;
   border-top: 1px solid var(--field-card-border, rgba(255, 255, 255, 0.12));
   background: var(--canvas-bg);
+}
+
+.field-workspace-toolbar-host {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.field-workspace-status-controls {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-workspace-toolbar-host .route-draw-controls {
+  border-bottom: 1px solid var(--field-card-border, transparent);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  box-shadow: none;
 }
 
 .field-zoom-workspace {
@@ -117,31 +139,21 @@
 .field-zoom-slot {
   --field-zoom: 1;
   --field-base-w: min(100cqw, calc(100cqh * 60.3 / 54.5));
-  --field-controls-h: 0px;
-  --field-stack-h: calc(var(--field-controls-h) + var(--field-base-w) * 54.5 / 60.3);
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   width: calc(var(--field-base-w) * var(--field-zoom));
-  height: calc(var(--field-stack-h) * var(--field-zoom));
   flex-shrink: 0;
-}
-
-.field-zoom-slot:has(.route-draw-controls) {
-  --field-base-w: min(100cqw, calc((100cqh - 52px) * 60.3 / 54.5));
-  --field-controls-h: 52px;
 }
 
 .field-zoom-scaler {
   --field-base-w: min(100cqw, calc(100cqh * 60.3 / 54.5));
-  position: absolute;
-  top: 0;
-  left: 50%;
+  position: relative;
+  align-self: center;
   width: var(--field-base-w);
-  transform: translateX(-50%) scale(var(--field-zoom));
+  transform: scale(var(--field-zoom));
   transform-origin: top center;
-}
-
-.field-zoom-slot:has(.route-draw-controls) .field-zoom-scaler {
-  --field-base-w: min(100cqw, calc((100cqh - 52px) * 60.3 / 54.5));
+  flex-shrink: 0;
 }
 
 .field-column .field-zoom-scaler .field-stack {
@@ -149,7 +161,6 @@
   flex-direction: column;
   align-items: stretch;
   width: 100%;
-  max-height: 100cqh;
   flex: 0 0 auto;
   min-height: 0;
 }
@@ -161,13 +172,9 @@
   min-height: 0;
   background: var(--field-card-bg, transparent);
   border: 1px solid var(--field-card-border);
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  border-radius: var(--radius-md);
   box-shadow: var(--field-card-shadow);
   overflow: hidden;
-}
-
-.field-column .field-zoom-scaler .field-stack:not(:has(.route-draw-controls)) .field-container {
-  border-radius: var(--radius-md);
 }
 
 .field-column .field-viewport {

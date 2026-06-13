@@ -74,3 +74,13 @@
   stroke: rgba(0, 0, 0, 0.35);
   stroke-width: 0.08px;
 }
+
+.block-endpoint-handle-hit {
+  fill: transparent;
+  pointer-events: all;
+  cursor: grab;
+}
+
+.block-endpoint-handle-hit:active {
+  cursor: grabbing;
+}

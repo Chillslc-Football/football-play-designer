@@ -1,5 +1,9 @@
+import { ActionEndpointMarker } from '../ActionEndpointMarker/ActionEndpointMarker'
+import { PLAYBOOK_HIT_SIZE } from '../../constants/field'
 import type { Position } from '../../types/player'
+import type { EndpointMarker } from '../../types/playerAction'
 import type { Block } from '../../types/block'
+import { getBlockEndBar, lastSegmentUsesArrowMarker } from '../../utils/endpointMarker'
 import {
   findNearestSegmentIndex,
   getRouteVertices,
@@ -12,58 +16,27 @@ import './BlockLine.css'
 type BlockLineProps = {
   playerPosition: Position
   block: Block
+  endpointMarker?: EndpointMarker
   isDraft?: boolean
   readOnly?: boolean
   selectedSegmentIndex?: number | null
   selectedVertexIndex?: number | null
   onSegmentSelect?: (segmentIndex: number) => void
   onVertexSelect?: (vertexIndex: number) => void
-}
-
-const BLOCK_BAR_HALF_LENGTH = 1.2
-
-function getBlockEndBar(
-  vertices: Position[],
-): { x1: number; y1: number; x2: number; y2: number } | null {
-  if (vertices.length < 2) return null
-
-  const end = vertices[vertices.length - 1]
-
-  let dirX = 0
-  let dirY = 0
-  for (let index = vertices.length - 1; index > 0; index--) {
-    const dx = vertices[index].x - vertices[index - 1].x
-    const dy = vertices[index].y - vertices[index - 1].y
-    const length = Math.sqrt(dx * dx + dy * dy)
-    if (length > 0.001) {
-      dirX = dx / length
-      dirY = dy / length
-      break
-    }
-  }
-
-  if (dirX === 0 && dirY === 0) return null
-
-  const perpX = -dirY
-  const perpY = dirX
-
-  return {
-    x1: end.x - perpX * BLOCK_BAR_HALF_LENGTH,
-    y1: end.y - perpY * BLOCK_BAR_HALF_LENGTH,
-    x2: end.x + perpX * BLOCK_BAR_HALF_LENGTH,
-    y2: end.y + perpY * BLOCK_BAR_HALF_LENGTH,
-  }
+  onEndpointPointerDown?: (event: React.MouseEvent) => void
 }
 
 export function BlockLine({
   playerPosition,
   block,
+  endpointMarker = 'blocking-line',
   isDraft = false,
   readOnly = false,
   selectedSegmentIndex = null,
   selectedVertexIndex = null,
   onSegmentSelect,
   onVertexSelect,
+  onEndpointPointerDown,
 }: BlockLineProps) {
   if (block.points.length === 0) return null
 
@@ -98,7 +71,6 @@ export function BlockLine({
   const segmentCount = vertices.length - 1
   const denseRoute = isDenseRoute(vertices)
   const polylinePoints = vertices.map((vertex) => `${vertex.x},${vertex.y}`).join(' ')
-  const endBar = getBlockEndBar(vertices)
 
   function handlePathSelect(event: React.MouseEvent<SVGPolylineElement>) {
     event.stopPropagation()
@@ -127,6 +99,7 @@ export function BlockLine({
         const start = vertices[index]
         const end = vertices[index + 1]
         const isSelected = selectedSegmentIndex === index
+        const isLast = index === segmentCount - 1
 
         return (
           <g key={`segment-${index}`} className="block-segment-group">
@@ -136,6 +109,11 @@ export function BlockLine({
               x2={end.x}
               y2={end.y}
               className={isSelected ? 'block-segment block-segment-selected' : 'block-segment'}
+              markerEnd={
+                isLast && lastSegmentUsesArrowMarker(endpointMarker)
+                  ? 'url(#route-arrow)'
+                  : undefined
+              }
               onMouseDown={
                 readOnly
                   ? undefined
@@ -149,13 +127,24 @@ export function BlockLine({
         )
       })}
 
-      {endBar && (
-        <line
-          x1={endBar.x1}
-          y1={endBar.y1}
-          x2={endBar.x2}
-          y2={endBar.y2}
-          className="block-end-bar"
+      {vertices.length >= 2 && (
+        <ActionEndpointMarker
+          vertices={vertices}
+          endpointMarker={endpointMarker}
+          variant="block"
+        />
+      )}
+
+      {!readOnly && onEndpointPointerDown && vertices.length >= 2 && (
+        <circle
+          cx={vertices[vertices.length - 1].x}
+          cy={vertices[vertices.length - 1].y}
+          r={PLAYBOOK_HIT_SIZE}
+          className="block-endpoint-handle-hit"
+          onMouseDown={(event) => {
+            event.stopPropagation()
+            onEndpointPointerDown(event)
+          }}
         />
       )}
 

@@ -1,0 +1,9 @@
+.route-endpoint-marker {
+  fill: var(--field-route-vertex-fill, #ffffff);
+  pointer-events: none;
+}
+
+.block-endpoint-marker {
+  fill: var(--block-orange, #c45c00);
+  pointer-events: none;
+}

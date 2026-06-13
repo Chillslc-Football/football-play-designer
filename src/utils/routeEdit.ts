@@ -101,11 +101,49 @@ export function getSvgPointFromMouseEvent(
 
 export function isRouteVertexInteractive(
   vertexIndex: number,
-  _vertexCount: number,
+  vertexCount: number,
   _denseRoute: boolean,
   _selectedSegmentIndex: number | null,
 ): boolean {
-  return vertexIndex > 0
+  if (vertexIndex <= 0 || vertexIndex === vertexCount - 1) {
+    return false
+  }
+  return true
+}
+
+/** Finds the segment closest to a point — no distance cutoff (for endpoint reshape). */
+function findClosestSegmentIndex(vertices: Position[], point: Position): number {
+  if (vertices.length < 2) return 0
+
+  let nearestIndex = 0
+  let nearestDistance = Infinity
+
+  for (let index = 0; index < vertices.length - 1; index += 1) {
+    const segmentDistance = distanceToSegment(point, vertices[index], vertices[index + 1])
+    if (segmentDistance < nearestDistance) {
+      nearestDistance = segmentDistance
+      nearestIndex = index
+    }
+  }
+
+  return nearestIndex
+}
+
+/**
+ * Repositions the endpoint while editing — trims waypoints when dragged backward
+ * along the path; extends when dragged forward past the current end.
+ */
+export function reshapeActionPointsFromEndpointDrag(
+  startPosition: Position,
+  points: Position[],
+  dragPosition: Position,
+): Position[] {
+  if (points.length === 0) return [dragPosition]
+
+  const vertices = [startPosition, ...points]
+  const segmentIndex = findClosestSegmentIndex(vertices, dragPosition)
+
+  return [...points.slice(0, segmentIndex), dragPosition]
 }
 
 export function getAnchorVertexIndex(selection: RouteEditSelection): number {

@@ -9,7 +9,7 @@ export type PlayerAction = {
   id: string
   type: PlayerActionType
   points: Position[]
-  endpointMarker: EndpointMarker
+  endpointMarker?: EndpointMarker
   order: number
   motionType?: MotionType
 }

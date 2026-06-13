@@ -2,7 +2,8 @@ import { BlockLine } from '../BlockLine/BlockLine'
 import { MotionLine } from '../MotionLine/MotionLine'
 import { RouteLine } from '../RouteLine/RouteLine'
 import type { Player, PlayerLabel, Position } from '../../types/player'
-import type { PlayerActionChains } from '../../types/playerAction'
+import type { PlayerActionChains, PlayerActionType } from '../../types/playerAction'
+import { resolveEndpointMarker } from '../../utils/endpointMarker'
 import type { RouteEditSelection } from '../../utils/routeEdit'
 import {
   getActionEndpoint,
@@ -26,6 +27,12 @@ type PlayerActionChainLinesProps = {
   onMotionVertexSelect: (playerId: PlayerLabel, actionId: string, vertexIndex: number) => void
   onBlockSegmentSelect: (playerId: PlayerLabel, actionId: string, segmentIndex: number) => void
   onBlockVertexSelect: (playerId: PlayerLabel, actionId: string, vertexIndex: number) => void
+  onActionEndpointPointerDown: (
+    playerId: PlayerLabel,
+    actionId: string,
+    actionType: PlayerActionType,
+    event: React.MouseEvent,
+  ) => void
 }
 
 export function PlayerActionChainLines({
@@ -43,6 +50,7 @@ export function PlayerActionChainLines({
   onMotionVertexSelect,
   onBlockSegmentSelect,
   onBlockVertexSelect,
+  onActionEndpointPointerDown,
 }: PlayerActionChainLinesProps) {
   return (
     <>
@@ -51,6 +59,7 @@ export function PlayerActionChainLines({
 
         return chain.map((action, actionIndex) => {
           const startPosition = getActionStartPosition(player.position, chain, actionIndex)
+          const endpointMarker = resolveEndpointMarker(action)
           const key = `${player.id}-${action.id}`
 
           if (action.type === 'block') {
@@ -59,6 +68,7 @@ export function PlayerActionChainLines({
                 key={key}
                 playerPosition={startPosition}
                 block={{ playerId: player.id, points: action.points }}
+                endpointMarker={endpointMarker}
                 readOnly={!blocksEditable}
                 selectedSegmentIndex={
                   blockEditSelection?.playerId === player.id &&
@@ -80,6 +90,9 @@ export function PlayerActionChainLines({
                 onVertexSelect={(vertexIndex) =>
                   onBlockVertexSelect(player.id, action.id, vertexIndex)
                 }
+                onEndpointPointerDown={(event) =>
+                  onActionEndpointPointerDown(player.id, action.id, 'block', event)
+                }
               />
             )
           }
@@ -94,6 +107,7 @@ export function PlayerActionChainLines({
                   motionType: action.motionType ?? 'jog',
                   points: action.points,
                 }}
+                endpointMarker={endpointMarker}
                 readOnly={!motionsEditable}
                 selectedSegmentIndex={
                   motionEditSelection?.playerId === player.id &&
@@ -115,6 +129,9 @@ export function PlayerActionChainLines({
                 onVertexSelect={(vertexIndex) =>
                   onMotionVertexSelect(player.id, action.id, vertexIndex)
                 }
+                onEndpointPointerDown={(event) =>
+                  onActionEndpointPointerDown(player.id, action.id, 'motion', event)
+                }
               />
             )
           }
@@ -124,6 +141,7 @@ export function PlayerActionChainLines({
               key={key}
               playerPosition={startPosition}
               route={{ playerId: player.id, points: action.points }}
+              endpointMarker={endpointMarker}
               readOnly={!routesEditable}
               selectedSegmentIndex={
                 routeEditSelection?.playerId === player.id &&
@@ -144,6 +162,9 @@ export function PlayerActionChainLines({
               }
               onVertexSelect={(vertexIndex) =>
                 onRouteVertexSelect(player.id, action.id, vertexIndex)
+              }
+              onEndpointPointerDown={(event) =>
+                onActionEndpointPointerDown(player.id, action.id, 'route', event)
               }
             />
           )

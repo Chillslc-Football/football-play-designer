@@ -91,3 +91,13 @@
 .motion-endpoint-marker-sprint {
   fill: #22c55e;
 }
+
+.motion-endpoint-handle-hit {
+  fill: transparent;
+  pointer-events: all;
+  cursor: grab;
+}
+
+.motion-endpoint-handle-hit:active {
+  cursor: grabbing;
+}
