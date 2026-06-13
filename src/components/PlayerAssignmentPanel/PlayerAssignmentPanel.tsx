@@ -13,6 +13,8 @@ type PlayerAssignmentPanelProps = {
   canEdit?: boolean
   onPlayerNotesChange: (playerId: PlayerLabel, notes: string) => void
   onPlayerLabelChange: (playerId: PlayerLabel, label: string) => void
+  /** When true, parent section controls collapse; body renders without inner toggle. */
+  embedded?: boolean
 }
 
 export function PlayerAssignmentPanel({
@@ -24,8 +26,78 @@ export function PlayerAssignmentPanel({
   canEdit = true,
   onPlayerNotesChange,
   onPlayerLabelChange,
+  embedded = false,
 }: PlayerAssignmentPanelProps) {
   const [isOpen, setIsOpen] = useState(false)
+
+  const body = (
+    <div className="assignment-panel-body">
+      <label htmlFor="assignment-player-picker" className="assignment-field-label">
+        Select player
+      </label>
+      <select
+        id="assignment-player-picker"
+        className="select-field assignment-player-picker"
+        value={selectedPlayerId ?? ''}
+        onChange={(event) => {
+          const playerId = event.target.value as PlayerLabel
+          if (playerId) onSelectPlayer(playerId)
+        }}
+        disabled={!canEdit}
+        aria-label="Select player on field"
+      >
+        <option value="">Choose player…</option>
+        {players.map((player) => (
+          <option key={player.id} value={player.id}>
+            {resolvePlayerDisplayLabel(player.id, player.label)}
+          </option>
+        ))}
+      </select>
+
+      {!selectedPlayerId ? (
+        <p className="assignment-placeholder">
+          Choose a player above or click on the field to edit position label and assignment
+          notes.
+        </p>
+      ) : (
+        <>
+          <p className="assignment-slot-id">Slot: {selectedPlayerId}</p>
+          <label htmlFor="player-position-label" className="assignment-field-label">
+            Position label
+          </label>
+          <input
+            id="player-position-label"
+            className="assignment-label-input"
+            type="text"
+            maxLength={3}
+            value={selectedPlayerLabel}
+            onChange={(event) =>
+              onPlayerLabelChange(selectedPlayerId, event.target.value.toUpperCase())
+            }
+            placeholder={selectedPlayerId}
+            readOnly={!canEdit}
+            aria-label={`Position label for ${selectedPlayerId}`}
+          />
+          <label htmlFor="player-assignment-notes" className="assignment-field-label">
+            Assignment
+          </label>
+          <textarea
+            id="player-assignment-notes"
+            className="assignment-textarea"
+            value={playerNotes[selectedPlayerId]}
+            onChange={(e) => onPlayerNotesChange(selectedPlayerId, e.target.value)}
+            placeholder={`e.g. route, read, or blocking assignment for ${selectedPlayerLabel || selectedPlayerId}...`}
+            rows={4}
+            readOnly={!canEdit}
+          />
+        </>
+      )}
+    </div>
+  )
+
+  if (embedded) {
+    return <div className="assignment-panel assignment-panel-embedded">{body}</div>
+  }
 
   return (
     <aside className={`assignment-panel ${isOpen ? 'is-open' : 'is-collapsed'}`}>
@@ -46,70 +118,7 @@ export function PlayerAssignmentPanel({
         </span>
       </button>
 
-      {isOpen && (
-        <div className="assignment-panel-body">
-          <label htmlFor="assignment-player-picker" className="assignment-field-label">
-            Select player
-          </label>
-          <select
-            id="assignment-player-picker"
-            className="select-field assignment-player-picker"
-            value={selectedPlayerId ?? ''}
-            onChange={(event) => {
-              const playerId = event.target.value as PlayerLabel
-              if (playerId) onSelectPlayer(playerId)
-            }}
-            disabled={!canEdit}
-            aria-label="Select player on field"
-          >
-            <option value="">Choose player…</option>
-            {players.map((player) => (
-              <option key={player.id} value={player.id}>
-                {resolvePlayerDisplayLabel(player.id, player.label)}
-              </option>
-            ))}
-          </select>
-
-          {!selectedPlayerId ? (
-            <p className="assignment-placeholder">
-              Choose a player above or click on the field to edit position label and assignment
-              notes.
-            </p>
-          ) : (
-            <>
-              <p className="assignment-slot-id">Slot: {selectedPlayerId}</p>
-              <label htmlFor="player-position-label" className="assignment-field-label">
-                Position label
-              </label>
-              <input
-                id="player-position-label"
-                className="assignment-label-input"
-                type="text"
-                maxLength={3}
-                value={selectedPlayerLabel}
-                onChange={(event) =>
-                  onPlayerLabelChange(selectedPlayerId, event.target.value.toUpperCase())
-                }
-                placeholder={selectedPlayerId}
-                readOnly={!canEdit}
-                aria-label={`Position label for ${selectedPlayerId}`}
-              />
-              <label htmlFor="player-assignment-notes" className="assignment-field-label">
-                Assignment
-              </label>
-              <textarea
-                id="player-assignment-notes"
-                className="assignment-textarea"
-                value={playerNotes[selectedPlayerId]}
-                onChange={(e) => onPlayerNotesChange(selectedPlayerId, e.target.value)}
-                placeholder={`e.g. route, read, or blocking assignment for ${selectedPlayerLabel || selectedPlayerId}...`}
-                rows={4}
-                readOnly={!canEdit}
-              />
-            </>
-          )}
-        </div>
-      )}
+      {isOpen && body}
     </aside>
   )
 }

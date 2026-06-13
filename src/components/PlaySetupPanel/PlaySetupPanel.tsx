@@ -1,6 +1,12 @@
+import { useState, type ReactNode } from 'react'
 import { FormationSelector } from '../FormationSelector/FormationSelector'
 import { Notes } from '../Notes/Notes'
-import { PlayControls } from '../PlayControls/PlayControls'
+import {
+  PlayControlsInformationSection,
+  PlayControlsLibrarySection,
+  PlayControlsRoot,
+  type PlayControlsProps,
+} from '../PlayControls/PlayControls'
 import { PlayerAssignmentPanel } from '../PlayerAssignmentPanel/PlayerAssignmentPanel'
 import { Toolbar } from '../Toolbar/Toolbar'
 import { DrawingModeSelector, type DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
@@ -91,6 +97,43 @@ type PlaySetupPanelProps = {
   onPlayNotesChange: (notes: string) => void
 }
 
+function SidebarCollapsibleSection({
+  title,
+  className = '',
+  titleClassName = '',
+  children,
+  isLast = false,
+}: {
+  title: string
+  className?: string
+  titleClassName?: string
+  children: ReactNode
+  isLast?: boolean
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <section
+      className={`sidebar-section sidebar-section-collapsible ${isOpen ? 'is-open' : 'is-collapsed'} ${className} ${isLast ? 'sidebar-section-last' : ''}`}
+    >
+      <button
+        type="button"
+        className="sidebar-section-toggle"
+        onClick={() => setIsOpen((open) => !open)}
+        aria-expanded={isOpen}
+      >
+        <h3 className={`sidebar-section-title sidebar-section-toggle-title ${titleClassName}`}>
+          {title}
+        </h3>
+        <span className="sidebar-section-chevron" aria-hidden="true">
+          {isOpen ? '▾' : '▸'}
+        </span>
+      </button>
+      {isOpen && <div className="sidebar-section-body">{children}</div>}
+    </section>
+  )
+}
+
 export function PlaySetupPanel({
   canEdit,
   isOpen,
@@ -155,6 +198,30 @@ export function PlaySetupPanel({
   playNotes,
   onPlayNotesChange,
 }: PlaySetupPanelProps) {
+  const playControlsProps: PlayControlsProps = {
+    playType,
+    canEdit,
+    playName,
+    onPlayNameChange,
+    playCategories,
+    availableCategories,
+    customCategories,
+    onPlayCategoriesChange,
+    onAddCustomCategory,
+    onDeleteCustomCategory,
+    deletingCategory,
+    playFilterId,
+    formationFilterOptions,
+    onPlayFilterChange,
+    categoryFilterId,
+    categoryFilterOptions,
+    onCategoryFilterChange,
+    filteredPlays,
+    libraryPlays,
+    selectedLoadId,
+    onLoadPlay,
+  }
+
   const schemeSectionTitle = playType === 'defensive' ? 'Front' : 'Formation'
 
   if (!isOpen) {
@@ -173,115 +240,102 @@ export function PlaySetupPanel({
   return (
     <aside className="play-setup-panel">
       <div className="play-setup-header">
-        <h2 className="play-setup-title">Play Setup</h2>
+        <h2 className="play-setup-title">Controls</h2>
         <button
           type="button"
           className="play-setup-collapse btn"
           onClick={onToggle}
-          title="Collapse Play Setup"
+          title="Collapse sidebar"
         >
           ◀
         </button>
       </div>
 
-      <div className="play-setup-sections">
-        <section className="sidebar-section">
-          <h3 className="sidebar-section-title">{schemeSectionTitle}</h3>
-          <FormationSelector
-            playType={playType}
-            canEdit={canEdit}
-            formationId={formationId}
-            formationName={formationName}
-            frontId={frontId}
-            frontName={frontName}
-            driveStartYardLine={driveStartYardLine}
-            customFormations={customFormations}
-            onFormationChange={onFormationChange}
-            onFrontChange={onFrontChange}
-            onDriveStartChange={onDriveStartChange}
-            onSaveCurrentFormation={onSaveCurrentFormation}
-            onDeleteCustomFormation={onDeleteCustomFormation}
-            hasDefendersOnField={hasDefendersOnField}
-            hasOffenseOnField={hasOffenseOnField}
-            onOpponentFrontChange={onOpponentFrontChange}
-            onOpponentFormationChange={onOpponentFormationChange}
-            onLoadDefensiveFront={onLoadDefensiveFront}
-            onLoadOffensiveFormation={onLoadOffensiveFormation}
-            onRemoveDefensiveFront={onRemoveDefensiveFront}
-            onRemoveOffensiveFormation={onRemoveOffensiveFormation}
-          />
-        </section>
+      <div className="play-setup-body">
+        <PlayControlsRoot {...playControlsProps}>
+          <div className="play-setup-sections">
+            <SidebarCollapsibleSection title="Play Library" className="sidebar-section-library">
+              <PlayControlsLibrarySection />
+            </SidebarCollapsibleSection>
 
-        <section className="sidebar-section">
-          <h3 className="sidebar-section-title">Play</h3>
-          <PlayControls
-            playType={playType}
-            canEdit={canEdit}
-            playName={playName}
-            onPlayNameChange={onPlayNameChange}
-            playCategories={playCategories}
-            availableCategories={availableCategories}
-            customCategories={customCategories}
-            onPlayCategoriesChange={onPlayCategoriesChange}
-            onAddCustomCategory={onAddCustomCategory}
-            onDeleteCustomCategory={onDeleteCustomCategory}
-            deletingCategory={deletingCategory}
-            playFilterId={playFilterId}
-            formationFilterOptions={formationFilterOptions}
-            onPlayFilterChange={onPlayFilterChange}
-            categoryFilterId={categoryFilterId}
-            categoryFilterOptions={categoryFilterOptions}
-            onCategoryFilterChange={onCategoryFilterChange}
-            filteredPlays={filteredPlays}
-            libraryPlays={libraryPlays}
-            selectedLoadId={selectedLoadId}
-            onLoadPlay={onLoadPlay}
-          />
-        </section>
+            <SidebarCollapsibleSection title={schemeSectionTitle}>
+              <FormationSelector
+                playType={playType}
+                canEdit={canEdit}
+                formationId={formationId}
+                formationName={formationName}
+                frontId={frontId}
+                frontName={frontName}
+                driveStartYardLine={driveStartYardLine}
+                customFormations={customFormations}
+                onFormationChange={onFormationChange}
+                onFrontChange={onFrontChange}
+                onDriveStartChange={onDriveStartChange}
+                onSaveCurrentFormation={onSaveCurrentFormation}
+                onDeleteCustomFormation={onDeleteCustomFormation}
+                hasDefendersOnField={hasDefendersOnField}
+                hasOffenseOnField={hasOffenseOnField}
+                onOpponentFrontChange={onOpponentFrontChange}
+                onOpponentFormationChange={onOpponentFormationChange}
+                onLoadDefensiveFront={onLoadDefensiveFront}
+                onLoadOffensiveFormation={onLoadOffensiveFormation}
+                onRemoveDefensiveFront={onRemoveDefensiveFront}
+                onRemoveOffensiveFormation={onRemoveOffensiveFormation}
+              />
+            </SidebarCollapsibleSection>
 
-        <section className="sidebar-section">
-          <h3 className="sidebar-section-title">Play Actions</h3>
-          <Toolbar
-            canEdit={canEdit}
-            selectedLoadId={selectedLoadId}
-            onNewPlay={onNewPlay}
-            onSaveChanges={onSaveChanges}
-            onSaveAsNew={onSaveAsNew}
-            onDeletePlay={onDeletePlay}
-            onMirrorPlay={onMirrorPlay}
-            isMirrored={isMirrored}
-            isSaving={isSaving}
-          />
-        </section>
+            <SidebarCollapsibleSection title="Play">
+              <PlayControlsInformationSection />
+            </SidebarCollapsibleSection>
 
-        <section className="sidebar-section">
-          <h3 className="sidebar-section-title">Drawing Mode</h3>
-          <DrawingModeSelector
-            mode={drawingMode}
-            playType={playType}
-            canEdit={canEdit}
-            motionType={motionType}
-            onMotionTypeChange={onMotionTypeChange}
-            onChange={onDrawingModeChange}
-          />
-        </section>
+            <SidebarCollapsibleSection
+              title="Drawing Mode"
+              className="sidebar-section-drawing-tools"
+              titleClassName="sidebar-section-title-prominent"
+            >
+              <DrawingModeSelector
+                mode={drawingMode}
+                playType={playType}
+                canEdit={canEdit}
+                motionType={motionType}
+                onMotionTypeChange={onMotionTypeChange}
+                onChange={onDrawingModeChange}
+              />
+            </SidebarCollapsibleSection>
 
-        <section className="sidebar-section sidebar-section-accordion">
-          <PlayerAssignmentPanel
-            selectedPlayerId={selectedPlayerId}
-            selectedPlayerLabel={selectedPlayerLabel}
-            players={players}
-            onSelectPlayer={onSelectPlayer}
-            playerNotes={playerNotes}
-            canEdit={canEdit}
-            onPlayerNotesChange={onPlayerNotesChange}
-            onPlayerLabelChange={onPlayerLabelChange}
-          />
-        </section>
+            <SidebarCollapsibleSection title="Play Actions">
+              <Toolbar
+                canEdit={canEdit}
+                selectedLoadId={selectedLoadId}
+                onNewPlay={onNewPlay}
+                onSaveChanges={onSaveChanges}
+                onSaveAsNew={onSaveAsNew}
+                onDeletePlay={onDeletePlay}
+                onMirrorPlay={onMirrorPlay}
+                isMirrored={isMirrored}
+                isSaving={isSaving}
+              />
+            </SidebarCollapsibleSection>
 
-        <section className="sidebar-section sidebar-section-accordion sidebar-section-last">
-          <Notes value={playNotes} canEdit={canEdit} onChange={onPlayNotesChange} />
-        </section>
+            <SidebarCollapsibleSection title="Player Assignment">
+              <PlayerAssignmentPanel
+                embedded
+                selectedPlayerId={selectedPlayerId}
+                selectedPlayerLabel={selectedPlayerLabel}
+                players={players}
+                onSelectPlayer={onSelectPlayer}
+                playerNotes={playerNotes}
+                canEdit={canEdit}
+                onPlayerNotesChange={onPlayerNotesChange}
+                onPlayerLabelChange={onPlayerLabelChange}
+              />
+            </SidebarCollapsibleSection>
+
+            <SidebarCollapsibleSection title="Play Notes" isLast>
+              <Notes embedded value={playNotes} canEdit={canEdit} onChange={onPlayNotesChange} />
+            </SidebarCollapsibleSection>
+          </div>
+      </PlayControlsRoot>
       </div>
     </aside>
   )

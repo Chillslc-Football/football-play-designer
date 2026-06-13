@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 import { CategorySelector } from '../CategorySelector/CategorySelector'
 import { ManageCategoriesDialog } from '../ManageCategoriesDialog/ManageCategoriesDialog'
 import { PlayLibraryModal } from '../PlayLibraryModal/PlayLibraryModal'
@@ -19,7 +19,7 @@ type CategoryFilterOption = {
   group: 'all' | 'default' | 'custom'
 }
 
-type PlayControlsProps = {
+export type PlayControlsProps = {
   playType: PlayType
   canEdit: boolean
   playName: string
@@ -43,57 +43,99 @@ type PlayControlsProps = {
   onLoadPlay: (playId: string) => void
 }
 
-export function PlayControls({
-  playType,
-  canEdit,
-  playName,
-  onPlayNameChange,
-  playCategories,
-  availableCategories,
-  customCategories,
-  onPlayCategoriesChange,
-  onAddCustomCategory,
-  onDeleteCustomCategory,
-  deletingCategory = false,
-  playFilterId,
-  formationFilterOptions,
-  onPlayFilterChange,
-  categoryFilterId,
-  categoryFilterOptions,
-  onCategoryFilterChange,
-  filteredPlays,
-  libraryPlays,
-  selectedLoadId,
-  onLoadPlay,
-}: PlayControlsProps) {
+type PlayControlsContextValue = PlayControlsProps & {
+  sortedPlays: Play[]
+  defaultCategoryOptions: CategoryFilterOption[]
+  customCategoryOptions: CategoryFilterOption[]
+  openManageCategories: () => void
+  openPlayLibrary: () => void
+}
+
+const PlayControlsContext = createContext<PlayControlsContextValue | null>(null)
+
+function usePlayControlsContext(): PlayControlsContextValue {
+  const context = useContext(PlayControlsContext)
+  if (!context) {
+    throw new Error('PlayControls section components must be used within PlayControlsRoot')
+  }
+  return context
+}
+
+export function PlayControlsRoot({
+  children,
+  ...props
+}: PlayControlsProps & { children: ReactNode }) {
   const [manageOpen, setManageOpen] = useState(false)
   const [libraryOpen, setLibraryOpen] = useState(false)
-  const sortedPlays = [...filteredPlays].sort((a, b) => a.name.localeCompare(b.name))
 
-  const defaultCategoryOptions = categoryFilterOptions.filter(
-    (option) => option.group === 'default',
+  const sortedPlays = useMemo(
+    () => [...props.filteredPlays].sort((a, b) => a.name.localeCompare(b.name)),
+    [props.filteredPlays],
   )
-  const customCategoryOptions = categoryFilterOptions.filter(
-    (option) => option.group === 'custom',
+
+  const defaultCategoryOptions = useMemo(
+    () => props.categoryFilterOptions.filter((option) => option.group === 'default'),
+    [props.categoryFilterOptions],
+  )
+
+  const customCategoryOptions = useMemo(
+    () => props.categoryFilterOptions.filter((option) => option.group === 'custom'),
+    [props.categoryFilterOptions],
+  )
+
+  const contextValue = useMemo<PlayControlsContextValue>(
+    () => ({
+      ...props,
+      sortedPlays,
+      defaultCategoryOptions,
+      customCategoryOptions,
+      openManageCategories: () => setManageOpen(true),
+      openPlayLibrary: () => setLibraryOpen(true),
+    }),
+    [props, sortedPlays, defaultCategoryOptions, customCategoryOptions],
   )
 
   return (
-    <div className="play-controls">
-      <div className="form-group">
-        <label htmlFor="play-name" className="field-label sidebar-field-label">
-          Play Name
-        </label>
-        <input
-          id="play-name"
-          type="text"
-          className="input-field sidebar-control"
-          value={playName}
-          onChange={(e) => onPlayNameChange(e.target.value)}
-          placeholder="Enter play name..."
-          disabled={!canEdit}
-        />
-      </div>
+    <PlayControlsContext.Provider value={contextValue}>
+      {children}
+      <ManageCategoriesDialog
+        playType={props.playType}
+        open={manageOpen}
+        customCategories={props.customCategories}
+        deleting={props.deletingCategory}
+        onAddCustomCategory={props.onAddCustomCategory}
+        onDeleteCategory={props.onDeleteCustomCategory}
+        onClose={() => setManageOpen(false)}
+      />
+      <PlayLibraryModal
+        open={libraryOpen}
+        plays={props.libraryPlays}
+        canSharePdf={props.canEdit}
+        onLoadPlay={props.onLoadPlay}
+        onClose={() => setLibraryOpen(false)}
+      />
+    </PlayControlsContext.Provider>
+  )
+}
 
+export function PlayControlsLibrarySection() {
+  const {
+    playType,
+    selectedLoadId,
+    onLoadPlay,
+    sortedPlays,
+    openPlayLibrary,
+    playFilterId,
+    formationFilterOptions,
+    onPlayFilterChange,
+    categoryFilterId,
+    defaultCategoryOptions,
+    customCategoryOptions,
+    onCategoryFilterChange,
+  } = usePlayControlsContext()
+
+  return (
+    <div className="play-controls play-controls-library">
       <div className="form-group">
         <label htmlFor="load-play" className="field-label sidebar-field-label">
           Load Play
@@ -116,45 +158,10 @@ export function PlayControls({
       <button
         type="button"
         className="btn sidebar-btn play-controls-library-btn"
-        onClick={() => setLibraryOpen(true)}
+        onClick={openPlayLibrary}
       >
         Play Library
       </button>
-
-      <CategorySelector
-        playType={playType}
-        canEdit={canEdit}
-        selectedCategories={playCategories}
-        availableCategories={availableCategories}
-        onChange={onPlayCategoriesChange}
-      />
-
-      <button
-        type="button"
-        className="btn sidebar-btn play-controls-manage-btn"
-        onClick={() => setManageOpen(true)}
-        disabled={!canEdit}
-      >
-        Manage Categories
-      </button>
-
-      <ManageCategoriesDialog
-        playType={playType}
-        open={manageOpen}
-        customCategories={customCategories}
-        deleting={deletingCategory}
-        onAddCustomCategory={onAddCustomCategory}
-        onDeleteCategory={onDeleteCustomCategory}
-        onClose={() => setManageOpen(false)}
-      />
-
-      <PlayLibraryModal
-        open={libraryOpen}
-        plays={libraryPlays}
-        canSharePdf={canEdit}
-        onLoadPlay={onLoadPlay}
-        onClose={() => setLibraryOpen(false)}
-      />
 
       <div className="play-controls-filters">
         <p className="play-controls-filters-label">Filters</p>
@@ -211,5 +218,64 @@ export function PlayControls({
         </div>
       </div>
     </div>
+  )
+}
+
+export function PlayControlsInformationSection() {
+  const {
+    playType,
+    canEdit,
+    playName,
+    onPlayNameChange,
+    playCategories,
+    availableCategories,
+    onPlayCategoriesChange,
+    openManageCategories,
+  } = usePlayControlsContext()
+
+  return (
+    <div className="play-controls play-controls-information">
+      <div className="form-group">
+        <label htmlFor="play-name" className="field-label sidebar-field-label">
+          Play Name
+        </label>
+        <input
+          id="play-name"
+          type="text"
+          className="input-field sidebar-control"
+          value={playName}
+          onChange={(e) => onPlayNameChange(e.target.value)}
+          placeholder="Enter play name..."
+          disabled={!canEdit}
+        />
+      </div>
+
+      <CategorySelector
+        playType={playType}
+        canEdit={canEdit}
+        selectedCategories={playCategories}
+        availableCategories={availableCategories}
+        onChange={onPlayCategoriesChange}
+      />
+
+      <button
+        type="button"
+        className="btn sidebar-btn play-controls-manage-btn"
+        onClick={openManageCategories}
+        disabled={!canEdit}
+      >
+        Manage Categories
+      </button>
+    </div>
+  )
+}
+
+/** @deprecated Use PlayControlsRoot with section components for sidebar layout. */
+export function PlayControls(props: PlayControlsProps) {
+  return (
+    <PlayControlsRoot {...props}>
+      <PlayControlsLibrarySection />
+      <PlayControlsInformationSection />
+    </PlayControlsRoot>
   )
 }

@@ -18,6 +18,7 @@
   --sidebar-header-bg: #ffffff;
   --sidebar-border: #e5e5e5;
   --sidebar-section-title: #2a3d2c;
+  --sidebar-drawing-tools-bg: rgba(45, 106, 45, 0.08);
   --sidebar-reopen-bg: #2d6a2d;
   --sidebar-reopen-hover: #3d8a3d;
 
@@ -54,6 +55,7 @@
   --sidebar-header-bg: #143d14;
   --sidebar-border: rgba(255, 255, 255, 0.12);
   --sidebar-section-title: #f0c040;
+  --sidebar-drawing-tools-bg: rgba(45, 106, 45, 0.28);
   --sidebar-reopen-bg: #2d6a2d;
   --sidebar-reopen-hover: #3d8a3d;
 
