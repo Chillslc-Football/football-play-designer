@@ -16,8 +16,7 @@ import {
   type WristbandCard,
   type WristbandCardDraft,
 } from '../types/wristbandCard'
-import { getAvailableCategories } from '../utils/categoryUtils'
-import { cardsPerSheet } from '../utils/wristbandPrint'
+import { cardsPerSheet, WRISTBAND_CUT_BUFFER_IN } from '../utils/wristbandPrint'
 import './WristbandCardsPage.css'
 
 type ViewMode = 'list' | 'edit' | 'print'
@@ -63,12 +62,6 @@ export function WristbandCardsPage() {
     () => Object.fromEntries(plays.map((play) => [play.id, play.name])),
     [plays],
   )
-
-  const headingSuggestions = useMemo(() => {
-    const offensive = getAvailableCategories('offensive', [], plays)
-    const defensive = getAvailableCategories('defensive', [], plays)
-    return [...new Set([...offensive, ...defensive])]
-  }, [plays])
 
   const sheetLayout = cardsPerSheet(draft.wristband_width, draft.wristband_height)
 
@@ -281,7 +274,7 @@ export function WristbandCardsPage() {
                   <input
                     id="left-heading"
                     className="input-field"
-                    list="wristband-heading-suggestions"
+                    type="text"
                     value={draft.left_heading}
                     readOnly={!canEdit}
                     onChange={(event) =>
@@ -296,7 +289,7 @@ export function WristbandCardsPage() {
                   <input
                     id="right-heading"
                     className="input-field"
-                    list="wristband-heading-suggestions"
+                    type="text"
                     value={draft.right_heading}
                     readOnly={!canEdit}
                     onChange={(event) =>
@@ -304,11 +297,6 @@ export function WristbandCardsPage() {
                     }
                   />
                 </div>
-                <datalist id="wristband-heading-suggestions">
-                  {headingSuggestions.map((heading) => (
-                    <option key={heading} value={heading} />
-                  ))}
-                </datalist>
               </div>
 
               <WristbandPlaySelector
@@ -350,16 +338,21 @@ export function WristbandCardsPage() {
             <section className="wristband-editor-preview">
               <h2>Card preview</h2>
               <p className="wristband-editor-preview-meta">
-                Fits {sheetLayout.count} per 8.5" × 11" sheet ({sheetLayout.cols} × {sheetLayout.rows})
+                Card {draft.wristband_width}" × {draft.wristband_height}" with {WRISTBAND_CUT_BUFFER_IN}"
+                cutting buffer per side · Fits {sheetLayout.count} per 8.5" × 11" sheet (
+                {sheetLayout.cols} × {sheetLayout.rows})
               </p>
-              <WristbandCardFace card={draft} playNamesById={playNamesById} />
+              <div className="wristband-card-cut-buffer">
+                <WristbandCardFace card={draft} playNamesById={playNamesById} />
+              </div>
             </section>
           </div>
         ) : (
           <div className="wristband-print-view">
             <p className="wristband-print-meta">
               Printing {sheetLayout.count} card{sheetLayout.count === 1 ? '' : 's'} per sheet (
-              {draft.wristband_width}" × {draft.wristband_height}")
+              {draft.wristband_width}" × {draft.wristband_height}" card with {WRISTBAND_CUT_BUFFER_IN}"
+              cutting buffer per side)
             </p>
             <div className="wristband-print-actions">
               <button type="button" className="btn btn-primary" onClick={handlePrint}>

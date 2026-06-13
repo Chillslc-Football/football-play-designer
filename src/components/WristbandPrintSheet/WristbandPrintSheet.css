@@ -14,11 +14,18 @@
 .wristband-print-slot {
   box-sizing: border-box;
   padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wristband-print-slot .wristband-card-cut-buffer {
+  box-sizing: content-box;
+  padding: 0.5in;
 }
 
 .wristband-print-slot .wristband-card-face {
-  width: 100% !important;
-  height: 100% !important;
+  flex-shrink: 0;
   border: 1px dashed #000;
 }
 

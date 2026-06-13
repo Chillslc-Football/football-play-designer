@@ -87,7 +87,6 @@ import { FIELD_DISPLAY_THEME } from '../../constants/fieldDisplayTheme'
 import './Field.css'
 
 const DRAG_THRESHOLD = 5
-const CLICK_MIN_DISTANCE = 0.25
 
 type DragTarget =
   | { kind: 'offense'; id: PlayerLabel }
@@ -1060,7 +1059,7 @@ export function Field({
       dragPoints: [],
       screenX: event.clientX,
       screenY: event.clientY,
-      startedDrag: false,
+      startedDrag: true,
     }
   }
 
@@ -1076,7 +1075,7 @@ export function Field({
       dragPoints: [],
       screenX: event.clientX,
       screenY: event.clientY,
-      startedDrag: false,
+      startedDrag: true,
     }
   }
 
@@ -1092,8 +1091,76 @@ export function Field({
       dragPoints: [],
       screenX: event.clientX,
       screenY: event.clientY,
-      startedDrag: false,
+      startedDrag: true,
     }
+  }
+
+  function isLastChainActionEndpoint(
+    playerId: PlayerLabel,
+    actionId: string,
+    actionType: PlayerActionType,
+  ): boolean {
+    const chain = getSortedChain(playerActions, playerId)
+    if (chain.length === 0) return false
+
+    const last = chain[chain.length - 1]
+    return last.id === actionId && last.type === actionType && last.points.length > 0
+  }
+
+  function matchesEndpointDrawAnchor(
+    anchor: { playerId: PlayerLabel; actionId: string },
+    playerId: PlayerLabel,
+    clickedActionId: string,
+    clickedActionType: PlayerActionType,
+  ): boolean {
+    if (anchor.playerId !== playerId) return false
+    if (anchor.actionId === clickedActionId) return true
+
+    return (
+      anchor.actionId === NEW_ACTION_ID &&
+      isLastChainActionEndpoint(playerId, clickedActionId, clickedActionType)
+    )
+  }
+
+  function tryStartActionDragFromEndpoint(
+    event: React.MouseEvent,
+    playerId: PlayerLabel,
+    actionId: string,
+    actionType: PlayerActionType,
+  ): boolean {
+    const mode = drawingModeRef.current
+
+    if (mode === 'route' && routesEditable) {
+      const anchor = resolveDrawAnchor()
+      if (anchor && matchesEndpointDrawAnchor(anchor, playerId, actionId, actionType)) {
+        event.stopPropagation()
+        event.preventDefault()
+        startRouteDrag(event, anchor)
+        return true
+      }
+    }
+
+    if (mode === 'motion' && motionsEditable) {
+      const anchor = resolveMotionDrawAnchor()
+      if (anchor && matchesEndpointDrawAnchor(anchor, playerId, actionId, actionType)) {
+        event.stopPropagation()
+        event.preventDefault()
+        startMotionDrag(event, anchor)
+        return true
+      }
+    }
+
+    if (mode === 'block' && blocksEditable) {
+      const anchor = resolveBlockDrawAnchor()
+      if (anchor && matchesEndpointDrawAnchor(anchor, playerId, actionId, actionType)) {
+        event.stopPropagation()
+        event.preventDefault()
+        startBlockDrag(event, anchor)
+        return true
+      }
+    }
+
+    return false
   }
 
   /** Start route/motion/block drag from the selected player marker (same flow as field mousedown). */
@@ -1141,6 +1208,10 @@ export function Field({
     actionType: PlayerActionType,
     event: React.MouseEvent,
   ) {
+    if (tryStartActionDragFromEndpoint(event, playerId, actionId, actionType)) {
+      return
+    }
+
     const editable =
       actionType === 'route'
         ? routesEditable
@@ -1237,7 +1308,7 @@ export function Field({
         dragPoints: [],
         screenX: event.clientX,
         screenY: event.clientY,
-        startedDrag: false,
+        startedDrag: true,
       }
       return
     }
@@ -1270,12 +1341,26 @@ export function Field({
     clearBlockDrag()
     clearDefenderRouteDrag()
     clearEndpointDrag()
+  }, [
+    drawingMode,
+    clearRouteDrag,
+    clearMotionDrag,
+    clearBlockDrag,
+    clearDefenderRouteDrag,
+    clearEndpointDrag,
+  ])
+
+  useEffect(() => {
+    clearRouteDrag()
+    clearMotionDrag()
+    clearBlockDrag()
+    clearDefenderRouteDrag()
+    clearEndpointDrag()
     clearRouteEditSelection()
     clearMotionEditSelection()
     clearBlockEditSelection()
     clearDefenderRouteEditSelection()
   }, [
-    drawingMode,
     selectedPlayerId,
     selectedDefenderId,
     playType,
@@ -1489,28 +1574,20 @@ export function Field({
       const routeDrag = routeDragRef.current
 
       if (drawingModeRef.current === 'route' && playType === 'offensive' && routeDrag) {
-        if (!routeDrag.startedDrag) {
-          const position = getSvgPosition(event.clientX, event.clientY)
-          const last = routeDrag.dragPoints[routeDrag.dragPoints.length - 1]
-          const dx = last ? position.x - last.x : 0
-          const dy = last ? position.y - last.y : 0
-          const isDistinct =
-            !last || Math.sqrt(dx * dx + dy * dy) >= CLICK_MIN_DISTANCE
-
-          if (isDistinct) {
-            commitRouteExtension(
-              routeDrag.playerId,
-              routeDrag.actionId,
-              routeDrag.anchorVertexIndex,
-              [position],
-            )
-          }
-        } else if (routeDrag.dragPoints.length > 0) {
+        if (routeDrag.dragPoints.length > 0) {
           commitRouteExtension(
             routeDrag.playerId,
             routeDrag.actionId,
             routeDrag.anchorVertexIndex,
             routeDrag.dragPoints,
+          )
+        } else {
+          const position = getSvgPosition(event.clientX, event.clientY)
+          commitRouteExtension(
+            routeDrag.playerId,
+            routeDrag.actionId,
+            routeDrag.anchorVertexIndex,
+            [position],
           )
         }
 
@@ -1520,28 +1597,20 @@ export function Field({
       const motionDrag = motionDragRef.current
 
       if (drawingModeRef.current === 'motion' && playType === 'offensive' && motionDrag) {
-        if (!motionDrag.startedDrag) {
-          const position = getSvgPosition(event.clientX, event.clientY)
-          const last = motionDrag.dragPoints[motionDrag.dragPoints.length - 1]
-          const dx = last ? position.x - last.x : 0
-          const dy = last ? position.y - last.y : 0
-          const isDistinct =
-            !last || Math.sqrt(dx * dx + dy * dy) >= CLICK_MIN_DISTANCE
-
-          if (isDistinct) {
-            commitMotionExtension(
-              motionDrag.playerId,
-              motionDrag.actionId,
-              motionDrag.anchorVertexIndex,
-              [position],
-            )
-          }
-        } else if (motionDrag.dragPoints.length > 0) {
+        if (motionDrag.dragPoints.length > 0) {
           commitMotionExtension(
             motionDrag.playerId,
             motionDrag.actionId,
             motionDrag.anchorVertexIndex,
             motionDrag.dragPoints,
+          )
+        } else {
+          const position = getSvgPosition(event.clientX, event.clientY)
+          commitMotionExtension(
+            motionDrag.playerId,
+            motionDrag.actionId,
+            motionDrag.anchorVertexIndex,
+            [position],
           )
         }
 
@@ -1551,28 +1620,20 @@ export function Field({
       const blockDrag = blockDragRef.current
 
       if (drawingModeRef.current === 'block' && playType === 'offensive' && blockDrag) {
-        if (!blockDrag.startedDrag) {
-          const position = getSvgPosition(event.clientX, event.clientY)
-          const last = blockDrag.dragPoints[blockDrag.dragPoints.length - 1]
-          const dx = last ? position.x - last.x : 0
-          const dy = last ? position.y - last.y : 0
-          const isDistinct =
-            !last || Math.sqrt(dx * dx + dy * dy) >= CLICK_MIN_DISTANCE
-
-          if (isDistinct) {
-            commitBlockExtension(
-              blockDrag.playerId,
-              blockDrag.actionId,
-              blockDrag.anchorVertexIndex,
-              [position],
-            )
-          }
-        } else if (blockDrag.dragPoints.length > 0) {
+        if (blockDrag.dragPoints.length > 0) {
           commitBlockExtension(
             blockDrag.playerId,
             blockDrag.actionId,
             blockDrag.anchorVertexIndex,
             blockDrag.dragPoints,
+          )
+        } else {
+          const position = getSvgPosition(event.clientX, event.clientY)
+          commitBlockExtension(
+            blockDrag.playerId,
+            blockDrag.actionId,
+            blockDrag.anchorVertexIndex,
+            [position],
           )
         }
 
@@ -1582,26 +1643,18 @@ export function Field({
       const defenderRouteDrag = defenderRouteDragRef.current
 
       if (drawingModeRef.current === 'route' && playType === 'defensive' && defenderRouteDrag) {
-        if (!defenderRouteDrag.startedDrag) {
-          const position = getSvgPosition(event.clientX, event.clientY)
-          const last = defenderRouteDrag.dragPoints[defenderRouteDrag.dragPoints.length - 1]
-          const dx = last ? position.x - last.x : 0
-          const dy = last ? position.y - last.y : 0
-          const isDistinct =
-            !last || Math.sqrt(dx * dx + dy * dy) >= CLICK_MIN_DISTANCE
-
-          if (isDistinct) {
-            commitDefenderRouteExtension(
-              defenderRouteDrag.defenderId,
-              defenderRouteDrag.anchorVertexIndex,
-              [position],
-            )
-          }
-        } else if (defenderRouteDrag.dragPoints.length > 0) {
+        if (defenderRouteDrag.dragPoints.length > 0) {
           commitDefenderRouteExtension(
             defenderRouteDrag.defenderId,
             defenderRouteDrag.anchorVertexIndex,
             defenderRouteDrag.dragPoints,
+          )
+        } else {
+          const position = getSvgPosition(event.clientX, event.clientY)
+          commitDefenderRouteExtension(
+            defenderRouteDrag.defenderId,
+            defenderRouteDrag.anchorVertexIndex,
+            [position],
           )
         }
 

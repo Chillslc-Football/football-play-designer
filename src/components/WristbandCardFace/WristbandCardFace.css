@@ -34,13 +34,27 @@
 .wristband-card-table th {
   font-size: 9px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+}
+
+.wristband-card-cut-buffer {
+  box-sizing: content-box;
+  padding: 0.5in;
+  display: inline-block;
+}
+
+.wristband-editor-preview .wristband-card-cut-buffer {
+  background: #ebebeb;
+  outline: 1px dashed #999;
 }
 
 @media print {
   .wristband-card-face {
     border: 1px dashed #000;
+  }
+
+  .wristband-card-cut-buffer {
+    box-sizing: content-box;
+    padding: 0.5in;
   }
 
   .wristband-card-table th,
