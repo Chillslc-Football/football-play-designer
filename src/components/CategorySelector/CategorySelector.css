@@ -81,6 +81,13 @@
   box-shadow: var(--shadow-md);
 }
 
+.category-multiselect-panel-inline {
+  position: static;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: none;
+}
+
 .category-multiselect-group {
   display: flex;
   flex-direction: column;

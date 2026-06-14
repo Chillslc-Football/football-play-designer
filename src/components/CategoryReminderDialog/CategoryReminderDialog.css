@@ -1,0 +1,36 @@
+.category-reminder-dialog {
+  width: min(100%, 480px);
+}
+
+.category-reminder-dialog-select {
+  width: min(100%, 520px);
+}
+
+.category-reminder-dialog-title {
+  margin: 0 0 var(--space-sm);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-on-surface);
+}
+
+.category-reminder-dialog-message {
+  margin: 0 0 var(--space-md);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-on-surface);
+}
+
+.category-reminder-dialog-selector {
+  margin-bottom: var(--space-md);
+}
+
+.category-reminder-dialog-selector .category-multiselect-panel-inline {
+  max-height: 220px;
+}
+
+.category-reminder-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}

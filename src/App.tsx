@@ -9,6 +9,7 @@ import * as cloudPlayRepository from './repositories/playRepository'
 import * as schemeTemplateRepository from './repositories/schemeTemplateRepository'
 import { AdminTemplateEditBar } from './components/AdminTemplateEditBar/AdminTemplateEditBar'
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog'
+import { CategoryReminderDialog } from './components/CategoryReminderDialog/CategoryReminderDialog'
 import { Header } from './components/Header/Header'
 import { Field } from './components/Field/Field'
 import { FieldZoomControl } from './components/FieldZoomControl/FieldZoomControl'
@@ -167,6 +168,7 @@ function App() {
   const [dataLoading, setDataLoading] = useState(false)
   const [playBaseline, setPlayBaseline] = useState(() => playToComparable(createEmptyPlay()))
   const [dialog, setDialog] = useState<DialogState>(null)
+  const [categoryReminderOpen, setCategoryReminderOpen] = useState(false)
   const [deletingCategory, setDeletingCategory] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [templateCreateLabel, setTemplateCreateLabel] = useState('')
@@ -550,7 +552,7 @@ function App() {
     await executeSaveChanges()
   }
 
-  async function executeSaveAsNew() {
+  async function executeSaveAsNew(categoriesOverride?: string[]) {
     if (!canEdit || isSavingRef.current) return
 
     isSavingRef.current = true
@@ -581,7 +583,12 @@ function App() {
         nameToUse = prompted.trim()
       }
 
-      const duplicatedPlay = duplicatePlay(play, nameToUse)
+      const sourcePlay =
+        categoriesOverride !== undefined
+          ? { ...play, categories: normalizeCategories(categoriesOverride) }
+          : play
+
+      const duplicatedPlay = duplicatePlay(sourcePlay, nameToUse)
       const playToSave = preparePlayForSave(duplicatedPlay)
 
       if (useCloud && activeTeamId) {
@@ -611,6 +618,33 @@ function App() {
       isSavingRef.current = false
       setIsSaving(false)
     }
+  }
+
+  async function proceedSaveAsNew() {
+    if (!canEdit || isSavingRef.current) return
+
+    if (normalizeCategories(play.categories).length === 0) {
+      setCategoryReminderOpen(true)
+      return
+    }
+
+    await executeSaveAsNew()
+  }
+
+  function handleCategoryReminderCancel() {
+    setCategoryReminderOpen(false)
+  }
+
+  function handleCategoryReminderSaveWithoutCategory() {
+    setCategoryReminderOpen(false)
+    void executeSaveAsNew()
+  }
+
+  async function handleCategoryReminderSaveWithCategory(categories: string[]) {
+    const normalized = normalizeCategories(categories)
+    setCategoryReminderOpen(false)
+    setPlay((current) => ({ ...current, categories: normalized }))
+    await executeSaveAsNew(normalized)
   }
 
   function handleSaveAsNew() {
@@ -1069,7 +1103,7 @@ function App() {
         await signOut()
         break
       case 'saveAsNew':
-        await executeSaveAsNew()
+        await proceedSaveAsNew()
         break
       case 'deletePlay':
         setDialog({ kind: 'delete-play' })
@@ -1117,7 +1151,7 @@ function App() {
       setDialog(null)
 
       if (action.type === 'saveAsNew') {
-        await executeSaveAsNew()
+        await proceedSaveAsNew()
         return
       }
 
@@ -1404,6 +1438,15 @@ function App() {
         onCancel={closeDialog}
         onSave={() => void handleUnsavedSave()}
         onDiscard={() => void handleUnsavedDiscard()}
+      />
+
+      <CategoryReminderDialog
+        open={categoryReminderOpen}
+        playType={play.playType}
+        availableCategories={availableCategories}
+        onSaveWithoutCategory={handleCategoryReminderSaveWithoutCategory}
+        onSaveWithCategory={(categories) => void handleCategoryReminderSaveWithCategory(categories)}
+        onCancel={handleCategoryReminderCancel}
       />
 
       <Header

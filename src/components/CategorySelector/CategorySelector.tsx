@@ -9,6 +9,9 @@ type CategorySelectorProps = {
   selectedCategories: string[]
   availableCategories: string[]
   onChange: (categories: string[]) => void
+  displayMode?: 'dropdown' | 'inline'
+  triggerId?: string
+  hideLabel?: boolean
 }
 
 export function CategorySelector({
@@ -17,8 +20,11 @@ export function CategorySelector({
   selectedCategories,
   availableCategories,
   onChange,
+  displayMode = 'dropdown',
+  triggerId = 'category-multiselect-trigger',
+  hideLabel = false,
 }: CategorySelectorProps) {
-  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(displayMode === 'inline')
   const containerRef = useRef<HTMLDivElement>(null)
 
   const defaultOptions = useMemo(
@@ -32,7 +38,7 @@ export function CategorySelector({
   )
 
   useEffect(() => {
-    if (!dropdownOpen) return
+    if (displayMode === 'inline' || !dropdownOpen) return
 
     function handlePointerDown(event: MouseEvent) {
       if (!containerRef.current?.contains(event.target as Node)) {
@@ -42,7 +48,7 @@ export function CategorySelector({
 
     window.addEventListener('mousedown', handlePointerDown)
     return () => window.removeEventListener('mousedown', handlePointerDown)
-  }, [dropdownOpen])
+  }, [displayMode, dropdownOpen])
 
   function toggleCategory(category: string) {
     if (!canEdit) return
@@ -65,72 +71,88 @@ export function CategorySelector({
       ? 'Select categories...'
       : selectedCategories.join(', ')
 
+  const optionsPanel = (
+    <div
+      className={
+        displayMode === 'inline'
+          ? 'category-multiselect-panel category-multiselect-panel-inline'
+          : 'category-multiselect-panel'
+      }
+      role="listbox"
+      aria-multiselectable="true"
+    >
+      {defaultOptions.length > 0 && (
+        <div className="category-multiselect-group">
+          <span className="category-multiselect-group-label">Default Categories</span>
+          {defaultOptions.map((category) => (
+            <label key={category} className="category-multiselect-option">
+              <input
+                type="checkbox"
+                checked={selectedCategories.includes(category)}
+                onChange={() => toggleCategory(category)}
+              />
+              <span>{category}</span>
+            </label>
+          ))}
+        </div>
+      )}
+
+      {customOptions.length > 0 && (
+        <div className="category-multiselect-group">
+          <span className="category-multiselect-group-label">Custom Categories</span>
+          {customOptions.map((category) => (
+            <label key={category} className="category-multiselect-option">
+              <input
+                type="checkbox"
+                checked={selectedCategories.includes(category)}
+                onChange={() => toggleCategory(category)}
+              />
+              <span>{category}</span>
+            </label>
+          ))}
+        </div>
+      )}
+
+      {availableCategories.length === 0 && (
+        <p className="category-selector-empty">No categories available yet.</p>
+      )}
+    </div>
+  )
+
   return (
     <div className="category-selector" ref={containerRef}>
-      <label htmlFor="category-multiselect-trigger" className="field-label sidebar-field-label">
-        Play Categories
-      </label>
+      {!hideLabel && (
+        <label htmlFor={triggerId} className="field-label sidebar-field-label">
+          Play Categories
+        </label>
+      )}
 
-      <div className="category-multiselect">
-        <button
-          type="button"
-          id="category-multiselect-trigger"
-          className="select-field sidebar-control category-multiselect-trigger"
-          onClick={() => canEdit && setDropdownOpen((open) => !open)}
-          disabled={!canEdit}
-          aria-haspopup="listbox"
-          aria-expanded={dropdownOpen}
-          title={triggerLabel}
-        >
-          <span
-            className={`category-multiselect-trigger-text ${
-              selectedCategories.length === 0 ? 'category-multiselect-trigger-placeholder' : ''
-            }`}
+      {displayMode === 'inline' ? (
+        optionsPanel
+      ) : (
+        <div className="category-multiselect">
+          <button
+            type="button"
+            id={triggerId}
+            className="select-field sidebar-control category-multiselect-trigger"
+            onClick={() => canEdit && setDropdownOpen((open) => !open)}
+            disabled={!canEdit}
+            aria-haspopup="listbox"
+            aria-expanded={dropdownOpen}
+            title={triggerLabel}
           >
-            {triggerLabel}
-          </span>
-        </button>
+            <span
+              className={`category-multiselect-trigger-text ${
+                selectedCategories.length === 0 ? 'category-multiselect-trigger-placeholder' : ''
+              }`}
+            >
+              {triggerLabel}
+            </span>
+          </button>
 
-        {dropdownOpen && (
-          <div className="category-multiselect-panel" role="listbox" aria-multiselectable="true">
-            {defaultOptions.length > 0 && (
-              <div className="category-multiselect-group">
-                <span className="category-multiselect-group-label">Default Categories</span>
-                {defaultOptions.map((category) => (
-                  <label key={category} className="category-multiselect-option">
-                    <input
-                      type="checkbox"
-                      checked={selectedCategories.includes(category)}
-                      onChange={() => toggleCategory(category)}
-                    />
-                    <span>{category}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-
-            {customOptions.length > 0 && (
-              <div className="category-multiselect-group">
-                <span className="category-multiselect-group-label">Custom Categories</span>
-                {customOptions.map((category) => (
-                  <label key={category} className="category-multiselect-option">
-                    <input
-                      type="checkbox"
-                      checked={selectedCategories.includes(category)}
-                      onChange={() => toggleCategory(category)}
-                    />
-                    <span>{category}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-
-            {availableCategories.length === 0 && (
-              <p className="category-selector-empty">No categories available yet.</p>
-            )}
-          </div>
-        )}
-      </div>
+          {dropdownOpen && optionsPanel}
+        </div>
+      )}
 
       {selectedCategories.length > 0 && (
         <div className="category-tags" aria-label="Selected categories">
