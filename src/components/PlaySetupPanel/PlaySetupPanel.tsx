@@ -99,18 +99,20 @@ type PlaySetupPanelProps = {
 
 function SidebarCollapsibleSection({
   title,
+  defaultExpanded = false,
   className = '',
   titleClassName = '',
   children,
   isLast = false,
 }: {
   title: string
+  defaultExpanded?: boolean
   className?: string
   titleClassName?: string
   children: ReactNode
   isLast?: boolean
 }) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(defaultExpanded)
 
   return (
     <section
@@ -290,6 +292,7 @@ export function PlaySetupPanel({
 
             <SidebarCollapsibleSection
               title="Drawing Mode"
+              defaultExpanded
               className="sidebar-section-drawing-tools"
               titleClassName="sidebar-section-title-prominent"
             >
@@ -303,7 +306,7 @@ export function PlaySetupPanel({
               />
             </SidebarCollapsibleSection>
 
-            <SidebarCollapsibleSection title="Play Actions">
+            <SidebarCollapsibleSection title="Play Actions" defaultExpanded>
               <Toolbar
                 canEdit={canEdit}
                 selectedLoadId={selectedLoadId}
@@ -317,7 +320,7 @@ export function PlaySetupPanel({
               />
             </SidebarCollapsibleSection>
 
-            <SidebarCollapsibleSection title="Player Assignment">
+            <SidebarCollapsibleSection title="Player Assignment" defaultExpanded>
               <PlayerAssignmentPanel
                 embedded
                 selectedPlayerId={selectedPlayerId}
@@ -331,7 +334,7 @@ export function PlaySetupPanel({
               />
             </SidebarCollapsibleSection>
 
-            <SidebarCollapsibleSection title="Play Notes" isLast>
+            <SidebarCollapsibleSection title="Play Notes" defaultExpanded isLast>
               <Notes embedded value={playNotes} canEdit={canEdit} onChange={onPlayNotesChange} />
             </SidebarCollapsibleSection>
           </div>

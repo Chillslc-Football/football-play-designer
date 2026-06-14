@@ -26,6 +26,7 @@ type RouteLineProps = {
   onSegmentSelect?: (segmentIndex: number) => void
   onVertexSelect?: (vertexIndex: number) => void
   onEndpointPointerDown?: (event: React.MouseEvent) => void
+  onContextMenu?: (event: React.MouseEvent) => void
 }
 
 /**
@@ -42,6 +43,7 @@ export function RouteLine({
   onSegmentSelect,
   onVertexSelect,
   onEndpointPointerDown,
+  onContextMenu,
 }: RouteLineProps) {
   if (route.points.length === 0) return null
 
@@ -64,6 +66,7 @@ export function RouteLine({
   const endpoint = vertices[vertices.length - 1]
 
   function handlePathSelect(event: React.MouseEvent<SVGPolylineElement>) {
+    if (event.button !== 0) return
     event.stopPropagation()
 
     const svg = event.currentTarget.ownerSVGElement
@@ -77,7 +80,16 @@ export function RouteLine({
   }
 
   return (
-    <g className="route-path">
+    <g
+      className="route-path"
+      onContextMenu={
+        readOnly
+          ? undefined
+          : (event) => {
+              onContextMenu?.(event)
+            }
+      }
+    >
       {!readOnly && (
         <polyline
           points={polylinePoints}
@@ -109,6 +121,7 @@ export function RouteLine({
                 readOnly
                   ? undefined
                   : (event) => {
+                      if (event.button !== 0) return
                       event.stopPropagation()
                       onSegmentSelect?.(index)
                     }
@@ -148,6 +161,7 @@ export function RouteLine({
               onMouseDown={
                 interactive
                   ? (event) => {
+                      if (event.button !== 0) return
                       event.stopPropagation()
                       onVertexSelect?.(index)
                     }
@@ -172,6 +186,7 @@ export function RouteLine({
           r={PLAYBOOK_HIT_SIZE}
           className="route-endpoint-handle-hit"
           onMouseDown={(event) => {
+            if (event.button !== 0) return
             event.stopPropagation()
             onEndpointPointerDown(event)
           }}

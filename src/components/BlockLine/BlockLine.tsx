@@ -24,6 +24,7 @@ type BlockLineProps = {
   onSegmentSelect?: (segmentIndex: number) => void
   onVertexSelect?: (vertexIndex: number) => void
   onEndpointPointerDown?: (event: React.MouseEvent) => void
+  onContextMenu?: (event: React.MouseEvent) => void
 }
 
 export function BlockLine({
@@ -37,6 +38,7 @@ export function BlockLine({
   onSegmentSelect,
   onVertexSelect,
   onEndpointPointerDown,
+  onContextMenu,
 }: BlockLineProps) {
   if (block.points.length === 0) return null
 
@@ -73,6 +75,7 @@ export function BlockLine({
   const polylinePoints = vertices.map((vertex) => `${vertex.x},${vertex.y}`).join(' ')
 
   function handlePathSelect(event: React.MouseEvent<SVGPolylineElement>) {
+    if (event.button !== 0) return
     event.stopPropagation()
 
     const svg = event.currentTarget.ownerSVGElement
@@ -86,7 +89,16 @@ export function BlockLine({
   }
 
   return (
-    <g className="block-path">
+    <g
+      className="block-path"
+      onContextMenu={
+        readOnly
+          ? undefined
+          : (event) => {
+              onContextMenu?.(event)
+            }
+      }
+    >
       {!readOnly && (
         <polyline
           points={polylinePoints}
@@ -118,6 +130,7 @@ export function BlockLine({
                 readOnly
                   ? undefined
                   : (event) => {
+                      if (event.button !== 0) return
                       event.stopPropagation()
                       onSegmentSelect?.(index)
                     }
@@ -142,6 +155,7 @@ export function BlockLine({
           r={PLAYBOOK_HIT_SIZE}
           className="block-endpoint-handle-hit"
           onMouseDown={(event) => {
+            if (event.button !== 0) return
             event.stopPropagation()
             onEndpointPointerDown(event)
           }}
@@ -178,6 +192,7 @@ export function BlockLine({
               onMouseDown={
                 interactive
                   ? (event) => {
+                      if (event.button !== 0) return
                       event.stopPropagation()
                       onVertexSelect?.(index)
                     }

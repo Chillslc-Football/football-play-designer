@@ -33,6 +33,27 @@ export function drawingModeToActionType(mode: string): PlayerActionType | null {
   return null
 }
 
+/** Preserves geometry and chain identity while switching action type. */
+export function convertPlayerActionType(
+  action: PlayerAction,
+  newType: PlayerActionType,
+  motionType: MotionType = 'jog',
+): PlayerAction {
+  const converted: PlayerAction = {
+    id: action.id,
+    type: newType,
+    points: action.points,
+    order: action.order,
+    endpointMarker: defaultEndpointMarker(newType),
+  }
+
+  if (newType === 'motion') {
+    converted.motionType = action.motionType ?? motionType
+  }
+
+  return converted
+}
+
 export function createPlayerAction(
   type: PlayerActionType,
   order: number,

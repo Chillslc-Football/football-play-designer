@@ -24,6 +24,7 @@ type MotionLineProps = {
   onSegmentSelect?: (segmentIndex: number) => void
   onVertexSelect?: (vertexIndex: number) => void
   onEndpointPointerDown?: (event: React.MouseEvent) => void
+  onContextMenu?: (event: React.MouseEvent) => void
 }
 
 function motionTypeClass(motionType: MotionType, prefix: string): string {
@@ -41,6 +42,7 @@ export function MotionLine({
   onSegmentSelect,
   onVertexSelect,
   onEndpointPointerDown,
+  onContextMenu,
 }: MotionLineProps) {
   if (motion.points.length === 0) return null
 
@@ -70,6 +72,7 @@ export function MotionLine({
   const polylinePoints = vertices.map((vertex) => `${vertex.x},${vertex.y}`).join(' ')
 
   function handlePathSelect(event: React.MouseEvent<SVGPolylineElement>) {
+    if (event.button !== 0) return
     event.stopPropagation()
 
     const svg = event.currentTarget.ownerSVGElement
@@ -83,7 +86,16 @@ export function MotionLine({
   }
 
   return (
-    <g className="motion-path">
+    <g
+      className="motion-path"
+      onContextMenu={
+        readOnly
+          ? undefined
+          : (event) => {
+              onContextMenu?.(event)
+            }
+      }
+    >
       {!readOnly && (
         <polyline
           points={polylinePoints}
@@ -119,6 +131,7 @@ export function MotionLine({
                 readOnly
                   ? undefined
                   : (event) => {
+                      if (event.button !== 0) return
                       event.stopPropagation()
                       onSegmentSelect?.(index)
                     }
@@ -144,6 +157,7 @@ export function MotionLine({
           r={PLAYBOOK_HIT_SIZE}
           className="motion-endpoint-handle-hit"
           onMouseDown={(event) => {
+            if (event.button !== 0) return
             event.stopPropagation()
             onEndpointPointerDown(event)
           }}
@@ -180,6 +194,7 @@ export function MotionLine({
               onMouseDown={
                 interactive
                   ? (event) => {
+                      if (event.button !== 0) return
                       event.stopPropagation()
                       onVertexSelect?.(index)
                     }

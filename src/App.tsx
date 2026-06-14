@@ -1518,6 +1518,7 @@ function App() {
                         onDefenderMove={handleDefenderMove}
                         onPlayerActionComplete={handlePlayerActionComplete}
                         onDefenderRouteComplete={handleDefenderRouteComplete}
+                        onDrawingModeChange={setDrawingMode}
                         toolbarPortalTarget={fieldToolbarHost}
                     />
                   </div>

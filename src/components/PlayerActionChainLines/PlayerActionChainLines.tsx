@@ -33,6 +33,11 @@ type PlayerActionChainLinesProps = {
     actionType: PlayerActionType,
     event: React.MouseEvent,
   ) => void
+  onActionContextMenu?: (
+    playerId: PlayerLabel,
+    actionId: string,
+    event: React.MouseEvent,
+  ) => void
 }
 
 export function PlayerActionChainLines({
@@ -51,6 +56,7 @@ export function PlayerActionChainLines({
   onBlockSegmentSelect,
   onBlockVertexSelect,
   onActionEndpointPointerDown,
+  onActionContextMenu,
 }: PlayerActionChainLinesProps) {
   return (
     <>
@@ -93,6 +99,7 @@ export function PlayerActionChainLines({
                 onEndpointPointerDown={(event) =>
                   onActionEndpointPointerDown(player.id, action.id, 'block', event)
                 }
+                onContextMenu={(event) => onActionContextMenu?.(player.id, action.id, event)}
               />
             )
           }
@@ -132,6 +139,7 @@ export function PlayerActionChainLines({
                 onEndpointPointerDown={(event) =>
                   onActionEndpointPointerDown(player.id, action.id, 'motion', event)
                 }
+                onContextMenu={(event) => onActionContextMenu?.(player.id, action.id, event)}
               />
             )
           }
@@ -166,6 +174,7 @@ export function PlayerActionChainLines({
               onEndpointPointerDown={(event) =>
                 onActionEndpointPointerDown(player.id, action.id, 'route', event)
               }
+              onContextMenu={(event) => onActionContextMenu?.(player.id, action.id, event)}
             />
           )
         })

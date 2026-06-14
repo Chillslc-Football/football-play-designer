@@ -11,7 +11,7 @@ export const FIELD_ZOOM_PRESETS = [
 
 export type FieldZoomValue = (typeof FIELD_ZOOM_PRESETS)[number]['value']
 
-export const DEFAULT_FIELD_ZOOM: FieldZoomValue = 1
+export const DEFAULT_FIELD_ZOOM: FieldZoomValue = 2
 
 const PRESET_VALUES = new Set<number>(FIELD_ZOOM_PRESETS.map((preset) => preset.value))
 

@@ -53,6 +53,7 @@ import {
 } from '../../utils/fieldView'
 import { resolveEndpointMarker } from '../../utils/endpointMarker'
 import {
+  convertPlayerActionType,
   createPlayerAction,
   findActionInChain,
   getActionStartPosition,
@@ -63,13 +64,20 @@ import {
   canDeleteRouteSegmentSelection,
   deleteRouteSegment,
   extendRouteFromAnchor,
+  findNearestSegmentIndex,
   getAnchorVertexIndex,
   getDeletableRouteSegmentIndex,
+  getRouteVertices,
+  getSvgPointFromMouseEvent,
   type RouteEditSelection,
   reshapeActionPointsFromEndpointDrag,
   updateFreehandDragPoints,
 } from '../../utils/routeEdit'
 import { EndpointMarkerSelector } from '../EndpointMarkerSelector/EndpointMarkerSelector'
+import {
+  FieldActionContextMenu,
+  type FieldActionContextMenuState,
+} from '../FieldActionContextMenu/FieldActionContextMenu'
 import { FieldAlignmentGrid } from '../FieldAlignmentGrid/FieldAlignmentGrid'
 import { BlockLine } from '../BlockLine/BlockLine'
 import { MotionLine } from '../MotionLine/MotionLine'
@@ -85,7 +93,10 @@ import { RouteLine } from '../RouteLine/RouteLine'
 import { findNearestByPosition } from '../../utils/playerSelection'
 import { getPlayerAlignmentGuides } from '../../utils/playerAlignmentGuides'
 import { FIELD_DISPLAY_THEME } from '../../constants/fieldDisplayTheme'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 import './Field.css'
+
+const DESKTOP_CONTEXT_MENU_MEDIA = '(min-width: 1024px)'
 
 const DRAG_THRESHOLD = 5
 
@@ -116,6 +127,7 @@ type FieldProps = {
   onDefenderMove: (defenderId: DefenderLabel, position: Position) => void
   onPlayerActionComplete: (playerId: PlayerLabel, action: PlayerAction) => void
   onDefenderRouteComplete: (route: DefenderRoute) => void
+  onDrawingModeChange?: (mode: DrawingMode) => void
   /** Portal target for route/action edit controls in the bottom workspace toolbar. */
   toolbarPortalTarget?: HTMLElement | null
 }
@@ -179,8 +191,10 @@ export function Field({
   onDefenderMove,
   onPlayerActionComplete,
   onDefenderRouteComplete,
+  onDrawingModeChange,
   toolbarPortalTarget = null,
 }: FieldProps) {
+  const isDesktopLayout = useMediaQuery(DESKTOP_CONTEXT_MENU_MEDIA)
   const offenseEditable = !viewOnly && playType === 'offensive'
   const defenseEditable = !viewOnly && playType === 'defensive'
   const routesEditable = offenseEditable && !schemePositionsOnly
@@ -242,6 +256,13 @@ export function Field({
   const [deleteEntireMotionOpen, setDeleteEntireMotionOpen] = useState(false)
   const [deleteEntireBlockOpen, setDeleteEntireBlockOpen] = useState(false)
   const [deleteEntireDefenderRouteOpen, setDeleteEntireDefenderRouteOpen] = useState(false)
+  const [actionContextMenu, setActionContextMenu] = useState<FieldActionContextMenuState | null>(
+    null,
+  )
+
+  const closeActionContextMenu = useCallback(() => {
+    setActionContextMenu(null)
+  }, [])
 
   routeEditSelectionRef.current = routeEditSelection
   motionEditSelectionRef.current = motionEditSelection
@@ -913,6 +934,8 @@ export function Field({
 
   const toggleBlockSegmentSelection = useCallback(
     (playerId: PlayerLabel, actionId: string, segmentIndex: number) => {
+      clearRouteEditSelection()
+      clearMotionEditSelection()
       setBlockEditSelection((current) => {
         if (
           current?.playerId === playerId &&
@@ -925,11 +948,13 @@ export function Field({
         return { playerId, actionId, kind: 'segment', segmentIndex }
       })
     },
-    [],
+    [clearRouteEditSelection, clearMotionEditSelection],
   )
 
   const toggleBlockVertexSelection = useCallback(
     (playerId: PlayerLabel, actionId: string, vertexIndex: number) => {
+      clearRouteEditSelection()
+      clearMotionEditSelection()
       setBlockEditSelection((current) => {
         if (
           current?.playerId === playerId &&
@@ -942,11 +967,13 @@ export function Field({
         return { playerId, actionId, kind: 'vertex', vertexIndex }
       })
     },
-    [],
+    [clearRouteEditSelection, clearMotionEditSelection],
   )
 
   const toggleSegmentSelection = useCallback(
     (playerId: PlayerLabel, actionId: string, segmentIndex: number) => {
+      clearMotionEditSelection()
+      clearBlockEditSelection()
       setRouteEditSelection((current) => {
         if (
           current?.playerId === playerId &&
@@ -959,11 +986,13 @@ export function Field({
         return { playerId, actionId, kind: 'segment', segmentIndex }
       })
     },
-    [],
+    [clearMotionEditSelection, clearBlockEditSelection],
   )
 
   const toggleVertexSelection = useCallback(
     (playerId: PlayerLabel, actionId: string, vertexIndex: number) => {
+      clearMotionEditSelection()
+      clearBlockEditSelection()
       setRouteEditSelection((current) => {
         if (
           current?.playerId === playerId &&
@@ -976,11 +1005,13 @@ export function Field({
         return { playerId, actionId, kind: 'vertex', vertexIndex }
       })
     },
-    [],
+    [clearMotionEditSelection, clearBlockEditSelection],
   )
 
   const toggleMotionSegmentSelection = useCallback(
     (playerId: PlayerLabel, actionId: string, segmentIndex: number) => {
+      clearRouteEditSelection()
+      clearBlockEditSelection()
       setMotionEditSelection((current) => {
         if (
           current?.playerId === playerId &&
@@ -993,11 +1024,13 @@ export function Field({
         return { playerId, actionId, kind: 'segment', segmentIndex }
       })
     },
-    [],
+    [clearRouteEditSelection, clearBlockEditSelection],
   )
 
   const toggleMotionVertexSelection = useCallback(
     (playerId: PlayerLabel, actionId: string, vertexIndex: number) => {
+      clearRouteEditSelection()
+      clearBlockEditSelection()
       setMotionEditSelection((current) => {
         if (
           current?.playerId === playerId &&
@@ -1010,7 +1043,7 @@ export function Field({
         return { playerId, actionId, kind: 'vertex', vertexIndex }
       })
     },
-    [],
+    [clearRouteEditSelection, clearBlockEditSelection],
   )
 
   const toggleDefenderSegmentSelection = useCallback(
@@ -1108,6 +1141,7 @@ export function Field({
     event: React.MouseEvent,
     anchor: { defenderId: DefenderLabel; vertexIndex: number },
   ) {
+    closeActionContextMenu()
     event.preventDefault()
     defenderRouteDragRef.current = {
       defenderId: anchor.defenderId,
@@ -1123,6 +1157,7 @@ export function Field({
     event: React.MouseEvent,
     anchor: { playerId: PlayerLabel; actionId: string; anchorVertexIndex: number },
   ) {
+    closeActionContextMenu()
     event.preventDefault()
     routeDragRef.current = {
       playerId: anchor.playerId,
@@ -1139,6 +1174,7 @@ export function Field({
     event: React.MouseEvent,
     anchor: { playerId: PlayerLabel; actionId: string; anchorVertexIndex: number },
   ) {
+    closeActionContextMenu()
     event.preventDefault()
     motionDragRef.current = {
       playerId: anchor.playerId,
@@ -1155,6 +1191,7 @@ export function Field({
     event: React.MouseEvent,
     anchor: { playerId: PlayerLabel; actionId: string; anchorVertexIndex: number },
   ) {
+    closeActionContextMenu()
     event.preventDefault()
     blockDragRef.current = {
       playerId: anchor.playerId,
@@ -1366,6 +1403,7 @@ export function Field({
   }
 
   function handleFieldMouseDown(event: React.MouseEvent) {
+    closeActionContextMenu()
     const target = event.target as Element
     if (target.closest('.player-marker') || target.closest('.defender-marker')) return
     if (
@@ -2150,6 +2188,23 @@ export function Field({
       )
     : null
 
+  const contextCanDeleteSegment = routeEditSelection
+    ? canDeleteRouteSegment
+    : motionEditSelection
+      ? canDeleteMotionSegment
+      : blockEditSelection
+        ? canDeleteBlockSegment
+        : false
+
+  const contextCanDeleteEntire =
+    selectedActionForMarkerEdit?.type === 'route'
+      ? canDeleteEntireRoute
+      : selectedActionForMarkerEdit?.type === 'motion'
+        ? canDeleteEntireMotion
+        : selectedActionForMarkerEdit?.type === 'block'
+          ? canDeleteEntireBlock
+          : false
+
   const showEndpointMarkerSelector = Boolean(
     offenseEditable &&
       !schemePositionsOnly &&
@@ -2166,6 +2221,198 @@ export function Field({
 
     onPlayerActionComplete(selection.playerId, { ...action, endpointMarker: marker })
   }
+
+  const handleActionContextMenu = useCallback(
+    (playerId: PlayerLabel, actionId: string, event: React.MouseEvent) => {
+      if (
+        !isDesktopLayout ||
+        playType !== 'offensive' ||
+        !offenseEditable ||
+        schemePositionsOnly
+      ) {
+        return
+      }
+
+      const action = findActionInChain(playerActions, playerId, actionId)
+      if (!action || action.points.length === 0) {
+        return
+      }
+
+      const player = players.find((entry) => entry.id === playerId)
+      if (!player) return
+
+      const chain = getSortedChain(playerActions, playerId)
+      const actionIndex = chain.findIndex((entry) => entry.id === actionId)
+      if (actionIndex < 0) return
+
+      const startPosition = getActionStartPosition(player.position, chain, actionIndex)
+      const vertices = getRouteVertices(startPosition, {
+        playerId,
+        points: action.points,
+      })
+      const svg = (event.currentTarget as Element).closest('svg')
+      if (!svg) return
+
+      const clickPoint = getSvgPointFromMouseEvent(svg, event.clientX, event.clientY)
+      const nearestSegmentIndex = findNearestSegmentIndex(vertices, clickPoint)
+      const segmentIndex =
+        nearestSegmentIndex ?? Math.max(0, vertices.length - 2)
+
+      const segmentSelection: RouteEditSelection = {
+        playerId,
+        actionId,
+        kind: 'segment',
+        segmentIndex,
+      }
+
+      clearRouteEditSelection()
+      clearMotionEditSelection()
+      clearBlockEditSelection()
+
+      if (action.type === 'route') {
+        setRouteEditSelection(segmentSelection)
+      } else if (action.type === 'motion') {
+        setMotionEditSelection(segmentSelection)
+      } else {
+        setBlockEditSelection(segmentSelection)
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+      setActionContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        playerId,
+        actionId,
+      })
+    },
+    [
+      isDesktopLayout,
+      playType,
+      offenseEditable,
+      schemePositionsOnly,
+      playerActions,
+      players,
+      clearRouteEditSelection,
+      clearMotionEditSelection,
+      clearBlockEditSelection,
+    ],
+  )
+
+  const handleContextDeleteSegment = useCallback(() => {
+    if (routeEditSelection) {
+      deleteSelectedRouteSegment()
+    } else if (motionEditSelection) {
+      deleteSelectedMotionSegment()
+    } else if (blockEditSelection) {
+      deleteSelectedBlockSegment()
+    }
+  }, [
+    routeEditSelection,
+    motionEditSelection,
+    blockEditSelection,
+    deleteSelectedRouteSegment,
+    deleteSelectedMotionSegment,
+    deleteSelectedBlockSegment,
+  ])
+
+  const handleContextDeleteEntire = useCallback(() => {
+    const action = selectedActionForMarkerEdit
+    if (!action) return
+
+    if (action.type === 'route') {
+      deleteEntireSelectedRoute()
+    } else if (action.type === 'motion') {
+      requestDeleteEntireMotion()
+    } else {
+      requestDeleteEntireBlock()
+    }
+  }, [
+    selectedActionForMarkerEdit,
+    deleteEntireSelectedRoute,
+    requestDeleteEntireMotion,
+    requestDeleteEntireBlock,
+  ])
+
+  const handleChangeSelectedActionType = useCallback(
+    (newType: PlayerActionType) => {
+      const selection = routeEditSelection ?? motionEditSelection ?? blockEditSelection
+      if (!selection || !offenseEditable || schemePositionsOnly) return
+
+      const action = findActionInChain(playerActions, selection.playerId, selection.actionId)
+      if (!action || action.points.length === 0 || action.type === newType) return
+
+      const converted = convertPlayerActionType(action, newType, motionTypeRef.current)
+      onPlayerActionComplete(selection.playerId, converted)
+
+      clearRouteEditSelection()
+      clearMotionEditSelection()
+      clearBlockEditSelection()
+
+      const nextSelection = { ...selection }
+      if (newType === 'route') {
+        setRouteEditSelection(nextSelection)
+      } else if (newType === 'motion') {
+        setMotionEditSelection(nextSelection)
+      } else {
+        setBlockEditSelection(nextSelection)
+      }
+
+      closeActionContextMenu()
+    },
+    [
+      routeEditSelection,
+      motionEditSelection,
+      blockEditSelection,
+      offenseEditable,
+      schemePositionsOnly,
+      playerActions,
+      onPlayerActionComplete,
+      clearRouteEditSelection,
+      clearMotionEditSelection,
+      clearBlockEditSelection,
+      closeActionContextMenu,
+    ],
+  )
+
+  const contextMenuTargetAction = actionContextMenu
+    ? findActionInChain(
+        playerActions,
+        actionContextMenu.playerId,
+        actionContextMenu.actionId,
+      )
+    : null
+
+  useEffect(() => {
+    if (actionContextMenu && !contextMenuTargetAction) {
+      closeActionContextMenu()
+    }
+  }, [actionContextMenu, contextMenuTargetAction, closeActionContextMenu])
+
+  useEffect(() => {
+    if (!actionContextMenu) return
+
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target
+      if (target instanceof Element && target.closest('.field-action-context-menu')) {
+        return
+      }
+      closeActionContextMenu()
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        closeActionContextMenu()
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [actionContextMenu, closeActionContextMenu])
 
   const hintText = (() => {
     if (playType === 'offensive' && selectedPlayerId) {
@@ -2363,6 +2610,23 @@ export function Field({
         onConfirm={executeDeleteEntireDefenderRoute}
         onCancel={() => setDeleteEntireDefenderRouteOpen(false)}
       />
+
+      {actionContextMenu && contextMenuTargetAction && onDrawingModeChange && (
+        <FieldActionContextMenu
+          menu={actionContextMenu}
+          actionType={contextMenuTargetAction.type}
+          drawingMode={drawingMode}
+          endpointMarker={resolveEndpointMarker(contextMenuTargetAction)}
+          canDeleteSegment={contextCanDeleteSegment}
+          canDeleteEntire={contextCanDeleteEntire}
+          onDeleteSegment={handleContextDeleteSegment}
+          onDeleteEntire={handleContextDeleteEntire}
+          onEndpointMarkerChange={handleEndpointMarkerChange}
+          onDrawingModeChange={onDrawingModeChange}
+          onActionTypeChange={handleChangeSelectedActionType}
+          onClose={closeActionContextMenu}
+        />
+      )}
 
       {toolbarPortalTarget && actionToolbar
         ? createPortal(actionToolbar, toolbarPortalTarget)
@@ -2606,6 +2870,7 @@ export function Field({
                 toggleBlockVertexSelection(playerId, actionId, vertexIndex)
               }}
               onActionEndpointPointerDown={handleActionEndpointPointerDown}
+              onActionContextMenu={handleActionContextMenu}
             />
 
             {defenderRoutes.map((route) => (
