@@ -1,0 +1,117 @@
+.help-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 640px);
+  max-height: min(88vh, 760px);
+  padding: 0;
+  overflow: hidden;
+}
+
+.help-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.help-dialog-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-on-surface);
+}
+
+.help-dialog-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-on-surface);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.help-dialog-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.help-dialog-body {
+  overflow-y: auto;
+  padding: var(--space-sm) var(--space-lg) var(--space-lg);
+}
+
+.help-accordion-section {
+  border-bottom: 1px solid var(--border);
+}
+
+.help-accordion-section:last-child {
+  border-bottom: none;
+}
+
+.help-accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 12px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-on-surface);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.help-accordion-header:hover {
+  color: var(--grass-mid);
+}
+
+.help-accordion-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.help-accordion-body {
+  padding: 0 0 14px;
+}
+
+.help-dialog-paragraph {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-on-surface);
+}
+
+.help-dialog-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.help-dialog-list {
+  margin: 0 0 10px;
+  padding-left: 1.25rem;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-on-surface);
+}
+
+.help-dialog-list:last-child {
+  margin-bottom: 0;
+}
+
+.help-dialog-list li + li {
+  margin-top: 6px;
+}

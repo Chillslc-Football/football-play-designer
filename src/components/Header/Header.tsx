@@ -6,6 +6,7 @@ import type { PlayType } from '../../types/playType'
 import { TEAM_ROLE_LABELS } from '../../utils/roleLabels'
 import { DeleteTeamDialog } from '../DeleteTeamDialog/DeleteTeamDialog'
 import { FeedbackDialog } from '../FeedbackDialog/FeedbackDialog'
+import { HelpDialog } from '../HelpDialog/HelpDialog'
 import { InviteMemberDialog } from '../InviteMemberDialog/InviteMemberDialog'
 import { AppShellNav } from '../AppShellNav/AppShellNav'
 import { PlayTypeSelector } from '../PlayTypeSelector/PlayTypeSelector'
@@ -34,6 +35,7 @@ export function Header({
   const email = user?.email ?? ''
   const userId = user?.id ?? ''
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [deleteTeamOpen, setDeleteTeamOpen] = useState(false)
   const [deleteTeamError, setDeleteTeamError] = useState<string | null>(null)
@@ -116,6 +118,7 @@ export function Header({
           onClose={() => setFeedbackOpen(false)}
         />
       )}
+      <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
       {team && activeTeamId && canInvite && (
         <InviteMemberDialog
           open={inviteOpen}
@@ -190,6 +193,14 @@ export function Header({
               onClick={() => setFeedbackOpen(true)}
             >
               Report Issue / Enhancement
+            </button>
+
+            <button
+              type="button"
+              className="btn header-action-btn"
+              onClick={() => setHelpOpen(true)}
+            >
+              Help
             </button>
 
             <div className="header-account-group">
