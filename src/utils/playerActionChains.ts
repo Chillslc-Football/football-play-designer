@@ -12,6 +12,7 @@ import {
 import type { Route } from '../types/route'
 import { getMirrorPartner } from './footballMirror'
 import { mirrorPositionLaterally } from './mirror'
+import { pickMergedEndpointMarker } from './endpointMarker'
 
 export const NEW_ACTION_ID = '__new__'
 
@@ -48,7 +49,7 @@ export function convertPlayerActionType(
   }
 
   if (newType === 'motion') {
-    converted.motionType = action.motionType ?? motionType
+    converted.motionType = motionType
   }
 
   return converted
@@ -298,7 +299,7 @@ export function ensurePlayPlayerActions(play: Play): Play {
     : hasLegacyActionData(play)
       ? migrateLegacyToPlayerActions(play.routes, play.blocks, play.motions ?? [])
       : storedChains
-  const chains = normalizePlayerActionChains(rawChains)
+  const chains = normalizePlayerActionChains(mergeConsecutiveSameTypeActions(rawChains))
 
   const legacy = flattenPlayerActionsToLegacy(chains)
 
@@ -355,4 +356,66 @@ export function deleteEntirePlayerAction(
   }
 
   return upsertPlayerAction(chains, playerId, { ...action, points: [] })
+}
+
+/** Removes every action of a type for one player (e.g. fragmented route segments). */
+export function deleteAllPlayerActionsOfType(
+  chains: PlayerActionChains,
+  playerId: PlayerLabel,
+  type: PlayerActionType,
+): PlayerActionChains {
+  const chain = getSortedChain(chains, playerId)
+  const remaining = chain.filter((action) => action.type !== type)
+  const nextChain = remaining.map((entry, index) => ({ ...entry, order: index }))
+
+  if (nextChain.length === 0) {
+    const { [playerId]: _removed, ...rest } = chains
+    return rest
+  }
+
+  return {
+    ...chains,
+    [playerId]: nextChain,
+  }
+}
+
+/** Merges adjacent same-type actions created when drawing resumed without selection. */
+export function mergeConsecutiveSameTypeActions(
+  chains: PlayerActionChains,
+): PlayerActionChains {
+  const merged = createEmptyPlayerActionChains()
+
+  for (const playerId of Object.keys(chains) as PlayerLabel[]) {
+    const chain = getSortedChain(chains, playerId)
+    const next: PlayerAction[] = []
+
+    for (const action of chain) {
+      const previous = next[next.length - 1]
+
+      if (
+        previous &&
+        previous.type === action.type &&
+        previous.points.length > 0 &&
+        action.points.length > 0
+      ) {
+        next[next.length - 1] = {
+          ...previous,
+          points: [...previous.points, ...action.points],
+          endpointMarker: pickMergedEndpointMarker(previous, action),
+          ...(action.type === 'motion'
+            ? { motionType: action.motionType ?? previous.motionType }
+            : {}),
+        }
+        continue
+      }
+
+      next.push({ ...action })
+    }
+
+    if (next.length > 0) {
+      merged[playerId] = next.map((entry, index) => ({ ...entry, order: index }))
+    }
+  }
+
+  return merged
 }

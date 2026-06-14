@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
+import type { MotionType } from '../../types/motion'
 import type { PlayerLabel } from '../../types/player'
 import type { EndpointMarker, PlayerActionType } from '../../types/playerAction'
 import './FieldActionContextMenu.css'
@@ -14,7 +15,9 @@ export type FieldActionContextMenuState = {
 type FieldActionContextMenuProps = {
   menu: FieldActionContextMenuState
   actionType: PlayerActionType
+  actionMotionType?: MotionType
   drawingMode: DrawingMode
+  motionType: MotionType
   endpointMarker: EndpointMarker
   canDeleteSegment: boolean
   canDeleteEntire: boolean
@@ -22,7 +25,8 @@ type FieldActionContextMenuProps = {
   onDeleteEntire: () => void
   onEndpointMarkerChange: (marker: EndpointMarker) => void
   onDrawingModeChange: (mode: DrawingMode) => void
-  onActionTypeChange: (type: PlayerActionType) => void
+  onDrawingModeMotionSelect: (motionType: MotionType) => void
+  onActionTypeChange: (type: PlayerActionType, motionType?: MotionType) => void
   onClose: () => void
 }
 
@@ -32,15 +36,26 @@ const ENDPOINT_OPTIONS: { id: EndpointMarker; label: string }[] = [
   { id: 'blocking-line', label: 'Block Marker' },
 ]
 
-const DRAWING_MODE_OPTIONS: { id: DrawingMode; label: string }[] = [
+const MOTION_TYPE_OPTIONS: { id: MotionType; label: string }[] = [
+  { id: 'jog', label: 'Jog' },
+  { id: 'sprint', label: 'Sprint' },
+]
+
+type ModeMenuOption = {
+  id: DrawingMode | PlayerActionType
+  label: string
+  hasMotionSubmenu?: boolean
+}
+
+const DRAWING_MODE_OPTIONS: ModeMenuOption[] = [
   { id: 'route', label: 'Route' },
-  { id: 'motion', label: 'Motion' },
+  { id: 'motion', label: 'Motion', hasMotionSubmenu: true },
   { id: 'block', label: 'Blocking' },
 ]
 
-const ACTION_TYPE_OPTIONS: { id: PlayerActionType; label: string }[] = [
+const ACTION_TYPE_OPTIONS: ModeMenuOption[] = [
   { id: 'route', label: 'Route' },
-  { id: 'motion', label: 'Motion' },
+  { id: 'motion', label: 'Motion', hasMotionSubmenu: true },
   { id: 'block', label: 'Blocking' },
 ]
 
@@ -50,10 +65,56 @@ function deleteEntireLabel(actionType: PlayerActionType): string {
   return 'Delete Entire Block'
 }
 
+type MotionSubmenuProps = {
+  disabled?: boolean
+  activeMotionType?: MotionType
+  onSelect: (motionType: MotionType) => void
+}
+
+function MotionSubmenu({ disabled = false, activeMotionType, onSelect }: MotionSubmenuProps) {
+  return (
+    <div
+      className={`field-action-context-menu-item-with-submenu ${
+        disabled ? 'field-action-context-menu-item-with-submenu-disabled' : ''
+      }`}
+    >
+      <button
+        type="button"
+        className="field-action-context-menu-item field-action-context-menu-item-parent"
+        disabled={disabled}
+        tabIndex={disabled ? -1 : 0}
+      >
+        Motion
+        <span className="field-action-context-menu-item-chevron" aria-hidden="true">
+          ›
+        </span>
+      </button>
+      <div className="field-action-context-menu-submenu" role="menu">
+        {MOTION_TYPE_OPTIONS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            role="menuitem"
+            className={`field-action-context-menu-item ${
+              activeMotionType === option.id ? 'field-action-context-menu-item-active' : ''
+            }`}
+            disabled={disabled}
+            onClick={() => onSelect(option.id)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function FieldActionContextMenu({
   menu,
   actionType,
+  actionMotionType,
   drawingMode,
+  motionType,
   endpointMarker,
   canDeleteSegment,
   canDeleteEntire,
@@ -61,6 +122,7 @@ export function FieldActionContextMenu({
   onDeleteEntire,
   onEndpointMarkerChange,
   onDrawingModeChange,
+  onDrawingModeMotionSelect,
   onActionTypeChange,
   onClose,
 }: FieldActionContextMenuProps) {
@@ -131,35 +193,56 @@ export function FieldActionContextMenu({
 
       <div className="field-action-context-menu-section">
         <span className="field-action-context-menu-label">Change Drawing Mode</span>
-        {DRAWING_MODE_OPTIONS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            className={`field-action-context-menu-item ${
-              drawingMode === option.id ? 'field-action-context-menu-item-active' : ''
-            }`}
-            onClick={() => run(() => onDrawingModeChange(option.id))}
-          >
-            {option.label}
-          </button>
-        ))}
+        {DRAWING_MODE_OPTIONS.map((option) =>
+          option.hasMotionSubmenu ? (
+            <MotionSubmenu
+              key={option.id}
+              activeMotionType={drawingMode === 'motion' ? motionType : undefined}
+              onSelect={(selectedMotionType) =>
+                run(() => onDrawingModeMotionSelect(selectedMotionType))
+              }
+            />
+          ) : (
+            <button
+              key={option.id}
+              type="button"
+              className={`field-action-context-menu-item ${
+                drawingMode === option.id ? 'field-action-context-menu-item-active' : ''
+              }`}
+              onClick={() => run(() => onDrawingModeChange(option.id as DrawingMode))}
+            >
+              {option.label}
+            </button>
+          ),
+        )}
       </div>
 
       <div className="field-action-context-menu-section">
         <span className="field-action-context-menu-label">Change Selected Segment Type</span>
-        {ACTION_TYPE_OPTIONS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            className={`field-action-context-menu-item ${
-              actionType === option.id ? 'field-action-context-menu-item-active' : ''
-            }`}
-            disabled={actionType === option.id}
-            onClick={() => run(() => onActionTypeChange(option.id))}
-          >
-            {option.label}
-          </button>
-        ))}
+        {ACTION_TYPE_OPTIONS.map((option) =>
+          option.hasMotionSubmenu ? (
+            <MotionSubmenu
+              key={option.id}
+              disabled={actionType === 'motion'}
+              activeMotionType={actionType === 'motion' ? actionMotionType : undefined}
+              onSelect={(selectedMotionType) =>
+                run(() => onActionTypeChange('motion', selectedMotionType))
+              }
+            />
+          ) : (
+            <button
+              key={option.id}
+              type="button"
+              className={`field-action-context-menu-item ${
+                actionType === option.id ? 'field-action-context-menu-item-active' : ''
+              }`}
+              disabled={actionType === option.id}
+              onClick={() => run(() => onActionTypeChange(option.id as PlayerActionType))}
+            >
+              {option.label}
+            </button>
+          ),
+        )}
       </div>
     </div>
   )

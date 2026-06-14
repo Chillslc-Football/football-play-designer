@@ -33,7 +33,7 @@ import {
   type PlayerLabel,
   type Position,
 } from './types/player'
-import type { PlayerAction } from './types/playerAction'
+import type { PlayerAction, PlayerActionType } from './types/playerAction'
 import { createEmptyPlayerActionChains } from './types/playerAction'
 import {
   addCustomFormation,
@@ -46,6 +46,7 @@ import {
 import { DEFAULT_FORMATION_ID } from './data/builtinFormations'
 import { applyPlayerSpacing } from './utils/playerSpacing'
 import {
+  deleteAllPlayerActionsOfType,
   ensurePlayPlayerActions,
   flattenPlayerActionsToLegacy,
   upsertPlayerAction,
@@ -1262,6 +1263,27 @@ function App() {
     })
   }
 
+  function handleDeleteAllPlayerActionsOfType(playerId: PlayerLabel, type: PlayerActionType) {
+    if (!fieldCanEdit || play.playType !== 'offensive' || adminTemplateEdit) return
+
+    setPlay((current) => {
+      const updatedPlayerActions = deleteAllPlayerActionsOfType(
+        current.playerActions ?? {},
+        playerId,
+        type,
+      )
+      const legacy = flattenPlayerActionsToLegacy(updatedPlayerActions)
+
+      return ensurePlayPlayerActions({
+        ...current,
+        playerActions: updatedPlayerActions,
+        routes: legacy.routes,
+        blocks: legacy.blocks,
+        motions: legacy.motions,
+      })
+    })
+  }
+
   function handleDefenderRouteComplete(route: DefenderRoute) {
     if (!fieldCanEdit || play.playType !== 'defensive' || adminTemplateEdit) return
 
@@ -1517,8 +1539,10 @@ function App() {
                         onPlayerMove={handlePlayerMove}
                         onDefenderMove={handleDefenderMove}
                         onPlayerActionComplete={handlePlayerActionComplete}
+                        onDeleteAllPlayerActionsOfType={handleDeleteAllPlayerActionsOfType}
                         onDefenderRouteComplete={handleDefenderRouteComplete}
                         onDrawingModeChange={setDrawingMode}
+                        onMotionTypeChange={setMotionType}
                         toolbarPortalTarget={fieldToolbarHost}
                     />
                   </div>

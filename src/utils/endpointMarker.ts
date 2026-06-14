@@ -8,6 +8,27 @@ export function resolveEndpointMarker(action: PlayerAction): EndpointMarker {
   return action.endpointMarker ?? defaultEndpointMarker(action.type)
 }
 
+/** True when the coach explicitly chose a non-default marker for this action type. */
+export function hasEndpointMarkerOverride(action: PlayerAction): boolean {
+  return (
+    action.endpointMarker != null &&
+    action.endpointMarker !== defaultEndpointMarker(action.type)
+  )
+}
+
+export function pickMergedEndpointMarker(
+  previous: PlayerAction,
+  current: PlayerAction,
+): EndpointMarker {
+  if (hasEndpointMarkerOverride(current)) {
+    return resolveEndpointMarker(current)
+  }
+  if (hasEndpointMarkerOverride(previous)) {
+    return resolveEndpointMarker(previous)
+  }
+  return defaultEndpointMarker(current.type)
+}
+
 export function lastSegmentUsesArrowMarker(endpointMarker: EndpointMarker): boolean {
   return endpointMarker === 'arrow'
 }
