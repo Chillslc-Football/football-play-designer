@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import type { AdminTemplateEditSession } from '../types/adminTemplateEdit'
 
-export type AppShellView = 'designer' | 'wristbands' | 'admin-templates'
+export type AppShellView = 'designer' | 'wristbands' | 'team-updates' | 'admin-templates'
 
 type AppShellContextValue = {
   view: AppShellView

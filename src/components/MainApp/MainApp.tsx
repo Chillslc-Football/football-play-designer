@@ -3,6 +3,7 @@ import App from '../../App'
 import { SchemeTemplateProvider } from '../../context/SchemeTemplateProvider'
 import { AppShellProvider, type AppShellView } from '../../context/AppShellContext'
 import { AdminTemplatesPage } from '../../pages/AdminTemplatesPage'
+import { TeamUpdatesPage } from '../../pages/TeamUpdatesPage'
 import { WristbandCardsPage } from '../../pages/WristbandCardsPage'
 import { useAppAdmin } from '../../hooks/useAppAdmin'
 import type { AdminTemplateEditSession } from '../../types/adminTemplateEdit'
@@ -34,6 +35,8 @@ function MainAppViews() {
           <App />
         ) : view === 'wristbands' ? (
           <WristbandCardsPage />
+        ) : view === 'team-updates' ? (
+          <TeamUpdatesPage />
         ) : (
           <AdminTemplatesPage />
         )}

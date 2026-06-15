@@ -25,6 +25,13 @@ export function AppShellNav() {
       >
         Wristband Cards
       </button>
+      <button
+        type="button"
+        className={`app-shell-nav-btn ${view === 'team-updates' ? 'is-active' : ''}`}
+        onClick={() => setView('team-updates')}
+      >
+        Team Updates
+      </button>
       {isAppAdmin && (
         <button
           type="button"
