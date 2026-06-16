@@ -9,6 +9,7 @@ export type TeamUpdate = {
   body: string
   update_type: TeamUpdateType
   is_pinned: boolean
+  show_on_home: boolean
   created_by: string | null
   created_at: string
   updated_at: string
@@ -25,6 +26,7 @@ export function updateToDraft(update: TeamUpdate): TeamUpdateDraft {
     title: update.title,
     body: update.body,
     is_pinned: update.is_pinned,
+    show_on_home: update.show_on_home,
   }
 }
 
@@ -34,5 +36,6 @@ export function createEmptyTeamUpdateDraft(): TeamUpdateDraft {
     title: '',
     body: '',
     is_pinned: false,
+    show_on_home: false,
   }
 }

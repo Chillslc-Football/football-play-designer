@@ -93,7 +93,8 @@
   font-size: 1.05rem;
 }
 
-.team-updates-pinned-badge {
+.team-updates-pinned-badge,
+.team-updates-home-badge {
   display: inline-block;
   padding: 2px 8px;
   font-size: 11px;
@@ -144,6 +145,9 @@
 }
 
 .team-updates-pin-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin: 0;
 }
 

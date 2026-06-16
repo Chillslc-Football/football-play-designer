@@ -89,9 +89,16 @@ export function TeamUpdatesPage() {
 
     try {
       if (editingExisting) {
+        const original = updates.find((update) => update.id === draft.id)
         await teamUpdateRepository.updateTeamUpdate(activeTeamId, draft)
+        if (original && draft.show_on_home !== original.show_on_home) {
+          await teamUpdateRepository.setTeamUpdateShowOnHome(draft.id, draft.show_on_home)
+        }
       } else {
         await teamUpdateRepository.createTeamUpdate(activeTeamId, draft)
+        if (draft.show_on_home) {
+          await teamUpdateRepository.setTeamUpdateShowOnHome(draft.id, true)
+        }
       }
 
       await loadUpdates()
@@ -192,6 +199,9 @@ export function TeamUpdatesPage() {
                         {update.is_pinned && (
                           <span className="team-updates-pinned-badge">Pinned</span>
                         )}
+                        {update.show_on_home && (
+                          <span className="team-updates-home-badge">Home</span>
+                        )}
                       </div>
                       <p className="team-updates-list-meta">
                         {formatTeamUpdateTimestamp(update.created_at)}
@@ -267,6 +277,19 @@ export function TeamUpdatesPage() {
                       }
                     />
                     Pin to top of list
+                  </label>
+                  <label className="team-updates-pin-label">
+                    <input
+                      type="checkbox"
+                      checked={draft.show_on_home}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          show_on_home: event.target.checked,
+                        }))
+                      }
+                    />
+                    Show on Home
                   </label>
                 </div>
               )}
