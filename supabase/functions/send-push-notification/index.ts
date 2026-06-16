@@ -5,20 +5,27 @@ import {
   isAdminReadError,
   logServiceClientDiagnostics,
 } from '../_shared/supabaseAdmin.ts';
+import {
+  isTeamMessageRecord,
+  sendTeamMessagePushNotifications,
+  type TeamMessageRow,
+} from '../_shared/teamMessagePush.ts';
 import { sendTeamUpdatePushNotifications, type TeamUpdateRow } from '../_shared/teamUpdatePush.ts';
 
 type DatabaseWebhookPayload = {
   type?: string;
   table?: string;
   schema?: string;
-  record?: TeamUpdateRow;
-  old_record?: TeamUpdateRow | null;
+  record?: TeamUpdateRow | TeamMessageRow;
+  old_record?: TeamUpdateRow | TeamMessageRow | null;
 };
 
 type DirectInvokePayload = {
   notification_type?: string;
   team_update_id?: string;
-  record?: TeamUpdateRow;
+  team_message_id?: string;
+  message_id?: string;
+  record?: TeamUpdateRow | TeamMessageRow;
 };
 
 type RequestPayload = DatabaseWebhookPayload & DirectInvokePayload;
@@ -58,8 +65,8 @@ function isAuthorized(req: Request): boolean {
 }
 
 function resolveTeamUpdateInput(payload: RequestPayload): { teamUpdateId?: string; record?: TeamUpdateRow } {
-  if (payload.record?.id) {
-    return { record: payload.record };
+  if (payload.record && !isTeamMessageRecord(payload.record)) {
+    return { record: payload.record as TeamUpdateRow };
   }
 
   if (payload.team_update_id) {
@@ -67,6 +74,60 @@ function resolveTeamUpdateInput(payload: RequestPayload): { teamUpdateId?: strin
   }
 
   throw new Error('Missing team update payload. Provide record or team_update_id.');
+}
+
+function resolveTeamMessageInput(payload: RequestPayload): { messageId?: string; record?: TeamMessageRow } {
+  if (payload.record && isTeamMessageRecord(payload.record)) {
+    return { record: payload.record };
+  }
+
+  const messageId = payload.team_message_id ?? payload.message_id;
+
+  if (messageId) {
+    return { messageId };
+  }
+
+  throw new Error('Missing team message payload. Provide record, team_message_id, or message_id.');
+}
+
+function isTeamUpdateInsertWebhook(payload: RequestPayload): boolean {
+  return (
+    payload.type === 'INSERT' &&
+    payload.table === 'team_updates' &&
+    payload.schema === 'public'
+  );
+}
+
+function isTeamMessageInsertWebhook(payload: RequestPayload): boolean {
+  return (
+    payload.type === 'INSERT' &&
+    payload.table === 'team_messages' &&
+    payload.schema === 'public'
+  );
+}
+
+function isDirectTeamUpdateInvoke(payload: RequestPayload): boolean {
+  if (payload.notification_type === 'team_update') {
+    return true;
+  }
+
+  if (payload.team_update_id) {
+    return true;
+  }
+
+  return Boolean(payload.record?.id) && !isTeamMessageRecord(payload.record);
+}
+
+function isDirectTeamMessageInvoke(payload: RequestPayload): boolean {
+  if (payload.notification_type === 'team_message') {
+    return true;
+  }
+
+  if (payload.team_message_id || payload.message_id) {
+    return true;
+  }
+
+  return isTeamMessageRecord(payload.record);
 }
 
 Deno.serve(async (req) => {
@@ -85,25 +146,29 @@ Deno.serve(async (req) => {
   try {
     const payload = (await req.json()) as RequestPayload;
 
-    const isInsertWebhook =
-      payload.type === 'INSERT' &&
-      payload.table === 'team_updates' &&
-      payload.schema === 'public';
+    const routeTeamMessage =
+      isTeamMessageInsertWebhook(payload) || isDirectTeamMessageInvoke(payload);
+    const routeTeamUpdate =
+      isTeamUpdateInsertWebhook(payload) || isDirectTeamUpdateInvoke(payload);
 
-    const isDirectTeamUpdateInvoke =
-      payload.notification_type === 'team_update' ||
-      Boolean(payload.team_update_id) ||
-      Boolean(payload.record?.id);
-
-    if (!isInsertWebhook && !isDirectTeamUpdateInvoke) {
+    if (!routeTeamMessage && !routeTeamUpdate) {
       return jsonResponse({
         ok: true,
         skipped: true,
-        reason: 'Unsupported event. Only team_updates INSERT is handled.',
+        reason: 'Unsupported event. Only team_updates and team_messages INSERT are handled.',
       });
     }
 
     logServiceClientDiagnostics('request received');
+
+    if (routeTeamMessage) {
+      const result = await sendTeamMessagePushNotifications(resolveTeamMessageInput(payload));
+
+      return jsonResponse({
+        ok: true,
+        ...result,
+      });
+    }
 
     const result = await sendTeamUpdatePushNotifications(resolveTeamUpdateInput(payload));
 
