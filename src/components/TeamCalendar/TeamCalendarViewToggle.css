@@ -1,0 +1,9 @@
+.team-calendar-view-toggle-month {
+  /* Month toggle is desktop-only; hidden on mobile without changing mobile list layout. */
+}
+
+@media (max-width: 768px) {
+  .team-calendar-view-toggle-month {
+    display: none;
+  }
+}

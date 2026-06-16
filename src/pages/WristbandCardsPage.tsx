@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog/ConfirmDialog'
-import { AppShellNav } from '../components/AppShellNav/AppShellNav'
+import { PageToolbarLayout } from '../components/PageToolbarLayout/PageToolbarLayout'
 import { WristbandCardFace } from '../components/WristbandCardFace/WristbandCardFace'
 import { WristbandPlaySelector } from '../components/WristbandPlaySelector/WristbandPlaySelector'
 import { WristbandPrintSheet } from '../components/WristbandPrintSheet/WristbandPrintSheet'
 import { APP_DISPLAY_THEME } from '../constants/appDisplayTheme'
+import { useAppShell } from '../context/AppShellContext'
 import { useCanEdit } from '../hooks/useCanEdit'
 import { useTeam } from '../hooks/useTeam'
 import * as playRepository from '../repositories/playRepository'
@@ -22,6 +23,10 @@ import './WristbandCardsPage.css'
 type ViewMode = 'list' | 'edit' | 'print'
 
 export function WristbandCardsPage() {
+  const shell = useAppShell()
+  const setPageToolbar = shell?.setPageToolbar
+  const launchMode = shell?.launchMode
+  const clearLaunchMode = shell?.clearLaunchMode
   const { team, activeTeamId } = useTeam()
   const canEdit = useCanEdit()
 
@@ -57,6 +62,12 @@ export function WristbandCardsPage() {
   useEffect(() => {
     void loadData()
   }, [loadData])
+
+  useEffect(() => {
+    if (launchMode !== 'create' || !canEdit || loading || view !== 'list') return
+    openCreate()
+    clearLaunchMode?.()
+  }, [launchMode, canEdit, loading, view, clearLaunchMode])
 
   const playNamesById = useMemo(
     () => Object.fromEntries(plays.map((play) => [play.id, play.name])),
@@ -126,25 +137,13 @@ export function WristbandCardsPage() {
     window.print()
   }
 
-  return (
-    <div className={`wristband-page app-theme-${APP_DISPLAY_THEME}`}>
-      <ConfirmDialog
-        open={deleteTargetId !== null}
-        message="Delete this wristband card template? This cannot be undone."
-        variant="delete"
-        confirmLabel="Delete"
-        onConfirm={() => void handleDeleteConfirm()}
-        onCancel={() => setDeleteTargetId(null)}
-      />
+  useLayoutEffect(() => {
+    if (!setPageToolbar) return
 
-      <div className="wristband-page-screen no-print">
-        <header className="wristband-page-header">
-          <div className="wristband-page-header-main">
-            <AppShellNav />
-            <h1>Wristband Cards</h1>
-            <p className="wristband-page-subtitle">{team?.name ?? 'Team'}</p>
-          </div>
-          <div className="wristband-page-header-actions">
+    setPageToolbar(
+      <PageToolbarLayout
+        actions={
+          <>
             {view !== 'list' && (
               <button type="button" className="btn" onClick={() => setView('list')}>
                 Back to list
@@ -155,20 +154,46 @@ export function WristbandCardsPage() {
                 Create Wristband Card
               </button>
             )}
+          </>
+        }
+      />,
+    )
+
+    return () => {
+      setPageToolbar(null)
+    }
+  }, [setPageToolbar, view, canEdit])
+
+  return (
+    <div className={`wristband-page app-shell-page app-theme-${APP_DISPLAY_THEME}`}>
+      <ConfirmDialog
+        open={deleteTargetId !== null}
+        message="Delete this wristband card template? This cannot be undone."
+        variant="delete"
+        confirmLabel="Delete"
+        onConfirm={() => void handleDeleteConfirm()}
+        onCancel={() => setDeleteTargetId(null)}
+      />
+
+      <div className="wristband-page-screen app-shell-page-screen no-print">
+        <header className="wristband-page-header app-shell-page-header">
+          <div className="wristband-page-header-main app-shell-page-header-main">
+            <h1>Wristband Cards</h1>
+            <p className="wristband-page-subtitle app-shell-page-subtitle">{team?.name ?? 'Team'}</p>
           </div>
         </header>
 
-        {error && <p className="wristband-page-error">{error}</p>}
+        {error && <p className="wristband-page-error app-shell-page-error">{error}</p>}
         {!canEdit && !loading && (
-          <p className="wristband-page-readonly">View and print only — contact your coach to edit.</p>
+          <p className="wristband-page-readonly app-shell-page-readonly">View and print only — contact your coach to edit.</p>
         )}
 
         {loading ? (
-          <p className="wristband-page-loading">Loading wristband cards…</p>
+          <p className="wristband-page-loading app-shell-page-loading">Loading wristband cards…</p>
         ) : view === 'list' ? (
-          <div className="wristband-card-list">
+          <div className="wristband-card-list app-shell-page-body">
             {cards.length === 0 ? (
-              <p className="wristband-page-empty">No wristband card templates saved yet.</p>
+              <p className="wristband-page-empty app-shell-page-empty">No wristband card templates saved yet.</p>
             ) : (
               cards.map((card) => (
                 <article key={card.id} className="wristband-card-list-item">
@@ -208,7 +233,7 @@ export function WristbandCardsPage() {
             )}
           </div>
         ) : view === 'edit' ? (
-          <div className="wristband-editor">
+          <div className="wristband-editor app-shell-page-body">
             <section className="wristband-editor-form">
               <div className="form-group">
                 <label className="field-label" htmlFor="wristband-name">
@@ -348,7 +373,7 @@ export function WristbandCardsPage() {
             </section>
           </div>
         ) : (
-          <div className="wristband-print-view">
+          <div className="wristband-print-view app-shell-page-body">
             <p className="wristband-print-meta">
               Printing {sheetLayout.count} card{sheetLayout.count === 1 ? '' : 's'} per sheet (
               {draft.wristband_width}" × {draft.wristband_height}" card with {WRISTBAND_CUT_BUFFER_IN}"

@@ -72,6 +72,24 @@ export async function getTeamUpdatesByTeam(teamId: string): Promise<TeamUpdate[]
   return ((data ?? []) as TeamUpdateRow[]).map(rowToUpdate)
 }
 
+export async function getRecentTeamUpdatesByTeam(
+  teamId: string,
+  limit = 3,
+): Promise<TeamUpdate[]> {
+  const { data, error } = await supabase
+    .from('team_updates')
+    .select(COLUMNS)
+    .eq('team_id', teamId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    throw new Error(`Failed to load recent team updates: ${error.message}`)
+  }
+
+  return ((data ?? []) as TeamUpdateRow[]).map(rowToUpdate)
+}
+
 export async function createTeamUpdate(
   teamId: string,
   draft: TeamUpdateDraft,

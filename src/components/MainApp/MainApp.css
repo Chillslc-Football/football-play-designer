@@ -5,15 +5,27 @@
   overflow: hidden;
 }
 
-.main-app > .app,
-.main-app > .wristband-page,
-.main-app > .admin-templates-page {
+.main-app-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.main-app-body > .app,
+.main-app-body > .wristband-page,
+.main-app-body > .admin-templates-page,
+.main-app-body > .team-updates-page,
+.main-app-body > .team-messaging-page,
+.main-app-body > .team-calendar-page,
+.main-app-body > .team-hub-page {
   flex: 1;
   min-height: 0;
   height: 100%;
   overflow: hidden;
 }
 
-.main-app > .wristband-page {
+.main-app-body > .wristband-page {
   overflow: auto;
 }

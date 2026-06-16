@@ -18,8 +18,8 @@ import {
   getResolvedFormationTemplates,
   getResolvedFrontTemplates,
 } from '../utils/schemeTemplateStore'
+import { APP_DISPLAY_THEME } from '../constants/appDisplayTheme'
 import './AdminTemplatesPage.css'
-import { AppShellNav } from '../components/AppShellNav/AppShellNav'
 
 function createFormationEditSession(
   formation: {
@@ -173,24 +173,24 @@ export function AdminTemplatesPage() {
   }
 
   return (
-    <div className="admin-templates-page">
-      <AppShellNav />
+    <div className={`admin-templates-page app-shell-page app-theme-${APP_DISPLAY_THEME}`}>
+      <div className="admin-templates-page-screen app-shell-page-screen">
+        <header className="admin-templates-header app-shell-page-header">
+          <div className="app-shell-page-header-main">
+            <h1>Formation & Front Templates</h1>
+            <p className="app-shell-page-subtitle">
+              App-admin control for global offensive formations and defensive fronts.
+            </p>
+          </div>
+        </header>
 
-      <header className="admin-templates-header">
-        <div>
-          <h1 className="admin-templates-title">Formation & Front Templates</h1>
-          <p className="admin-templates-subtitle">
-            App-admin control for global offensive formations and defensive fronts.
+        {(loading || error || message) && (
+          <p className={`admin-templates-status ${error ? 'is-error app-shell-page-error' : ''}`}>
+            {loading ? 'Loading templates…' : error || message}
           </p>
-        </div>
-      </header>
+        )}
 
-      {(loading || error || message) && (
-        <p className={`admin-templates-status ${error ? 'is-error' : ''}`}>
-          {loading ? 'Loading templates…' : error || message}
-        </p>
-      )}
-
+        <div className="admin-templates-content app-shell-page-body">
       <section className="admin-templates-section">
         <div className="admin-templates-section-header">
           <h2>Offensive Formations</h2>
@@ -340,6 +340,8 @@ export function AdminTemplatesPage() {
           })}
         </div>
       </section>
+        </div>
+      </div>
     </div>
   )
 }

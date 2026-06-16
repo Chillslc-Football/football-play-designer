@@ -13,6 +13,34 @@ export function AppShellNav() {
     <nav className="app-shell-nav no-print" aria-label="Main navigation">
       <button
         type="button"
+        className={`app-shell-nav-btn ${view === 'team-hub' ? 'is-active' : ''}`}
+        onClick={() => setView('team-hub')}
+      >
+        Team Hub
+      </button>
+      <button
+        type="button"
+        className={`app-shell-nav-btn ${view === 'calendar' ? 'is-active' : ''}`}
+        onClick={() => setView('calendar')}
+      >
+        Calendar
+      </button>
+      <button
+        type="button"
+        className={`app-shell-nav-btn ${view === 'messages' ? 'is-active' : ''}`}
+        onClick={() => setView('messages')}
+      >
+        Messages
+      </button>
+      <button
+        type="button"
+        className={`app-shell-nav-btn ${view === 'team-updates' ? 'is-active' : ''}`}
+        onClick={() => setView('team-updates')}
+      >
+        Team Updates
+      </button>
+      <button
+        type="button"
         className={`app-shell-nav-btn ${view === 'designer' ? 'is-active' : ''}`}
         onClick={() => setView('designer')}
       >
@@ -24,27 +52,6 @@ export function AppShellNav() {
         onClick={() => setView('wristbands')}
       >
         Wristband Cards
-      </button>
-      <button
-        type="button"
-        className={`app-shell-nav-btn ${view === 'team-updates' ? 'is-active' : ''}`}
-        onClick={() => setView('team-updates')}
-      >
-        Team Updates
-      </button>
-      <button
-        type="button"
-        className={`app-shell-nav-btn ${view === 'messages' ? 'is-active' : ''}`}
-        onClick={() => setView('messages')}
-      >
-        Messages
-      </button>
-      <button
-        type="button"
-        className={`app-shell-nav-btn ${view === 'calendar' ? 'is-active' : ''}`}
-        onClick={() => setView('calendar')}
-      >
-        Calendar
       </button>
       {isAppAdmin && (
         <button

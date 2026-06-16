@@ -1,0 +1,31 @@
+.app-shell-page-toolbar {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-shell-page-toolbar .play-type-selector {
+  justify-content: flex-start;
+  padding: 0;
+  background: transparent;
+}
+
+.app-shell-page-toolbar .play-type-selector .btn {
+  min-height: 30px;
+  padding: 3px 12px;
+  font-size: 12px;
+}
+
+.app-shell-page-toolbar .admin-template-edit-bar {
+  padding: 0;
+  background: transparent;
+  border-bottom: none;
+}
+
+@media (max-width: 600px) {
+  .app-shell-page-toolbar {
+    padding: 6px 8px;
+  }
+}

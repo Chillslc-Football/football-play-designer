@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { useSchemeTemplates } from './context/SchemeTemplateProvider'
 import { useAppShell } from './context/AppShellContext'
@@ -10,9 +10,10 @@ import * as schemeTemplateRepository from './repositories/schemeTemplateReposito
 import { AdminTemplateEditBar } from './components/AdminTemplateEditBar/AdminTemplateEditBar'
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog'
 import { CategoryReminderDialog } from './components/CategoryReminderDialog/CategoryReminderDialog'
-import { Header } from './components/Header/Header'
 import { Field } from './components/Field/Field'
 import { FieldZoomControl } from './components/FieldZoomControl/FieldZoomControl'
+import { PageToolbarLayout } from './components/PageToolbarLayout/PageToolbarLayout'
+import { PlayTypeSelector } from './components/PlayTypeSelector/PlayTypeSelector'
 import { APP_DISPLAY_THEME } from './constants/appDisplayTheme'
 import { PlaySetupPanel } from './components/PlaySetupPanel/PlaySetupPanel'
 import { type DrawingMode } from './components/DrawingModeSelector/DrawingModeSelector'
@@ -1427,6 +1428,50 @@ function App() {
     }
   }
 
+  if (shell) {
+    shell.designerHeaderHandlersRef.current = {
+      onTeamChange: handleTeamSwitchRequest,
+      onLogout: handleLogoutRequest,
+    }
+  }
+
+  const setPageToolbar = shell?.setPageToolbar
+
+  useLayoutEffect(() => {
+    if (!setPageToolbar) return
+
+    if (adminTemplateEdit) {
+      setPageToolbar(
+        <AdminTemplateEditBar
+          kind={adminTemplateEdit.kind}
+          mode={adminTemplateEdit.mode}
+          label={adminTemplateEdit.label}
+          createLabel={templateCreateLabel}
+          saving={templateSaving}
+          onCreateLabelChange={setTemplateCreateLabel}
+          onSave={() => void handleSaveAdminTemplate()}
+          onCancel={handleCancelAdminTemplate}
+        />,
+      )
+    } else {
+      setPageToolbar(
+        <PageToolbarLayout
+          left={
+            <PlayTypeSelector
+              playType={play.playType}
+              canEdit={canEdit}
+              onChange={handlePlayTypeChange}
+            />
+          }
+        />,
+      )
+    }
+
+    return () => {
+      setPageToolbar(null)
+    }
+  }, [setPageToolbar, adminTemplateEdit, templateCreateLabel, templateSaving, play.playType, canEdit])
+
   return (
     <div className={`app app-theme-${APP_DISPLAY_THEME}`}>
       <ConfirmDialog
@@ -1448,28 +1493,6 @@ function App() {
         onSaveWithCategory={(categories) => void handleCategoryReminderSaveWithCategory(categories)}
         onCancel={handleCategoryReminderCancel}
       />
-
-      <Header
-        playType={play.playType}
-        canEdit={canEdit}
-        hidePlayTypeSelector={Boolean(adminTemplateEdit)}
-        onPlayTypeChange={handlePlayTypeChange}
-        onTeamChange={handleTeamSwitchRequest}
-        onLogout={handleLogoutRequest}
-      />
-
-      {adminTemplateEdit && (
-        <AdminTemplateEditBar
-          kind={adminTemplateEdit.kind}
-          mode={adminTemplateEdit.mode}
-          label={adminTemplateEdit.label}
-          createLabel={templateCreateLabel}
-          saving={templateSaving}
-          onCreateLabelChange={setTemplateCreateLabel}
-          onSave={() => void handleSaveAdminTemplate()}
-          onCancel={handleCancelAdminTemplate}
-        />
-      )}
 
       <div className={`app-body ${setupPanelOpen && !adminTemplateEdit ? '' : 'setup-collapsed'}`}>
         {!adminTemplateEdit && (

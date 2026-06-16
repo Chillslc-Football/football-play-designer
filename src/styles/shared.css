@@ -2,6 +2,8 @@
  * Shared coaching-tool UI styles — buttons, inputs, cards, labels.
  */
 
+@import './appShellPage.css';
+
 /* ---- Buttons ---- */
 .btn {
   display: inline-flex;

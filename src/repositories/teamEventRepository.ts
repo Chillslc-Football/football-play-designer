@@ -75,6 +75,29 @@ export async function getTeamEventsByTeam(teamId: string): Promise<TeamEvent[]> 
   return ((data ?? []) as TeamEventRow[]).map(rowToEvent)
 }
 
+export async function getNextUpcomingTeamEvent(teamId: string): Promise<TeamEvent | null> {
+  const now = new Date().toISOString()
+
+  const { data, error } = await supabase
+    .from('team_events')
+    .select(COLUMNS)
+    .eq('team_id', teamId)
+    .gte('starts_at', now)
+    .order('starts_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(`Failed to load next team event: ${error.message}`)
+  }
+
+  if (!data) {
+    return null
+  }
+
+  return rowToEvent(data as TeamEventRow)
+}
+
 export async function createTeamEvent(
   teamId: string,
   draft: TeamEventDraft,

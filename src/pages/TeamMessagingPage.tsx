@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AppShellNav } from '../components/AppShellNav/AppShellNav'
 import { APP_DISPLAY_THEME } from '../constants/appDisplayTheme'
 import { useAuth } from '../hooks/useAuth'
 import { useTeam } from '../hooks/useTeam'
@@ -123,88 +122,89 @@ export function TeamMessagingPage() {
   }
 
   return (
-    <div className={`team-messaging-page app-theme-${APP_DISPLAY_THEME}`}>
-      <div className="team-messaging-page-screen">
-        <header className="team-messaging-page-header">
-          <div className="team-messaging-page-header-main">
-            <AppShellNav />
+    <div className={`team-messaging-page app-shell-page app-theme-${APP_DISPLAY_THEME}`}>
+      <div className="team-messaging-page-screen app-shell-page-screen">
+        <header className="team-messaging-page-header app-shell-page-header">
+          <div className="team-messaging-page-header-main app-shell-page-header-main">
             <h1>Messages</h1>
-            <p className="team-messaging-page-subtitle">
+            <p className="team-messaging-page-subtitle app-shell-page-subtitle">
               {thread?.title ?? 'Team Chat'} · {team?.name ?? 'Team'}
             </p>
           </div>
         </header>
 
-        {error && <p className="team-messaging-page-error">{error}</p>}
+        {error && <p className="team-messaging-page-error app-shell-page-error">{error}</p>}
 
         {loading ? (
-          <p className="team-messaging-page-loading">Loading messages…</p>
+          <p className="team-messaging-page-loading app-shell-page-loading">Loading messages…</p>
         ) : (
-          <div className="team-messaging-chat">
-            <div className="team-messaging-messages" aria-live="polite">
-              {messages.length === 0 ? (
-                <p className="team-messaging-page-empty">
-                  No messages yet. Send the first message to your team.
-                </p>
-              ) : (
-                messages.map((message) => {
-                  const isOwn = user?.id === message.sender_id
+          <div className="team-messaging-chat app-shell-page-body">
+            <div className="team-messaging-panel">
+              <div className="team-messaging-messages" aria-live="polite">
+                {messages.length === 0 ? (
+                  <p className="team-messaging-page-empty app-shell-page-empty">
+                    No messages yet. Send the first message to your team.
+                  </p>
+                ) : (
+                  messages.map((message) => {
+                    const isOwn = user?.id === message.sender_id
 
-                  return (
-                    <article
-                      key={message.id}
-                      className={`team-messaging-message${isOwn ? ' is-own' : ''}`}
-                    >
-                      <p className="team-messaging-message-meta">
-                        {senderLabel(message)} · {formatTeamUpdateTimestamp(message.created_at)}
-                      </p>
-                      <p className="team-messaging-message-body">{message.body}</p>
-                    </article>
-                  )
-                })
-              )}
-              <div ref={messagesEndRef} />
-            </div>
+                    return (
+                      <article
+                        key={message.id}
+                        className={`team-messaging-message${isOwn ? ' is-own' : ''}`}
+                      >
+                        <div className="team-messaging-message-bubble">
+                          <p className="team-messaging-message-meta">
+                            {senderLabel(message)} · {formatTeamUpdateTimestamp(message.created_at)}
+                          </p>
+                          <p className="team-messaging-message-body">{message.body}</p>
+                        </div>
+                      </article>
+                    )
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
 
-            <form
-              className="team-messaging-compose"
-              onSubmit={(event) => {
-                event.preventDefault()
-                void handleSend()
-              }}
-            >
-              <div className="form-group">
-                <label className="field-label" htmlFor="team-message-body">
+              <form
+                className="team-messaging-compose"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  void handleSend()
+                }}
+              >
+                <label className="field-label team-messaging-compose-label" htmlFor="team-message-body">
                   Message
                 </label>
-                <textarea
-                  id="team-message-body"
-                  className="input-field team-messaging-compose-body"
-                  value={draft.body}
-                  rows={3}
-                  placeholder="Write a message to your team…"
-                  disabled={sending}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, body: event.target.value }))
-                  }
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && !event.shiftKey) {
-                      event.preventDefault()
-                      void handleSend()
+                <div className="team-messaging-compose-row">
+                  <textarea
+                    id="team-message-body"
+                    className="input-field team-messaging-compose-body"
+                    value={draft.body}
+                    rows={3}
+                    placeholder="Write a message to your team…"
+                    disabled={sending}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, body: event.target.value }))
                     }
-                  }}
-                />
-              </div>
-              <div className="team-messaging-compose-actions">
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={sending || !isDraftValid(draft)}
-                >
-                  {sending ? 'Sending…' : 'Send'}
-                </button>
-              </div>
-            </form>
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault()
+                        void handleSend()
+                      }
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    className="btn btn-primary team-messaging-compose-send"
+                    disabled={sending || !isDraftValid(draft)}
+                  >
+                    {sending ? 'Sending…' : 'Send'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </div>

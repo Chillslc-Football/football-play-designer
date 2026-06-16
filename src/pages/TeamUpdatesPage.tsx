@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
-import { AppShellNav } from '../components/AppShellNav/AppShellNav'
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog/ConfirmDialog'
+import { PageToolbarLayout } from '../components/PageToolbarLayout/PageToolbarLayout'
 import { APP_DISPLAY_THEME } from '../constants/appDisplayTheme'
+import { useAppShell } from '../context/AppShellContext'
 import { useAuth } from '../hooks/useAuth'
 import { useCanEdit } from '../hooks/useCanEdit'
 import { useTeam } from '../hooks/useTeam'
@@ -23,6 +24,10 @@ function isDraftValid(draft: TeamUpdateDraft): boolean {
 
 export function TeamUpdatesPage() {
   const { user } = useAuth()
+  const shell = useAppShell()
+  const setPageToolbar = shell?.setPageToolbar
+  const launchMode = shell?.launchMode
+  const clearLaunchMode = shell?.clearLaunchMode
   const { team, activeTeamId } = useTeam()
   const canEdit = useCanEdit()
 
@@ -54,6 +59,12 @@ export function TeamUpdatesPage() {
   useEffect(() => {
     void loadUpdates()
   }, [loadUpdates])
+
+  useEffect(() => {
+    if (launchMode !== 'create' || !canEdit || loading || view !== 'list') return
+    openCreate()
+    clearLaunchMode?.()
+  }, [launchMode, canEdit, loading, view, clearLaunchMode])
 
   function openCreate() {
     setDraft(createEmptyTeamUpdateDraft())
@@ -134,25 +145,13 @@ export function TeamUpdatesPage() {
     return 'Coach'
   }
 
-  return (
-    <div className={`team-updates-page app-theme-${APP_DISPLAY_THEME}`}>
-      <ConfirmDialog
-        open={deleteTargetId !== null}
-        message="Delete this team update? This cannot be undone."
-        variant="delete"
-        confirmLabel="Delete"
-        onConfirm={() => void handleDeleteConfirm()}
-        onCancel={() => setDeleteTargetId(null)}
-      />
+  useLayoutEffect(() => {
+    if (!setPageToolbar) return
 
-      <div className="team-updates-page-screen">
-        <header className="team-updates-page-header">
-          <div className="team-updates-page-header-main">
-            <AppShellNav />
-            <h1>Team Updates</h1>
-            <p className="team-updates-page-subtitle">{team?.name ?? 'Team'}</p>
-          </div>
-          <div className="team-updates-page-header-actions">
+    setPageToolbar(
+      <PageToolbarLayout
+        actions={
+          <>
             {view !== 'list' && (
               <button type="button" className="btn" onClick={backToList} disabled={saving}>
                 Back to list
@@ -163,22 +162,48 @@ export function TeamUpdatesPage() {
                 New Update
               </button>
             )}
+          </>
+        }
+      />,
+    )
+
+    return () => {
+      setPageToolbar(null)
+    }
+  }, [setPageToolbar, view, canEdit, saving])
+
+  return (
+    <div className={`team-updates-page app-shell-page app-theme-${APP_DISPLAY_THEME}`}>
+      <ConfirmDialog
+        open={deleteTargetId !== null}
+        message="Delete this team update? This cannot be undone."
+        variant="delete"
+        confirmLabel="Delete"
+        onConfirm={() => void handleDeleteConfirm()}
+        onCancel={() => setDeleteTargetId(null)}
+      />
+
+      <div className="team-updates-page-screen app-shell-page-screen">
+        <header className="team-updates-page-header app-shell-page-header">
+          <div className="team-updates-page-header-main app-shell-page-header-main">
+            <h1>Team Updates</h1>
+            <p className="team-updates-page-subtitle app-shell-page-subtitle">{team?.name ?? 'Team'}</p>
           </div>
         </header>
 
-        {error && <p className="team-updates-page-error">{error}</p>}
+        {error && <p className="team-updates-page-error app-shell-page-error">{error}</p>}
         {!canEdit && !loading && view === 'list' && (
-          <p className="team-updates-page-readonly">
+          <p className="team-updates-page-readonly app-shell-page-readonly">
             View only — contact your coach to post updates.
           </p>
         )}
 
         {loading ? (
-          <p className="team-updates-page-loading">Loading team updates…</p>
+          <p className="team-updates-page-loading app-shell-page-loading">Loading team updates…</p>
         ) : view === 'list' ? (
-          <div className="team-updates-list">
+          <div className="team-updates-list app-shell-page-body">
             {updates.length === 0 ? (
-              <p className="team-updates-page-empty">
+              <p className="team-updates-page-empty app-shell-page-empty">
                 {canEdit
                   ? 'No team updates yet. Post the first announcement for your team.'
                   : 'No team updates have been posted yet.'}
@@ -230,7 +255,7 @@ export function TeamUpdatesPage() {
             )}
           </div>
         ) : (
-          <div className="team-updates-editor">
+          <div className="team-updates-editor app-shell-page-body">
             <section className="team-updates-editor-form">
               <div className="form-group">
                 <label className="field-label" htmlFor="team-update-title">

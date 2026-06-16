@@ -1,67 +1,7 @@
-.team-calendar-page {
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--app-bg);
-  color: var(--text-light);
-}
-
-.team-calendar-page-screen {
-  flex: 1;
-  padding: var(--space-md);
-  overflow: auto;
-}
-
-.team-calendar-page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-md);
-  margin-bottom: var(--space-md);
-}
-
-.team-calendar-page-header-main {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.team-calendar-page-header h1 {
-  margin: 0 0 4px;
-  font-size: 1.4rem;
-}
-
-.team-calendar-page-subtitle {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-muted, #666);
-}
-
-.team-calendar-page-header-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.team-calendar-page-error,
-.team-calendar-page-readonly,
-.team-calendar-page-loading,
-.team-calendar-page-empty {
-  margin: 0 0 var(--space-md);
-  font-size: 13px;
-}
-
-.team-calendar-page-error {
-  color: var(--danger);
-}
-
 .team-calendar-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  max-width: 900px;
 }
 
 .team-calendar-list-section {
@@ -156,6 +96,16 @@
 
 .team-calendar-editor {
   max-width: 720px;
+}
+
+.team-calendar-month-wrap {
+  max-width: 900px;
+}
+
+@media (min-width: 769px) {
+  .team-calendar-month-wrap {
+    width: 100%;
+  }
 }
 
 .team-calendar-editor-form {

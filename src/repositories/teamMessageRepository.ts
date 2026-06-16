@@ -130,6 +130,28 @@ export async function getTeamMessagesByThread(
   return withSenderDisplayNames(messages)
 }
 
+export async function getRecentTeamMessagesForTeam(
+  teamId: string,
+  limit = 5,
+): Promise<TeamMessage[]> {
+  const thread = await getOrCreateTeamChatThread(teamId)
+
+  const { data, error } = await supabase
+    .from('team_messages')
+    .select(MESSAGE_COLUMNS)
+    .eq('team_id', teamId)
+    .eq('thread_id', thread.id)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    throw new Error(`Failed to load recent messages: ${error.message}`)
+  }
+
+  const messages = ((data ?? []) as TeamMessageRow[]).map(rowToMessage)
+  return withSenderDisplayNames(messages)
+}
+
 export async function createTeamMessage(
   teamId: string,
   threadId: string,

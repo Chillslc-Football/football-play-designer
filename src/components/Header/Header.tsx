@@ -2,33 +2,20 @@ import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCanInvite } from '../../hooks/useCanInvite'
 import { useTeam } from '../../hooks/useTeam'
-import type { PlayType } from '../../types/playType'
 import { TEAM_ROLE_LABELS } from '../../utils/roleLabels'
 import { DeleteTeamDialog } from '../DeleteTeamDialog/DeleteTeamDialog'
 import { FeedbackDialog } from '../FeedbackDialog/FeedbackDialog'
 import { HelpDialog } from '../HelpDialog/HelpDialog'
 import { InviteMemberDialog } from '../InviteMemberDialog/InviteMemberDialog'
 import { AppShellNav } from '../AppShellNav/AppShellNav'
-import { PlayTypeSelector } from '../PlayTypeSelector/PlayTypeSelector'
 import './Header.css'
 
 type HeaderProps = {
-  playType: PlayType
-  canEdit?: boolean
-  onPlayTypeChange: (playType: PlayType) => void
   onTeamChange?: (teamId: string) => void
   onLogout?: () => void
-  hidePlayTypeSelector?: boolean
 }
 
-export function Header({
-  playType,
-  canEdit = true,
-  onPlayTypeChange,
-  onTeamChange,
-  onLogout,
-  hidePlayTypeSelector = false,
-}: HeaderProps) {
+export function Header({ onTeamChange, onLogout }: HeaderProps) {
   const { user, signOut } = useAuth()
   const { team, activeTeamId, memberships, role, deleteTeam } = useTeam()
   const canInvite = useCanInvite()
@@ -94,7 +81,7 @@ export function Header({
   }
 
   return (
-    <header className="header">
+    <header className="header no-print">
       {team && (
         <DeleteTeamDialog
           open={deleteTeamOpen}
@@ -134,13 +121,7 @@ export function Header({
 
         <AppShellNav />
 
-        {!hidePlayTypeSelector && (
-          <PlayTypeSelector
-            playType={playType}
-            canEdit={canEdit}
-            onChange={onPlayTypeChange}
-          />
-        )}
+        <div className="header-spacer" aria-hidden="true" />
 
         {email && (
           <div className="header-actions">

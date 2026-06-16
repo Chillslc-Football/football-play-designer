@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
-import { AppShellNav } from '../components/AppShellNav/AppShellNav'
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog/ConfirmDialog'
+import { PageToolbarLayout } from '../components/PageToolbarLayout/PageToolbarLayout'
+import { TeamCalendarMonthView } from '../components/TeamCalendar/TeamCalendarMonthView'
+import { TeamCalendarViewToggle } from '../components/TeamCalendar/TeamCalendarViewToggle'
 import { APP_DISPLAY_THEME } from '../constants/appDisplayTheme'
+import { useAppShell } from '../context/AppShellContext'
 import { useAuth } from '../hooks/useAuth'
 import { useCanEdit } from '../hooks/useCanEdit'
 import { useTeam } from '../hooks/useTeam'
@@ -20,9 +23,8 @@ import {
   validateTeamEventDraft,
   wasTeamEventEdited,
 } from '../utils/teamEventUtils'
+import type { TeamCalendarDisplayView, TeamCalendarPageMode } from './teamCalendarTypes'
 import './TeamCalendarPage.css'
-
-type ViewMode = 'list' | 'edit'
 
 function descriptionPreview(description: string | null): string | null {
   if (!description) return null
@@ -30,14 +32,24 @@ function descriptionPreview(description: string | null): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
+function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
 export function TeamCalendarPage() {
   const { user } = useAuth()
+  const shell = useAppShell()
+  const setPageToolbar = shell?.setPageToolbar
+  const launchMode = shell?.launchMode
+  const clearLaunchMode = shell?.clearLaunchMode
   const { team, activeTeamId } = useTeam()
   const canEdit = useCanEdit()
 
   const [events, setEvents] = useState<TeamEvent[]>([])
   const [draft, setDraft] = useState<TeamEventDraft>(createEmptyTeamEventDraft())
-  const [view, setView] = useState<ViewMode>('list')
+  const [pageMode, setPageMode] = useState<TeamCalendarPageMode>('browse')
+  const [displayView, setDisplayView] = useState<TeamCalendarDisplayView>('list')
+  const [visibleMonth, setVisibleMonth] = useState<Date>(() => startOfMonth(new Date()))
   const [editingExisting, setEditingExisting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -64,25 +76,43 @@ export function TeamCalendarPage() {
     void loadEvents()
   }, [loadEvents])
 
+  useEffect(() => {
+    if (launchMode !== 'create' || !canEdit || loading || pageMode !== 'browse') return
+    openCreate()
+    clearLaunchMode?.()
+  }, [launchMode, canEdit, loading, pageMode, clearLaunchMode])
+
   function openCreate() {
     setDraft(createEmptyTeamEventDraft())
     setEditingExisting(false)
-    setView('edit')
+    setPageMode('edit')
     setError(null)
   }
 
   function openEdit(event: TeamEvent) {
     setDraft(eventToDraft(event))
     setEditingExisting(true)
-    setView('edit')
+    setPageMode('edit')
     setError(null)
   }
 
-  function backToList() {
-    setView('list')
+  function backToBrowse() {
+    setPageMode('browse')
     setEditingExisting(false)
     setDraft(createEmptyTeamEventDraft())
     setError(null)
+  }
+
+  function goToPrevMonth() {
+    setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))
+  }
+
+  function goToNextMonth() {
+    setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))
+  }
+
+  function goToToday() {
+    setVisibleMonth(startOfMonth(new Date()))
   }
 
   async function handleSave() {
@@ -105,7 +135,7 @@ export function TeamCalendarPage() {
       }
 
       await loadEvents()
-      backToList()
+      backToBrowse()
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Failed to save team event')
     } finally {
@@ -120,8 +150,8 @@ export function TeamCalendarPage() {
       await teamEventRepository.deleteTeamEvent(activeTeamId, deleteTargetId)
       setDeleteTargetId(null)
       await loadEvents()
-      if (view === 'edit' && draft.id === deleteTargetId) {
-        backToList()
+      if (pageMode === 'edit' && draft.id === deleteTargetId) {
+        backToBrowse()
       }
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete team event')
@@ -184,8 +214,40 @@ export function TeamCalendarPage() {
   const draftValidationError = validateTeamEventDraft(draft)
   const canSaveDraft = draftValidationError === null
 
+  useLayoutEffect(() => {
+    if (!setPageToolbar) return
+
+    setPageToolbar(
+      <PageToolbarLayout
+        left={
+          pageMode === 'browse' ? (
+            <TeamCalendarViewToggle displayView={displayView} onChange={setDisplayView} />
+          ) : null
+        }
+        actions={
+          <>
+            {pageMode === 'edit' && (
+              <button type="button" className="btn" onClick={backToBrowse} disabled={saving}>
+                Back
+              </button>
+            )}
+            {canEdit && pageMode === 'browse' && (
+              <button type="button" className="btn btn-primary" onClick={openCreate}>
+                New Event
+              </button>
+            )}
+          </>
+        }
+      />,
+    )
+
+    return () => {
+      setPageToolbar(null)
+    }
+  }, [setPageToolbar, pageMode, displayView, canEdit, saving])
+
   return (
-    <div className={`team-calendar-page app-theme-${APP_DISPLAY_THEME}`}>
+    <div className={`team-calendar-page app-shell-page app-theme-${APP_DISPLAY_THEME}`}>
       <ConfirmDialog
         open={deleteTargetId !== null}
         message="Delete this team event? This cannot be undone."
@@ -195,40 +257,27 @@ export function TeamCalendarPage() {
         onCancel={() => setDeleteTargetId(null)}
       />
 
-      <div className="team-calendar-page-screen">
-        <header className="team-calendar-page-header">
-          <div className="team-calendar-page-header-main">
-            <AppShellNav />
+      <div className="team-calendar-page-screen app-shell-page-screen">
+        <header className="team-calendar-page-header app-shell-page-header">
+          <div className="team-calendar-page-header-main app-shell-page-header-main">
             <h1>Team Calendar</h1>
-            <p className="team-calendar-page-subtitle">{team?.name ?? 'Team'}</p>
-          </div>
-          <div className="team-calendar-page-header-actions">
-            {view !== 'list' && (
-              <button type="button" className="btn" onClick={backToList} disabled={saving}>
-                Back to list
-              </button>
-            )}
-            {canEdit && view === 'list' && (
-              <button type="button" className="btn btn-primary" onClick={openCreate}>
-                New Event
-              </button>
-            )}
+            <p className="team-calendar-page-subtitle app-shell-page-subtitle">{team?.name ?? 'Team'}</p>
           </div>
         </header>
 
-        {error && <p className="team-calendar-page-error">{error}</p>}
-        {!canEdit && !loading && view === 'list' && (
-          <p className="team-calendar-page-readonly">
+        {error && <p className="team-calendar-page-error app-shell-page-error">{error}</p>}
+        {!canEdit && !loading && pageMode === 'browse' && (
+          <p className="team-calendar-page-readonly app-shell-page-readonly">
             View only — contact your coach to manage calendar events.
           </p>
         )}
 
         {loading ? (
-          <p className="team-calendar-page-loading">Loading team events…</p>
-        ) : view === 'list' ? (
-          <div className="team-calendar-list">
+          <p className="team-calendar-page-loading app-shell-page-loading">Loading team events…</p>
+        ) : pageMode === 'browse' && displayView === 'list' ? (
+          <div className="team-calendar-list app-shell-page-body">
             {events.length === 0 ? (
-              <p className="team-calendar-page-empty">
+              <p className="team-calendar-page-empty app-shell-page-empty">
                 {canEdit
                   ? 'No team events yet. Add the first practice, game, or meeting for your team.'
                   : 'No team events have been scheduled yet.'}
@@ -254,8 +303,19 @@ export function TeamCalendarPage() {
               </>
             )}
           </div>
+        ) : pageMode === 'browse' && displayView === 'month' ? (
+          <div className="team-calendar-month-wrap app-shell-page-body">
+            <TeamCalendarMonthView
+              events={events}
+              visibleMonth={visibleMonth}
+              onPrevMonth={goToPrevMonth}
+              onNextMonth={goToNextMonth}
+              onToday={goToToday}
+              onEventClick={openEdit}
+            />
+          </div>
         ) : (
-          <div className="team-calendar-editor">
+          <div className="team-calendar-editor app-shell-page-body">
             <section className="team-calendar-editor-form">
               <div className="form-group">
                 <label className="field-label" htmlFor="team-event-title">
