@@ -6,7 +6,8 @@
 }
 
 .main-app > .app,
-.main-app > .wristband-page {
+.main-app > .wristband-page,
+.main-app > .admin-templates-page {
   flex: 1;
   min-height: 0;
   height: 100%;

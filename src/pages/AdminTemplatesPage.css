@@ -1,10 +1,22 @@
 .admin-templates-page {
+  height: 100%;
+  min-height: 0;
   max-width: 960px;
   margin: 0 auto;
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--app-bg);
+  color: var(--text-light);
+}
+
+.admin-templates-page > .app-shell-nav,
+.admin-templates-header,
+.admin-templates-status {
+  flex-shrink: 0;
 }
 
 .admin-templates-header {
@@ -42,6 +54,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  flex: 1;
+  min-height: 0;
 }
 
 .admin-templates-section-header {
@@ -49,6 +63,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 .admin-templates-section-header h2 {
@@ -60,6 +75,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .admin-template-card {
