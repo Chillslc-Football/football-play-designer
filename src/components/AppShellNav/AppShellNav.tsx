@@ -32,6 +32,13 @@ export function AppShellNav() {
       >
         Team Updates
       </button>
+      <button
+        type="button"
+        className={`app-shell-nav-btn ${view === 'messages' ? 'is-active' : ''}`}
+        onClick={() => setView('messages')}
+      >
+        Messages
+      </button>
       {isAppAdmin && (
         <button
           type="button"

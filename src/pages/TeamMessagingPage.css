@@ -1,0 +1,126 @@
+.team-messaging-page {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--app-bg);
+  color: var(--text-light);
+}
+
+.team-messaging-page-screen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-md);
+}
+
+.team-messaging-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+  flex-shrink: 0;
+}
+
+.team-messaging-page-header-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.team-messaging-page-header h1 {
+  margin: 0 0 4px;
+  font-size: 1.4rem;
+}
+
+.team-messaging-page-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted, #666);
+}
+
+.team-messaging-page-error,
+.team-messaging-page-loading,
+.team-messaging-page-empty {
+  margin: 0;
+  font-size: 13px;
+}
+
+.team-messaging-page-error {
+  color: var(--danger);
+  margin-bottom: var(--space-md);
+  flex-shrink: 0;
+}
+
+.team-messaging-chat {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  max-width: 900px;
+  width: 100%;
+}
+
+.team-messaging-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--surface);
+  color: var(--text-on-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
+}
+
+.team-messaging-message {
+  max-width: 85%;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--play-type-selector-bg, var(--app-bg));
+  border: 1px solid var(--border);
+}
+
+.team-messaging-message.is-own {
+  align-self: flex-end;
+  border-color: var(--border-strong, var(--border));
+}
+
+.team-messaging-message-meta {
+  margin: 0 0 6px;
+  font-size: 11px;
+  color: var(--text-muted, #666);
+}
+
+.team-messaging-message-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.team-messaging-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.team-messaging-compose-body {
+  min-height: 72px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.team-messaging-compose-actions {
+  display: flex;
+  justify-content: flex-end;
+}
