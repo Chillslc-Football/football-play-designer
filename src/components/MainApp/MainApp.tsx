@@ -3,6 +3,7 @@ import App from '../../App'
 import { SchemeTemplateProvider } from '../../context/SchemeTemplateProvider'
 import { AppShellProvider, type AppShellView } from '../../context/AppShellContext'
 import { AdminTemplatesPage } from '../../pages/AdminTemplatesPage'
+import { TeamCalendarPage } from '../../pages/TeamCalendarPage'
 import { TeamMessagingPage } from '../../pages/TeamMessagingPage'
 import { TeamUpdatesPage } from '../../pages/TeamUpdatesPage'
 import { WristbandCardsPage } from '../../pages/WristbandCardsPage'
@@ -40,6 +41,8 @@ function MainAppViews() {
           <TeamUpdatesPage />
         ) : view === 'messages' ? (
           <TeamMessagingPage />
+        ) : view === 'calendar' ? (
+          <TeamCalendarPage />
         ) : (
           <AdminTemplatesPage />
         )}

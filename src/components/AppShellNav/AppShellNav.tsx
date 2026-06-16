@@ -39,6 +39,13 @@ export function AppShellNav() {
       >
         Messages
       </button>
+      <button
+        type="button"
+        className={`app-shell-nav-btn ${view === 'calendar' ? 'is-active' : ''}`}
+        onClick={() => setView('calendar')}
+      >
+        Calendar
+      </button>
       {isAppAdmin && (
         <button
           type="button"

@@ -6,6 +6,7 @@ export type AppShellView =
   | 'wristbands'
   | 'team-updates'
   | 'messages'
+  | 'calendar'
   | 'admin-templates'
 
 type AppShellContextValue = {
