@@ -119,7 +119,7 @@ export function TeamMessagingPage() {
     if (user?.id && message.sender_id === user.id) {
       return 'You'
     }
-    return 'Team member'
+    return message.sender_display_name ?? 'Team member'
   }
 
   return (

@@ -22,7 +22,10 @@ type TeamMessageRow = {
   deleted_at: string | null
 }
 
-  'id, thread_id, team_id, sender_id, body, created_at, edited_at, deleted_at'
+type ProfileNameRow = {
+  id: string
+  display_name: string | null
+}
 
 const MESSAGE_COLUMNS =
   'id, thread_id, team_id, sender_id, body, created_at, edited_at, deleted_at'
@@ -45,11 +48,51 @@ function rowToMessage(row: TeamMessageRow): TeamMessage {
     thread_id: row.thread_id,
     team_id: row.team_id,
     sender_id: row.sender_id,
+    sender_display_name: null,
     body: row.body,
     created_at: row.created_at,
     edited_at: row.edited_at,
     deleted_at: row.deleted_at,
   }
+}
+
+async function fetchSenderDisplayNames(senderIds: string[]): Promise<Map<string, string>> {
+  const uniqueIds = [...new Set(senderIds.filter((id) => id.length > 0))]
+  if (uniqueIds.length === 0) {
+    return new Map()
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, display_name')
+    .in('id', uniqueIds)
+
+  if (error) {
+    throw new Error(`Failed to load sender profiles: ${error.message}`)
+  }
+
+  const names = new Map<string, string>()
+  for (const row of (data ?? []) as ProfileNameRow[]) {
+    const trimmed = row.display_name?.trim()
+    if (trimmed) {
+      names.set(row.id, trimmed)
+    }
+  }
+
+  return names
+}
+
+async function withSenderDisplayNames(messages: TeamMessage[]): Promise<TeamMessage[]> {
+  if (messages.length === 0) {
+    return messages
+  }
+
+  const names = await fetchSenderDisplayNames(messages.map((message) => message.sender_id))
+
+  return messages.map((message) => ({
+    ...message,
+    sender_display_name: names.get(message.sender_id) ?? null,
+  }))
 }
 
 export async function getOrCreateTeamChatThread(teamId: string): Promise<TeamMessageThread> {
@@ -83,7 +126,8 @@ export async function getTeamMessagesByThread(
     throw new Error(`Failed to load messages: ${error.message}`)
   }
 
-  return ((data ?? []) as TeamMessageRow[]).map(rowToMessage)
+  const messages = ((data ?? []) as TeamMessageRow[]).map(rowToMessage)
+  return withSenderDisplayNames(messages)
 }
 
 export async function createTeamMessage(
@@ -113,7 +157,8 @@ export async function createTeamMessage(
     throw new Error(`Failed to send message: ${error.message}`)
   }
 
-  return rowToMessage(data as TeamMessageRow)
+  const [message] = await withSenderDisplayNames([rowToMessage(data as TeamMessageRow)])
+  return message
 }
 
 export function subscribeToTeamMessages(
@@ -136,7 +181,10 @@ export function subscribeToTeamMessages(
         if (row.team_id !== teamId) {
           return
         }
-        onInsert(rowToMessage(row))
+
+        void withSenderDisplayNames([rowToMessage(row)]).then(([message]) => {
+          onInsert(message)
+        })
       },
     )
     .subscribe()

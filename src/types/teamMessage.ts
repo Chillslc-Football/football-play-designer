@@ -13,6 +13,7 @@ export type TeamMessage = {
   thread_id: string
   team_id: string
   sender_id: string
+  sender_display_name: string | null
   body: string
   created_at: string
   edited_at: string | null
