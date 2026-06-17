@@ -108,6 +108,28 @@
   gap: 8px;
   width: 100%;
   padding: 10px 12px;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+}
+
+.sidebar-section-toggle:hover {
+  background: var(--surface-hover, rgba(0, 0, 0, 0.04));
+}
+
+.sidebar-section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.sidebar-section-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -115,8 +137,16 @@
   font-family: inherit;
 }
 
-.sidebar-section-toggle:hover {
-  background: var(--surface-hover, rgba(0, 0, 0, 0.04));
+.sidebar-section-chevron-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .sidebar-section-toggle-title {

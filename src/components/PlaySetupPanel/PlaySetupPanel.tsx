@@ -8,6 +8,7 @@ import {
   type PlayControlsProps,
 } from '../PlayControls/PlayControls'
 import { PlayerAssignmentPanel } from '../PlayerAssignmentPanel/PlayerAssignmentPanel'
+import { SectionHelpTooltip } from '../SectionHelpTooltip/SectionHelpTooltip'
 import { Toolbar } from '../Toolbar/Toolbar'
 import { DrawingModeSelector, type DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
 import type { MotionType } from '../../types/motion'
@@ -97,8 +98,23 @@ type PlaySetupPanelProps = {
   onPlayNotesChange: (notes: string) => void
 }
 
+const SECTION_HELP = {
+  savedPlays:
+    'Open saved plays, filter your play list, and print or share playbooks.',
+  formation:
+    'Choose offensive formations, defensive fronts, and field position setup.',
+  play: 'Name the play and assign play categories.',
+  drawingMode: 'Choose what you are placing or drawing on the field.',
+  playActions: 'Create, save, delete, or mirror the current play.',
+  playerAssignment:
+    'Select a player and edit their position label or assignment notes.',
+  playNotes:
+    'Add coaching notes, reads, reminders, or install details for this play.',
+} as const
+
 function SidebarCollapsibleSection({
   title,
+  helpContent,
   defaultExpanded = false,
   className = '',
   titleClassName = '',
@@ -106,6 +122,7 @@ function SidebarCollapsibleSection({
   isLast = false,
 }: {
   title: string
+  helpContent?: string
   defaultExpanded?: boolean
   className?: string
   titleClassName?: string
@@ -118,19 +135,31 @@ function SidebarCollapsibleSection({
     <section
       className={`sidebar-section sidebar-section-collapsible ${isOpen ? 'is-open' : 'is-collapsed'} ${className} ${isLast ? 'sidebar-section-last' : ''}`}
     >
-      <button
-        type="button"
-        className="sidebar-section-toggle"
-        onClick={() => setIsOpen((open) => !open)}
-        aria-expanded={isOpen}
-      >
-        <h3 className={`sidebar-section-title sidebar-section-toggle-title ${titleClassName}`}>
-          {title}
-        </h3>
-        <span className="sidebar-section-chevron" aria-hidden="true">
-          {isOpen ? '▾' : '▸'}
-        </span>
-      </button>
+      <div className="sidebar-section-toggle">
+        <div className="sidebar-section-title-row">
+          <button
+            type="button"
+            className="sidebar-section-toggle-btn"
+            onClick={() => setIsOpen((open) => !open)}
+            aria-expanded={isOpen}
+          >
+            <h3 className={`sidebar-section-title sidebar-section-toggle-title ${titleClassName}`}>
+              {title}
+            </h3>
+          </button>
+          {helpContent && <SectionHelpTooltip content={helpContent} />}
+        </div>
+        <button
+          type="button"
+          className="sidebar-section-chevron-btn"
+          onClick={() => setIsOpen((open) => !open)}
+          aria-label={isOpen ? `Collapse ${title}` : `Expand ${title}`}
+        >
+          <span className="sidebar-section-chevron" aria-hidden="true">
+            {isOpen ? '▾' : '▸'}
+          </span>
+        </button>
+      </div>
       {isOpen && <div className="sidebar-section-body">{children}</div>}
     </section>
   )
@@ -256,11 +285,18 @@ export function PlaySetupPanel({
       <div className="play-setup-body">
         <PlayControlsRoot {...playControlsProps}>
           <div className="play-setup-sections">
-            <SidebarCollapsibleSection title="Play Library" className="sidebar-section-library">
+            <SidebarCollapsibleSection
+              title="Saved Plays & Playbooks"
+              helpContent={SECTION_HELP.savedPlays}
+              className="sidebar-section-library"
+            >
               <PlayControlsLibrarySection />
             </SidebarCollapsibleSection>
 
-            <SidebarCollapsibleSection title={schemeSectionTitle}>
+            <SidebarCollapsibleSection
+              title={schemeSectionTitle}
+              helpContent={SECTION_HELP.formation}
+            >
               <FormationSelector
                 playType={playType}
                 canEdit={canEdit}
@@ -286,12 +322,13 @@ export function PlaySetupPanel({
               />
             </SidebarCollapsibleSection>
 
-            <SidebarCollapsibleSection title="Play">
+            <SidebarCollapsibleSection title="Play" helpContent={SECTION_HELP.play}>
               <PlayControlsInformationSection />
             </SidebarCollapsibleSection>
 
             <SidebarCollapsibleSection
               title="Drawing Mode"
+              helpContent={SECTION_HELP.drawingMode}
               defaultExpanded
               className="sidebar-section-drawing-tools"
               titleClassName="sidebar-section-title-prominent"
@@ -306,7 +343,11 @@ export function PlaySetupPanel({
               />
             </SidebarCollapsibleSection>
 
-            <SidebarCollapsibleSection title="Play Actions" defaultExpanded>
+            <SidebarCollapsibleSection
+              title="Play Actions"
+              helpContent={SECTION_HELP.playActions}
+              defaultExpanded
+            >
               <Toolbar
                 canEdit={canEdit}
                 selectedLoadId={selectedLoadId}
@@ -320,7 +361,11 @@ export function PlaySetupPanel({
               />
             </SidebarCollapsibleSection>
 
-            <SidebarCollapsibleSection title="Player Assignment" defaultExpanded>
+            <SidebarCollapsibleSection
+              title="Player Assignment"
+              helpContent={SECTION_HELP.playerAssignment}
+              defaultExpanded
+            >
               <PlayerAssignmentPanel
                 embedded
                 selectedPlayerId={selectedPlayerId}
@@ -334,7 +379,12 @@ export function PlaySetupPanel({
               />
             </SidebarCollapsibleSection>
 
-            <SidebarCollapsibleSection title="Play Notes" defaultExpanded isLast>
+            <SidebarCollapsibleSection
+              title="Play Notes"
+              helpContent={SECTION_HELP.playNotes}
+              defaultExpanded
+              isLast
+            >
               <Notes embedded value={playNotes} canEdit={canEdit} onChange={onPlayNotesChange} />
             </SidebarCollapsibleSection>
           </div>

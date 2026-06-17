@@ -138,7 +138,7 @@ export function PlayControlsLibrarySection() {
     <div className="play-controls play-controls-library">
       <div className="form-group">
         <label htmlFor="load-play" className="field-label sidebar-field-label">
-          Load Play
+          Open Saved Play
         </label>
         <select
           id="load-play"

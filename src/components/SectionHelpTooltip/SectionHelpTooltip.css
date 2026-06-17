@@ -1,0 +1,58 @@
+.section-help-tooltip {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.section-help-tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid var(--text-muted);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  font-style: italic;
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1;
+  cursor: help;
+}
+
+.section-help-tooltip-trigger:hover,
+.section-help-tooltip-trigger:focus-visible {
+  color: var(--text-on-surface);
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+  outline: none;
+}
+
+.section-help-tooltip-bubble {
+  width: max-content;
+  max-width: 220px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  color: var(--text-on-surface);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.2));
+  pointer-events: none;
+}
+
+.section-help-tooltip-bubble-portal {
+  z-index: 1000;
+}
