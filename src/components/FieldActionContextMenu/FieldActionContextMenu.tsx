@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import { ENABLE_ROUTE_BEAUTIFY } from '../../config/featureFlags'
 import type { DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
 import type { MotionType } from '../../types/motion'
 import type { PlayerLabel } from '../../types/player'
@@ -21,8 +22,10 @@ type FieldActionContextMenuProps = {
   endpointMarker: EndpointMarker
   canDeleteSegment: boolean
   canDeleteEntire: boolean
+  canBeautifyRoute: boolean
   onDeleteSegment: () => void
   onDeleteEntire: () => void
+  onBeautifyRoute: () => void
   onEndpointMarkerChange: (marker: EndpointMarker) => void
   onDrawingModeChange: (mode: DrawingMode) => void
   onDrawingModeMotionSelect: (motionType: MotionType) => void
@@ -118,8 +121,10 @@ export function FieldActionContextMenu({
   endpointMarker,
   canDeleteSegment,
   canDeleteEntire,
+  canBeautifyRoute,
   onDeleteSegment,
   onDeleteEntire,
+  onBeautifyRoute,
   onEndpointMarkerChange,
   onDrawingModeChange,
   onDrawingModeMotionSelect,
@@ -174,6 +179,19 @@ export function FieldActionContextMenu({
           {deleteEntireLabel(actionType)}
         </button>
       </div>
+
+      {ENABLE_ROUTE_BEAUTIFY && actionType === 'route' && (
+        <div className="field-action-context-menu-section">
+          <button
+            type="button"
+            className="field-action-context-menu-item"
+            disabled={!canBeautifyRoute}
+            onClick={() => run(onBeautifyRoute)}
+          >
+            Beautify Route
+          </button>
+        </div>
+      )}
 
       <div className="field-action-context-menu-section">
         <span className="field-action-context-menu-label">Endpoint Marker</span>

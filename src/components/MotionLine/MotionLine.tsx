@@ -10,6 +10,7 @@ import {
   getSvgPointFromMouseEvent,
   isDenseRoute,
   isRouteVertexInteractive,
+  shouldRenderRouteVertexHandle,
 } from '../../utils/routeEdit'
 import './MotionLine.css'
 
@@ -19,6 +20,7 @@ type MotionLineProps = {
   endpointMarker?: EndpointMarker
   isDraft?: boolean
   readOnly?: boolean
+  showIntermediateVertices?: boolean
   selectedSegmentIndex?: number | null
   selectedVertexIndex?: number | null
   onSegmentSelect?: (segmentIndex: number) => void
@@ -37,6 +39,7 @@ export function MotionLine({
   endpointMarker = 'filled-circle',
   isDraft = false,
   readOnly = false,
+  showIntermediateVertices = false,
   selectedSegmentIndex = null,
   selectedVertexIndex = null,
   onSegmentSelect,
@@ -166,6 +169,10 @@ export function MotionLine({
 
       {!readOnly &&
         vertices.map((vertex, index) => {
+          if (!shouldRenderRouteVertexHandle(index, vertices.length, showIntermediateVertices)) {
+            return null
+          }
+
           const isVertexSelected = selectedVertexIndex === index
           const isSegmentStart = selectedSegmentIndex === index
           const isSegmentEnd =

@@ -10,6 +10,7 @@ import {
   getSvgPointFromMouseEvent,
   isDenseRoute,
   isRouteVertexInteractive,
+  shouldRenderRouteVertexHandle,
 } from '../../utils/routeEdit'
 import './RouteLine.css'
 
@@ -21,6 +22,8 @@ type RouteLineProps = {
   isDraft?: boolean
   /** When true, route is visible but segments and handles are not interactive. */
   readOnly?: boolean
+  /** When true, interior waypoint handles are shown for editing. */
+  showIntermediateVertices?: boolean
   selectedSegmentIndex?: number | null
   selectedVertexIndex?: number | null
   onSegmentSelect?: (segmentIndex: number) => void
@@ -38,6 +41,7 @@ export function RouteLine({
   endpointMarker = 'arrow',
   isDraft = false,
   readOnly = false,
+  showIntermediateVertices = false,
   selectedSegmentIndex = null,
   selectedVertexIndex = null,
   onSegmentSelect,
@@ -133,6 +137,10 @@ export function RouteLine({
 
       {!readOnly &&
         vertices.map((vertex, index) => {
+          if (!shouldRenderRouteVertexHandle(index, vertices.length, showIntermediateVertices)) {
+            return null
+          }
+
           const isVertexSelected = selectedVertexIndex === index
           const isSegmentStart = selectedSegmentIndex === index
           const isSegmentEnd =

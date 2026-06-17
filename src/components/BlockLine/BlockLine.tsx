@@ -10,6 +10,7 @@ import {
   getSvgPointFromMouseEvent,
   isDenseRoute,
   isRouteVertexInteractive,
+  shouldRenderRouteVertexHandle,
 } from '../../utils/routeEdit'
 import './BlockLine.css'
 
@@ -19,6 +20,7 @@ type BlockLineProps = {
   endpointMarker?: EndpointMarker
   isDraft?: boolean
   readOnly?: boolean
+  showIntermediateVertices?: boolean
   selectedSegmentIndex?: number | null
   selectedVertexIndex?: number | null
   onSegmentSelect?: (segmentIndex: number) => void
@@ -33,6 +35,7 @@ export function BlockLine({
   endpointMarker = 'blocking-line',
   isDraft = false,
   readOnly = false,
+  showIntermediateVertices = false,
   selectedSegmentIndex = null,
   selectedVertexIndex = null,
   onSegmentSelect,
@@ -164,6 +167,10 @@ export function BlockLine({
 
       {!readOnly &&
         vertices.map((vertex, index) => {
+          if (!shouldRenderRouteVertexHandle(index, vertices.length, showIntermediateVertices)) {
+            return null
+          }
+
           const isVertexSelected = selectedVertexIndex === index
           const isSegmentStart = selectedSegmentIndex === index
           const isSegmentEnd =

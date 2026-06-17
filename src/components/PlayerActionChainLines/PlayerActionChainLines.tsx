@@ -76,6 +76,10 @@ export function PlayerActionChainLines({
                 block={{ playerId: player.id, points: action.points }}
                 endpointMarker={endpointMarker}
                 readOnly={!blocksEditable}
+                showIntermediateVertices={
+                  blockEditSelection?.playerId === player.id &&
+                  blockEditSelection.actionId === action.id
+                }
                 selectedSegmentIndex={
                   blockEditSelection?.playerId === player.id &&
                   blockEditSelection.actionId === action.id &&
@@ -116,6 +120,10 @@ export function PlayerActionChainLines({
                 }}
                 endpointMarker={endpointMarker}
                 readOnly={!motionsEditable}
+                showIntermediateVertices={
+                  motionEditSelection?.playerId === player.id &&
+                  motionEditSelection.actionId === action.id
+                }
                 selectedSegmentIndex={
                   motionEditSelection?.playerId === player.id &&
                   motionEditSelection.actionId === action.id &&
@@ -151,6 +159,10 @@ export function PlayerActionChainLines({
               route={{ playerId: player.id, points: action.points }}
               endpointMarker={endpointMarker}
               readOnly={!routesEditable}
+              showIntermediateVertices={
+                routeEditSelection?.playerId === player.id &&
+                routeEditSelection.actionId === action.id
+              }
               selectedSegmentIndex={
                 routeEditSelection?.playerId === player.id &&
                 routeEditSelection.actionId === action.id &&

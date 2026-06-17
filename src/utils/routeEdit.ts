@@ -112,6 +112,22 @@ export function isRouteVertexInteractive(
   return true
 }
 
+export function isRouteEndpointVertex(vertexIndex: number, vertexCount: number): boolean {
+  return vertexIndex === 0 || vertexIndex === vertexCount - 1
+}
+
+/** Route start/end handles are always visible; interior handles only while editing that action. */
+export function shouldRenderRouteVertexHandle(
+  vertexIndex: number,
+  vertexCount: number,
+  isActionSelected: boolean,
+): boolean {
+  if (isRouteEndpointVertex(vertexIndex, vertexCount)) {
+    return true
+  }
+  return isActionSelected
+}
+
 /** Finds the segment closest to a point — no distance cutoff (for endpoint reshape). */
 function findClosestSegmentIndex(vertices: Position[], point: Position): number {
   if (vertices.length < 2) return 0

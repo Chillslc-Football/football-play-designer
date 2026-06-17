@@ -74,6 +74,7 @@ import {
   reshapeActionPointsFromEndpointDrag,
   updateFreehandDragPoints,
 } from '../../utils/routeEdit'
+import { beautifyRoutePoints, canBeautifyRoutePoints } from '../../utils/routeBeautify'
 import { EndpointMarkerSelector } from '../EndpointMarkerSelector/EndpointMarkerSelector'
 import {
   FieldActionContextMenu,
@@ -2487,6 +2488,24 @@ export function Field({
     requestDeleteEntireBlock,
   ])
 
+  const handleBeautifyRoute = useCallback(() => {
+    if (!actionContextMenu) return
+
+    const action = findActionInChain(
+      playerActions,
+      actionContextMenu.playerId,
+      actionContextMenu.actionId,
+    )
+    if (!action || action.type !== 'route' || !canBeautifyRoutePoints(action.points)) {
+      return
+    }
+
+    onPlayerActionComplete(actionContextMenu.playerId, {
+      ...action,
+      points: beautifyRoutePoints(action.points),
+    })
+  }, [actionContextMenu, playerActions, onPlayerActionComplete])
+
   const handleChangeSelectedActionType = useCallback(
     (newType: PlayerActionType, selectedMotionType?: MotionType) => {
       const selection = routeEditSelection ?? motionEditSelection ?? blockEditSelection
@@ -2571,6 +2590,11 @@ export function Field({
         actionContextMenu.actionId,
       )
     : null
+
+  const contextCanBeautifyRoute = Boolean(
+    contextMenuTargetAction?.type === 'route' &&
+      canBeautifyRoutePoints(contextMenuTargetAction.points),
+  )
 
   useEffect(() => {
     if (actionContextMenu && !contextMenuTargetAction) {
@@ -2823,8 +2847,10 @@ export function Field({
           endpointMarker={resolveEndpointMarker(contextMenuTargetAction)}
           canDeleteSegment={contextCanDeleteSegment}
           canDeleteEntire={contextCanDeleteEntire}
+          canBeautifyRoute={contextCanBeautifyRoute}
           onDeleteSegment={handleContextDeleteSegment}
           onDeleteEntire={handleContextDeleteEntire}
+          onBeautifyRoute={handleBeautifyRoute}
           onEndpointMarkerChange={handleEndpointMarkerChange}
           onDrawingModeChange={onDrawingModeChange}
           onDrawingModeMotionSelect={handleContextDrawingModeMotionSelect}
@@ -3100,6 +3126,9 @@ export function Field({
                   points: route.points,
                 }}
                 readOnly={!defenderRoutesEditable}
+                showIntermediateVertices={
+                  defenderRouteEditSelection?.defenderId === route.defenderId
+                }
                 selectedSegmentIndex={
                   defenderRouteEditSelection?.defenderId === route.defenderId &&
                   defenderRouteEditSelection.kind === 'segment'
