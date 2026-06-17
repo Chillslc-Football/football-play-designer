@@ -41,6 +41,13 @@
   --play-type-selector-bg: #f0f0f0;
 }
 
+@media (min-width: 769px) {
+  .app-theme-light {
+    --app-bg: #f2f7f2;
+    --canvas-bg: #f2f7f2;
+  }
+}
+
 .app-theme-dark {
   --app-bg: #143d14;
   --canvas-bg: #143d14;

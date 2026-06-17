@@ -145,6 +145,19 @@
   .team-calendar-month {
     display: flex;
   }
+
+  .team-calendar-month.app-shell-card {
+    padding: var(--space-md);
+  }
+
+  .app-shell-card .team-calendar-month-cell {
+    background: #fafcf9;
+    border-color: #d9e4d8;
+  }
+
+  .app-shell-card .team-calendar-month-cell.is-outside-month {
+    background: #f5f8f4;
+  }
 }
 
 @media (max-width: 768px) {

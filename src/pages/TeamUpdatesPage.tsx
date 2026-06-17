@@ -216,7 +216,7 @@ export function TeamUpdatesPage() {
                 return (
                   <article
                     key={update.id}
-                    className={`team-updates-list-item${update.is_pinned ? ' is-pinned' : ''}`}
+                    className={`team-updates-list-item app-shell-card${update.is_pinned ? ' is-pinned' : ''}`}
                   >
                     <div className="team-updates-list-content">
                       <div className="team-updates-list-title-row">

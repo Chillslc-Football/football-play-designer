@@ -10,10 +10,18 @@
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  background: var(--surface);
-  color: var(--text-on-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+}
+
+@media (max-width: 768px) {
+  .wristband-card-list-item,
+  .wristband-editor-form,
+  .wristband-editor-preview,
+  .wristband-print-view {
+    background: var(--surface);
+    color: var(--text-on-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
 }
 
 .wristband-card-list-item h2 {
@@ -46,10 +54,6 @@
   flex-direction: column;
   gap: 14px;
   padding: var(--space-md);
-  background: var(--surface);
-  color: var(--text-on-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
 }
 
 .wristband-editor-size-row,
@@ -68,10 +72,6 @@
 
 .wristband-editor-preview {
   padding: var(--space-md);
-  background: var(--surface);
-  color: var(--text-on-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
 }
 
 .wristband-editor-preview h2 {
@@ -89,10 +89,6 @@
 .wristband-print-view {
   max-width: 900px;
   padding: var(--space-md);
-  background: var(--surface);
-  color: var(--text-on-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
 }
 
 .print-only {

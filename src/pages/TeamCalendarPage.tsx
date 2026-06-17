@@ -175,7 +175,7 @@ export function TeamCalendarPage() {
     return (
       <article
         key={event.id}
-        className={`team-calendar-list-item${isPast ? ' is-past' : ''}`}
+        className={`team-calendar-list-item app-shell-card${isPast ? ' is-past' : ''}`}
       >
         <div className="team-calendar-list-content">
           <div className="team-calendar-list-title-row">

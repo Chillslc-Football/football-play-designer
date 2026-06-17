@@ -210,7 +210,7 @@ export function AdminTemplatesPage() {
             const isDefault = formation.id === defaultFormationId
 
             return (
-              <article key={formation.id} className="admin-template-card">
+              <article key={formation.id} className="admin-template-card app-shell-card">
                 <div className="admin-template-card-main">
                   <h3>{formation.label}</h3>
                   <p className="admin-template-meta">
@@ -286,7 +286,7 @@ export function AdminTemplatesPage() {
             const isDefault = front.id === defaultFrontId
 
             return (
-              <article key={front.id} className="admin-template-card">
+              <article key={front.id} className="admin-template-card app-shell-card">
                 <div className="admin-template-card-main">
                   <h3>{front.label}</h3>
                   <p className="admin-template-meta">

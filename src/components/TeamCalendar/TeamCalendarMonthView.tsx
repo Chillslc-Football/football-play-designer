@@ -36,7 +36,7 @@ export function TeamCalendarMonthView({
   }).format(new Date(year, month, 1))
 
   return (
-    <div className="team-calendar-month">
+    <div className="team-calendar-month app-shell-card">
       <div className="team-calendar-month-header">
         <h2 className="team-calendar-month-title">{monthLabel}</h2>
         <div className="team-calendar-month-nav">

@@ -51,10 +51,15 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.85rem 1rem;
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text-on-surface);
+}
+
+@media (max-width: 768px) {
+  .admin-template-card {
+    background: var(--surface);
+    color: var(--text-on-surface);
+    border: 1px solid var(--border-strong);
+  }
 }
 
 .admin-template-card-main h3 {

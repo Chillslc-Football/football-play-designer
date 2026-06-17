@@ -10,10 +10,15 @@
   justify-content: space-between;
   gap: 12px;
   padding: 14px 16px;
-  background: var(--surface);
-  color: var(--text-on-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+}
+
+@media (max-width: 768px) {
+  .team-updates-list-item {
+    background: var(--surface);
+    color: var(--text-on-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
 }
 
 .team-updates-list-item.is-pinned {

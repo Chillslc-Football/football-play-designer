@@ -139,7 +139,7 @@ export function TeamMessagingPage() {
           <p className="team-messaging-page-loading app-shell-page-loading">Loading messages…</p>
         ) : (
           <div className="team-messaging-chat app-shell-page-body">
-            <div className="team-messaging-panel">
+            <div className="team-messaging-panel app-shell-card">
               <div className="team-messaging-messages" aria-live="polite">
                 {messages.length === 0 ? (
                   <p className="team-messaging-page-empty app-shell-page-empty">

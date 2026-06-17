@@ -28,7 +28,7 @@ export function TeamHubCard({
 
   return (
     <article
-      className={`team-hub-card${clickable ? ' team-hub-card-clickable' : ''}`}
+      className={`team-hub-card app-shell-card${clickable ? ' team-hub-card-clickable app-shell-card--interactive' : ''}`}
       aria-labelledby={id}
       {...(clickable
         ? {

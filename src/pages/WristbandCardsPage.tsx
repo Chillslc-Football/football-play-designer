@@ -196,7 +196,7 @@ export function WristbandCardsPage() {
               <p className="wristband-page-empty app-shell-page-empty">No wristband card templates saved yet.</p>
             ) : (
               cards.map((card) => (
-                <article key={card.id} className="wristband-card-list-item">
+                <article key={card.id} className="wristband-card-list-item app-shell-card">
                   <div>
                     <h2>{card.name}</h2>
                     <p>
@@ -234,7 +234,7 @@ export function WristbandCardsPage() {
           </div>
         ) : view === 'edit' ? (
           <div className="wristband-editor app-shell-page-body">
-            <section className="wristband-editor-form">
+            <section className="wristband-editor-form app-shell-card">
               <div className="form-group">
                 <label className="field-label" htmlFor="wristband-name">
                   Template name
@@ -360,7 +360,7 @@ export function WristbandCardsPage() {
               </div>
             </section>
 
-            <section className="wristband-editor-preview">
+            <section className="wristband-editor-preview app-shell-card">
               <h2>Card preview</h2>
               <p className="wristband-editor-preview-meta">
                 Card {draft.wristband_width}" × {draft.wristband_height}" with {WRISTBAND_CUT_BUFFER_IN}"
@@ -373,7 +373,7 @@ export function WristbandCardsPage() {
             </section>
           </div>
         ) : (
-          <div className="wristband-print-view app-shell-page-body">
+          <div className="wristband-print-view app-shell-page-body app-shell-card">
             <p className="wristband-print-meta">
               Printing {sheetLayout.count} card{sheetLayout.count === 1 ? '' : 's'} per sheet (
               {draft.wristband_width}" × {draft.wristband_height}" card with {WRISTBAND_CUT_BUFFER_IN}"
