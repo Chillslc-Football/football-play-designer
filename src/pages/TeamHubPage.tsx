@@ -117,6 +117,10 @@ export function TeamHubPage() {
     navigateTo?.('wristbands', 'create')
   }
 
+  function openPlayDesigner() {
+    navigateTo?.('designer')
+  }
+
   const eventDescription = nextEvent ? descriptionPreview(nextEvent.description) : null
 
   return (
@@ -175,6 +179,9 @@ export function TeamHubPage() {
                 >
                   <p className="team-hub-quick-actions-hint">Jump to common tasks for your team.</p>
                   <div className="team-hub-quick-actions-buttons">
+                    <button type="button" className="btn" onClick={openPlayDesigner}>
+                      Open Play Designer
+                    </button>
                     {canEdit && (
                       <>
                         <button type="button" className="btn" onClick={createEvent}>
@@ -183,14 +190,16 @@ export function TeamHubPage() {
                         <button type="button" className="btn" onClick={createUpdate}>
                           New Update
                         </button>
-                        <button type="button" className="btn" onClick={createWristband}>
-                          Create Wristband Card
-                        </button>
                       </>
                     )}
                     <button type="button" className="btn" onClick={goToMessages}>
                       Open Chat
                     </button>
+                    {canEdit && (
+                      <button type="button" className="btn" onClick={createWristband}>
+                        Create Wristband Card
+                      </button>
+                    )}
                   </div>
                 </TeamHubCard>
               </div>
