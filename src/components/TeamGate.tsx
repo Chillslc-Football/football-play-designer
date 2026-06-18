@@ -11,13 +11,12 @@ export function TeamGate() {
     activeTeamId,
     team,
     memberships,
-    loading,
     profileLoaded,
     needsOnboarding,
   } = useTeam()
 
   useEffect(() => {
-    if (loading || !profileLoaded) return
+    if (!profileLoaded) return
 
     if (needsOnboarding) {
       console.log('[TeamGate] showing Create Team', {
@@ -38,7 +37,6 @@ export function TeamGate() {
       })
     }
   }, [
-    loading,
     profileLoaded,
     needsOnboarding,
     team,
@@ -47,7 +45,7 @@ export function TeamGate() {
     user?.id,
   ])
 
-  if (loading || !profileLoaded) {
+  if (!profileLoaded) {
     return <div className="auth-loading">Loading team…</div>
   }
 

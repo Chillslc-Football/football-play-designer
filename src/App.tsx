@@ -120,6 +120,12 @@ import {
   createPlayForAdminTemplateEdit,
   positionsFromAdminTemplatePlay,
 } from './utils/adminTemplateEditPlay'
+import {
+  clearPlayDesignerDraft,
+  PLAY_DESIGNER_DRAFT_DEBOUNCE_MS,
+  readPlayDesignerDraft,
+  writePlayDesignerDraft,
+} from './utils/playDesignerDraftStorage'
 import './App.css'
 
 type PendingAction =
@@ -179,6 +185,8 @@ function App() {
   const [fieldToolbarHost, setFieldToolbarHost] = useState<HTMLDivElement | null>(null)
   const fieldWorkspaceRef = useRef<HTMLDivElement>(null)
   const isSavingRef = useRef(false)
+  const editorInitializedForRef = useRef<string | null>(null)
+  const prevActiveTeamIdRef = useRef<string | null>(activeTeamId)
 
   useEffect(() => {
     const workspace = fieldWorkspaceRef.current
@@ -237,6 +245,7 @@ function App() {
     updatePlayBaseline(nextPlay)
     setActiveSavedPlayId(savedId)
     setSelectedLoadId(savedId)
+    clearPlayDesignerDraft(user?.id ?? null, activeTeamId)
   }
 
   const updatePlayBaseline = useCallback(
@@ -305,9 +314,60 @@ function App() {
   }, [activeTeamId, userId])
 
   useEffect(() => {
+    if (userId && prevActiveTeamIdRef.current && prevActiveTeamIdRef.current !== activeTeamId) {
+      clearPlayDesignerDraft(userId, prevActiveTeamIdRef.current)
+    }
+    prevActiveTeamIdRef.current = activeTeamId
+  }, [activeTeamId, userId])
+
+  const editorScopeKey = userId && activeTeamId ? `${userId}:${activeTeamId}` : null
+
+  useEffect(() => {
     if (schemeTemplatesLoading || adminTemplateEdit) return
+
+    if (!editorScopeKey || !userId || !activeTeamId) {
+      editorInitializedForRef.current = null
+      resetEditor()
+      return
+    }
+
+    if (editorInitializedForRef.current === editorScopeKey) {
+      return
+    }
+
+    editorInitializedForRef.current = editorScopeKey
+
+    const draft = readPlayDesignerDraft(userId, activeTeamId)
+    if (draft) {
+      const restoredPlay = ensurePlayPlayerActions(draft.play)
+      setPlay(restoredPlay)
+      setActiveSavedPlayId(draft.activeSavedPlayId)
+      setSelectedLoadId(draft.selectedLoadId)
+      setPlayBaseline(draft.playBaseline)
+      setSelectedPlayerId(null)
+      setSelectedDefenderId(null)
+      setPlayFilterId(
+        restoredPlay.playType === 'defensive' ? restoredPlay.frontId : restoredPlay.formationId,
+      )
+      console.log('[PlayDesigner] Restored session draft', {
+        userId,
+        activeTeamId,
+        playId: restoredPlay.id,
+        playName: restoredPlay.name,
+        savedAt: new Date(draft.savedAt).toISOString(),
+      })
+      return
+    }
+
     resetEditor()
-  }, [activeTeamId, userId, schemeTemplatesLoading, resetEditor, adminTemplateEdit])
+  }, [
+    activeTeamId,
+    adminTemplateEdit,
+    editorScopeKey,
+    resetEditor,
+    schemeTemplatesLoading,
+    userId,
+  ])
 
   useEffect(() => {
     if (!adminTemplateEdit) return
@@ -375,6 +435,38 @@ function App() {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [formationHasUnsavedChanges, hasUnsavedPlayChanges])
+
+  useEffect(() => {
+    if (!userId || !activeTeamId || !canEdit || adminTemplateEdit) return
+
+    if (!hasUnsavedPlayChanges) {
+      clearPlayDesignerDraft(userId, activeTeamId)
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      writePlayDesignerDraft({
+        userId,
+        activeTeamId,
+        play,
+        activeSavedPlayId,
+        selectedLoadId,
+        playBaseline,
+      })
+    }, PLAY_DESIGNER_DRAFT_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [
+    activeSavedPlayId,
+    activeTeamId,
+    adminTemplateEdit,
+    canEdit,
+    hasUnsavedPlayChanges,
+    play,
+    playBaseline,
+    selectedLoadId,
+    userId,
+  ])
 
   function needsPlayGuard(action: PendingAction): boolean {
     return (
@@ -1185,6 +1277,10 @@ function App() {
     setDialog(null)
 
     if (!action) return
+
+    if (action.type === 'newPlay' || action.type === 'loadPlay') {
+      clearPlayDesignerDraft(userId, activeTeamId)
+    }
 
     if (action.type === 'saveFormation') {
       await executeSaveNewFormation()

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import * as teamRepository from '../repositories/teamRepository'
 import type { Team, TeamMembership, TeamRole } from '../types/team'
@@ -27,6 +27,8 @@ function applyLoadResult(
 
 export function TeamProvider({ children }: TeamProviderProps) {
   const { user } = useAuth()
+  const userId = user?.id ?? null
+  const loadedUserIdRef = useRef<string | null>(null)
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null)
   const [team, setTeam] = useState<Team | null>(null)
   const [role, setRole] = useState<TeamRole | null>(null)
@@ -37,7 +39,8 @@ export function TeamProvider({ children }: TeamProviderProps) {
   const [isAppAdmin, setIsAppAdmin] = useState(false)
 
   const refreshTeam = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
+      loadedUserIdRef.current = null
       setActiveTeamId(null)
       setTeam(null)
       setRole(null)
@@ -49,10 +52,14 @@ export function TeamProvider({ children }: TeamProviderProps) {
       return
     }
 
-    setLoading(true)
+    const isInitialLoadForUser = loadedUserIdRef.current !== userId
+    if (isInitialLoadForUser) {
+      setProfileLoaded(false)
+      setLoading(true)
+    }
 
     try {
-      const result = await teamRepository.loadActiveTeamForUser(user.id)
+      const result = await teamRepository.loadActiveTeamForUser(userId)
       applyLoadResult(result, {
         setActiveTeamId,
         setTeam,
@@ -61,8 +68,9 @@ export function TeamProvider({ children }: TeamProviderProps) {
         setNeedsOnboarding,
       })
       setIsAppAdmin(result.profile?.is_app_admin ?? false)
+      loadedUserIdRef.current = userId
       console.log('[TeamProvider] active team state applied', {
-        userId: user.id,
+        userId,
         activeTeamId: result.activeTeamId,
         teamId: result.team?.id ?? null,
         teamName: result.team?.name ?? null,
@@ -72,7 +80,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
       })
     } catch (error) {
       console.error('[TeamProvider] failed to load active team', {
-        userId: user.id,
+        userId,
         error,
       })
       setActiveTeamId(null)
@@ -85,7 +93,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
       setProfileLoaded(true)
       setLoading(false)
     }
-  }, [user])
+  }, [userId])
 
   useEffect(() => {
     void refreshTeam()

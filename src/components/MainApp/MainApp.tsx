@@ -18,12 +18,13 @@ import { WristbandCardsPage } from '../../pages/WristbandCardsPage'
 import { useAppAdmin } from '../../hooks/useAppAdmin'
 import type { AdminTemplateEditSession } from '../../types/adminTemplateEdit'
 import { APP_DISPLAY_THEME } from '../../constants/appDisplayTheme'
+import { readStoredAppShellView, writeStoredAppShellView } from '../../utils/appShellViewStorage'
 import './MainApp.css'
 
 export type AppView = AppShellView
 
 function MainAppViews() {
-  const [view, setView] = useState<AppShellView>('team-hub')
+  const [view, setView] = useState<AppShellView>(() => readStoredAppShellView())
   const [launchMode, setLaunchMode] = useState<AppShellLaunchMode | null>(null)
   const [adminTemplateEdit, setAdminTemplateEdit] = useState<AdminTemplateEditSession | null>(null)
   const [pageToolbar, setPageToolbar] = useState<ReactNode | null>(null)
@@ -43,6 +44,10 @@ function MainAppViews() {
   const clearLaunchMode = () => {
     setLaunchMode(null)
   }
+
+  useEffect(() => {
+    writeStoredAppShellView(view)
+  }, [view])
 
   useEffect(() => {
     if (view === 'admin-templates' && !isAppAdmin) {
