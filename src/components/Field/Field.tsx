@@ -74,7 +74,13 @@ import {
   reshapeActionPointsFromEndpointDrag,
   updateFreehandDragPoints,
 } from '../../utils/routeEdit'
-import { beautifyRoutePoints, canBeautifyRoutePoints } from '../../utils/routeBeautify'
+import {
+  beautifyRoutePoints,
+  canBeautifyRoutePoints,
+  DEFAULT_BEAUTIFY_INTENSITY,
+} from '../../utils/routeBeautify'
+import { BeautifyRouteControl } from '../BeautifyRouteControl/BeautifyRouteControl'
+import { ENABLE_ROUTE_BEAUTIFY } from '../../config/featureFlags'
 import { EndpointMarkerSelector } from '../EndpointMarkerSelector/EndpointMarkerSelector'
 import {
   FieldActionContextMenu,
@@ -105,6 +111,13 @@ import './Field.css'
 const DESKTOP_CONTEXT_MENU_MEDIA = '(min-width: 1024px)'
 
 const DRAG_THRESHOLD = 5
+
+type BeautifyRouteSession = {
+  playerId: PlayerLabel
+  actionId: string
+  originalPoints: Position[]
+  intensity: number
+}
 
 function findMarkerEditTarget(
   playerActions: PlayerActionChains,
@@ -300,6 +313,9 @@ export function Field({
   )
   const [defenderMovementContextMenu, setDefenderMovementContextMenu] =
     useState<DefenderMovementContextMenuState | null>(null)
+  const [beautifyRouteSession, setBeautifyRouteSession] = useState<BeautifyRouteSession | null>(
+    null,
+  )
 
   const closeActionContextMenu = useCallback(() => {
     setActionContextMenu(null)
@@ -2488,7 +2504,7 @@ export function Field({
     requestDeleteEntireBlock,
   ])
 
-  const handleBeautifyRoute = useCallback(() => {
+  const handleOpenBeautifyRoute = useCallback(() => {
     if (!actionContextMenu) return
 
     const action = findActionInChain(
@@ -2500,11 +2516,44 @@ export function Field({
       return
     }
 
-    onPlayerActionComplete(actionContextMenu.playerId, {
-      ...action,
-      points: beautifyRoutePoints(action.points),
+    setBeautifyRouteSession({
+      playerId: actionContextMenu.playerId,
+      actionId: actionContextMenu.actionId,
+      originalPoints: action.points.map((point) => ({ ...point })),
+      intensity: DEFAULT_BEAUTIFY_INTENSITY,
     })
-  }, [actionContextMenu, playerActions, onPlayerActionComplete])
+  }, [actionContextMenu, playerActions])
+
+  const handleBeautifyIntensityChange = useCallback((intensity: number) => {
+    setBeautifyRouteSession((session) => (session ? { ...session, intensity } : null))
+  }, [])
+
+  const handleBeautifyApply = useCallback(() => {
+    if (!beautifyRouteSession) return
+
+    const action = findActionInChain(
+      playerActions,
+      beautifyRouteSession.playerId,
+      beautifyRouteSession.actionId,
+    )
+    if (!action || action.type !== 'route') {
+      setBeautifyRouteSession(null)
+      return
+    }
+
+    onPlayerActionComplete(beautifyRouteSession.playerId, {
+      ...action,
+      points: beautifyRoutePoints(
+        beautifyRouteSession.originalPoints,
+        beautifyRouteSession.intensity,
+      ),
+    })
+    setBeautifyRouteSession(null)
+  }, [beautifyRouteSession, playerActions, onPlayerActionComplete])
+
+  const handleBeautifyCancel = useCallback(() => {
+    setBeautifyRouteSession(null)
+  }, [])
 
   const handleChangeSelectedActionType = useCallback(
     (newType: PlayerActionType, selectedMotionType?: MotionType) => {
@@ -2595,6 +2644,44 @@ export function Field({
     contextMenuTargetAction?.type === 'route' &&
       canBeautifyRoutePoints(contextMenuTargetAction.points),
   )
+
+  const routePreviewOverrides = useMemo(() => {
+    if (!beautifyRouteSession) return undefined
+
+    const previewPoints = beautifyRoutePoints(
+      beautifyRouteSession.originalPoints,
+      beautifyRouteSession.intensity,
+    )
+
+    return {
+      [`${beautifyRouteSession.playerId}-${beautifyRouteSession.actionId}`]: previewPoints,
+    }
+  }, [beautifyRouteSession])
+
+  useEffect(() => {
+    if (!beautifyRouteSession) return
+
+    const action = findActionInChain(
+      playerActions,
+      beautifyRouteSession.playerId,
+      beautifyRouteSession.actionId,
+    )
+    if (!action || action.type !== 'route') {
+      setBeautifyRouteSession(null)
+    }
+  }, [beautifyRouteSession, playerActions])
+
+  useEffect(() => {
+    if (!beautifyRouteSession) return
+
+    const selectionMatchesSession =
+      routeEditSelection?.playerId === beautifyRouteSession.playerId &&
+      routeEditSelection.actionId === beautifyRouteSession.actionId
+
+    if (!selectionMatchesSession) {
+      setBeautifyRouteSession(null)
+    }
+  }, [beautifyRouteSession, routeEditSelection])
 
   useEffect(() => {
     if (actionContextMenu && !contextMenuTargetAction) {
@@ -2706,8 +2793,11 @@ export function Field({
     return null
   })()
 
+  const showBeautifyRouteControl = ENABLE_ROUTE_BEAUTIFY && beautifyRouteSession !== null
+
   const showRouteDrawControls =
     hintText ||
+    showBeautifyRouteControl ||
     showEndpointMarkerSelector ||
     canDeleteEntireRoute ||
     canDeleteRouteSegment ||
@@ -2725,6 +2815,14 @@ export function Field({
     showRouteDrawControls ? (
       <div className="route-draw-controls">
         {hintText && <span className="route-draw-hint">{hintText}</span>}
+        {showBeautifyRouteControl && beautifyRouteSession && (
+          <BeautifyRouteControl
+            intensity={beautifyRouteSession.intensity}
+            onIntensityChange={handleBeautifyIntensityChange}
+            onApply={handleBeautifyApply}
+            onCancel={handleBeautifyCancel}
+          />
+        )}
         {canDeleteRouteSegment && (
           <button
             type="button"
@@ -2850,7 +2948,7 @@ export function Field({
           canBeautifyRoute={contextCanBeautifyRoute}
           onDeleteSegment={handleContextDeleteSegment}
           onDeleteEntire={handleContextDeleteEntire}
-          onBeautifyRoute={handleBeautifyRoute}
+          onBeautifyRoute={handleOpenBeautifyRoute}
           onEndpointMarkerChange={handleEndpointMarkerChange}
           onDrawingModeChange={onDrawingModeChange}
           onDrawingModeMotionSelect={handleContextDrawingModeMotionSelect}
@@ -3115,6 +3213,7 @@ export function Field({
               }}
               onActionEndpointPointerDown={handleActionEndpointPointerDown}
               onActionContextMenu={handleActionContextMenu}
+              routePreviewOverrides={routePreviewOverrides}
             />
 
             {defenderRoutes.map((route) => (

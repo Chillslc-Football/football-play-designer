@@ -1,8 +1,10 @@
 import type { Position } from '../types/player'
 
 const MIN_POINTS_FOR_BEAUTIFY = 3
-const SMOOTH_ITERATIONS = 2
-const SIMPLIFY_MIN_DISTANCE = 0.35
+
+export const DEFAULT_BEAUTIFY_INTENSITY = 25
+export const MIN_BEAUTIFY_INTENSITY = 0
+export const MAX_BEAUTIFY_INTENSITY = 100
 
 function distance(a: Position, b: Position): number {
   const dx = b.x - a.x
@@ -62,20 +64,57 @@ export function canBeautifyRoutePoints(points: Position[]): boolean {
   return points.length >= MIN_POINTS_FOR_BEAUTIFY
 }
 
+function clampIntensity(intensity: number): number {
+  return Math.max(MIN_BEAUTIFY_INTENSITY, Math.min(MAX_BEAUTIFY_INTENSITY, intensity))
+}
+
+function smoothIterationsForIntensity(intensity: number): number {
+  if (intensity <= 25) {
+    return Math.max(1, Math.round(1 + intensity / 25))
+  }
+
+  return Math.round(2 + ((intensity - 25) / 75) * 6)
+}
+
+function simplifyMinDistanceForIntensity(intensity: number): number {
+  if (intensity <= 25) {
+    return 0.35 + (25 - intensity) * 0.008
+  }
+
+  return 0.35 - ((intensity - 25) / 75) * 0.23
+}
+
 /**
  * Smooths hand-drawn route waypoints while preserving the first and last points.
  * Player position is unchanged because it is not part of the points array.
+ *
+ * Intensity 0 returns the original shape. Higher values apply more smoothing
+ * and simplification. Default intensity (~25) matches the original single-pass effect.
  */
-export function beautifyRoutePoints(points: Position[]): Position[] {
+export function beautifyRoutePoints(
+  points: Position[],
+  intensity: number = DEFAULT_BEAUTIFY_INTENSITY,
+): Position[] {
   if (points.length < MIN_POINTS_FOR_BEAUTIFY) {
+    return points.map((point) => ({ ...point }))
+  }
+
+  const clampedIntensity = clampIntensity(intensity)
+  if (clampedIntensity === 0) {
     return points.map((point) => ({ ...point }))
   }
 
   const originalStart = points[0]
   const originalEnd = points[points.length - 1]
 
-  const smoothed = laplacianSmooth(points, SMOOTH_ITERATIONS)
-  const simplified = simplifyPreservingEndpoints(smoothed, SIMPLIFY_MIN_DISTANCE)
+  const smoothed = laplacianSmooth(
+    points,
+    smoothIterationsForIntensity(clampedIntensity),
+  )
+  const simplified = simplifyPreservingEndpoints(
+    smoothed,
+    simplifyMinDistanceForIntensity(clampedIntensity),
+  )
 
   simplified[0] = { ...originalStart }
   simplified[simplified.length - 1] = { ...originalEnd }
