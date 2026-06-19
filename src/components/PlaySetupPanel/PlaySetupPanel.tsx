@@ -326,7 +326,10 @@ export function PlaySetupPanel({
               />
             </SidebarCollapsibleSection>
 
-            <SidebarCollapsibleSection title="Play" helpContent={SECTION_HELP.play}>
+            <SidebarCollapsibleSection
+              title="Play Name & Categories"
+              helpContent={SECTION_HELP.play}
+            >
               <PlayControlsInformationSection />
             </SidebarCollapsibleSection>
 
@@ -370,7 +373,6 @@ export function PlaySetupPanel({
             <SidebarCollapsibleSection
               title="Player Assignment"
               helpContent={SECTION_HELP.playerAssignment}
-              defaultExpanded
             >
               <PlayerAssignmentPanel
                 embedded
@@ -388,7 +390,6 @@ export function PlaySetupPanel({
             <SidebarCollapsibleSection
               title="Play Notes"
               helpContent={SECTION_HELP.playNotes}
-              defaultExpanded
               isLast
             >
               <Notes embedded value={playNotes} canEdit={canEdit} onChange={onPlayNotesChange} />

@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useAppAdmin } from '../../hooks/useAppAdmin'
 import { useAuth } from '../../hooks/useAuth'
 import { useCanInvite } from '../../hooks/useCanInvite'
 import { useTeam } from '../../hooks/useTeam'
 import { TEAM_ROLE_LABELS } from '../../utils/roleLabels'
 import { DeleteTeamDialog } from '../DeleteTeamDialog/DeleteTeamDialog'
 import { FeedbackDialog } from '../FeedbackDialog/FeedbackDialog'
+import { FeedbackReviewDialog } from '../FeedbackReviewDialog/FeedbackReviewDialog'
 import { HelpDialog } from '../HelpDialog/HelpDialog'
 import { InviteMemberDialog } from '../InviteMemberDialog/InviteMemberDialog'
 import { AppShellNav } from '../AppShellNav/AppShellNav'
@@ -19,9 +21,11 @@ export function Header({ onTeamChange, onLogout }: HeaderProps) {
   const { user, signOut } = useAuth()
   const { team, activeTeamId, memberships, role, deleteTeam } = useTeam()
   const canInvite = useCanInvite()
+  const isAppAdmin = useAppAdmin()
   const email = user?.email ?? ''
   const userId = user?.id ?? ''
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [feedbackReviewOpen, setFeedbackReviewOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [deleteTeamOpen, setDeleteTeamOpen] = useState(false)
@@ -105,6 +109,12 @@ export function Header({ onTeamChange, onLogout }: HeaderProps) {
           onClose={() => setFeedbackOpen(false)}
         />
       )}
+      {isAppAdmin && (
+        <FeedbackReviewDialog
+          open={feedbackReviewOpen}
+          onClose={() => setFeedbackReviewOpen(false)}
+        />
+      )}
       <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
       {team && activeTeamId && canInvite && (
         <InviteMemberDialog
@@ -167,6 +177,16 @@ export function Header({ onTeamChange, onLogout }: HeaderProps) {
                 </button>
               )}
             </div>
+
+            {isAppAdmin && (
+              <button
+                type="button"
+                className="btn header-action-btn"
+                onClick={() => setFeedbackReviewOpen(true)}
+              >
+                View Issues / Enhancements
+              </button>
+            )}
 
             <button
               type="button"
