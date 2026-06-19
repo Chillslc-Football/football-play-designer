@@ -1,5 +1,5 @@
 import { ActionEndpointMarker } from '../ActionEndpointMarker/ActionEndpointMarker'
-import { PLAYBOOK_HIT_SIZE } from '../../constants/field'
+import { PATH_HIT_STROKE_WIDTH, PLAYBOOK_HIT_SIZE } from '../../constants/field'
 import type { Position } from '../../types/player'
 import type { EndpointMarker } from '../../types/playerAction'
 import type { Block } from '../../types/block'
@@ -80,6 +80,7 @@ export function BlockLine({
   function handlePathSelect(event: React.MouseEvent<SVGPolylineElement>) {
     if (event.button !== 0) return
     event.stopPropagation()
+    event.preventDefault()
 
     const svg = event.currentTarget.ownerSVGElement
     if (!svg) return
@@ -102,14 +103,6 @@ export function BlockLine({
             }
       }
     >
-      {!readOnly && (
-        <polyline
-          points={polylinePoints}
-          className="block-path-hit"
-          onMouseDown={handlePathSelect}
-        />
-      )}
-
       {Array.from({ length: segmentCount }, (_, index) => {
         const start = vertices[index]
         const end = vertices[index + 1]
@@ -129,19 +122,19 @@ export function BlockLine({
                   ? 'url(#route-arrow)'
                   : undefined
               }
-              onMouseDown={
-                readOnly
-                  ? undefined
-                  : (event) => {
-                      if (event.button !== 0) return
-                      event.stopPropagation()
-                      onSegmentSelect?.(index)
-                    }
-              }
             />
           </g>
         )
       })}
+
+      {!readOnly && (
+        <polyline
+          points={polylinePoints}
+          className="block-path-hit"
+          strokeWidth={PATH_HIT_STROKE_WIDTH}
+          onMouseDown={handlePathSelect}
+        />
+      )}
 
       {vertices.length >= 2 && (
         <ActionEndpointMarker

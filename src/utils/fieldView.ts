@@ -1,5 +1,7 @@
 import {
   ENDZONE_DEPTH_YARDS,
+  FIELD_PADDING_LEFT,
+  FIELD_PLAY_AREA_Y,
   FIELD_VIEW_LENGTH,
   FIELD_WIDTH,
   HASH_MARK_LANES,
@@ -188,6 +190,35 @@ export function getHashMarks(): HashMark[] {
   }
 
   return marks
+}
+
+/** Field-play-area coordinates from a screen pointer (not clamped). */
+export function getFieldPositionFromClientPoint(
+  svg: SVGSVGElement,
+  clientX: number,
+  clientY: number,
+): Position | null {
+  const point = svg.createSVGPoint()
+  point.x = clientX
+  point.y = clientY
+  const matrix = svg.getScreenCTM()
+  if (!matrix) return null
+
+  const svgPoint = point.matrixTransform(matrix.inverse())
+  return {
+    x: svgPoint.x - FIELD_PADDING_LEFT,
+    y: svgPoint.y - FIELD_PLAY_AREA_Y,
+  }
+}
+
+/** True when a pointer lies on the rendered field surface (turf + endzones). */
+export function isInsideFieldDrawingArea(position: Position): boolean {
+  return (
+    position.x >= 0 &&
+    position.x <= FIELD_WIDTH &&
+    position.y >= -ENDZONE_DEPTH_YARDS &&
+    position.y <= FIELD_VIEW_LENGTH + ENDZONE_DEPTH_YARDS
+  )
 }
 
 export function clampViewPosition(position: Position): Position {

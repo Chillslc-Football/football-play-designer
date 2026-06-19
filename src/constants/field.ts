@@ -69,6 +69,9 @@ export const PLAYBOOK_HIT_SIZE = 1.1
 /** Click radius for nearest-player selection (SVG yards). */
 export const PLAYER_SELECTION_RADIUS = PLAYBOOK_HIT_SIZE
 
+/** Invisible SVG stroke width for route/motion/block hit targets (visible lines stay thin). */
+export const PATH_HIT_STROKE_WIDTH = 5.5
+
 /** Minimum visible gap between player icon edges (SVG yards). */
 export const MIN_PLAYER_GAP_YARDS = 0.2
 

@@ -3,13 +3,12 @@
 }
 
 .motion-segment-group {
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .motion-path-hit {
   fill: none;
   stroke: transparent;
-  stroke-width: 2.8;
   stroke-linecap: round;
   stroke-linejoin: round;
   cursor: pointer;
@@ -22,7 +21,7 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-dasharray: 0.5 0.45;
-  pointer-events: stroke;
+  pointer-events: none;
   cursor: pointer;
 }
 

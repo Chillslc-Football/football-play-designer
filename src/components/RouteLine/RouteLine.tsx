@@ -1,5 +1,5 @@
 import { ActionEndpointMarker } from '../ActionEndpointMarker/ActionEndpointMarker'
-import { PLAYBOOK_HIT_SIZE } from '../../constants/field'
+import { PATH_HIT_STROKE_WIDTH, PLAYBOOK_HIT_SIZE } from '../../constants/field'
 import type { Position } from '../../types/player'
 import type { EndpointMarker } from '../../types/playerAction'
 import type { Route } from '../../types/route'
@@ -72,6 +72,7 @@ export function RouteLine({
   function handlePathSelect(event: React.MouseEvent<SVGPolylineElement>) {
     if (event.button !== 0) return
     event.stopPropagation()
+    event.preventDefault()
 
     const svg = event.currentTarget.ownerSVGElement
     if (!svg) return
@@ -82,6 +83,30 @@ export function RouteLine({
       onSegmentSelect?.(segmentIndex)
     }
   }
+
+  const segmentElements = Array.from({ length: segmentCount }, (_, index) => {
+    const start = vertices[index]
+    const end = vertices[index + 1]
+    const isSelected = selectedSegmentIndex === index
+    const isLast = index === segmentCount - 1
+
+    return (
+      <g key={`segment-${index}`} className="route-segment-group">
+        <line
+          x1={start.x}
+          y1={start.y}
+          x2={end.x}
+          y2={end.y}
+          className={isSelected ? 'route-segment route-segment-selected' : 'route-segment'}
+          markerEnd={
+            isLast && lastSegmentUsesArrowMarker(endpointMarker)
+              ? 'url(#route-arrow)'
+              : undefined
+          }
+        />
+      </g>
+    )
+  })
 
   return (
     <g
@@ -94,46 +119,16 @@ export function RouteLine({
             }
       }
     >
+      {segmentElements}
+
       {!readOnly && (
         <polyline
           points={polylinePoints}
           className="route-path-hit"
+          strokeWidth={PATH_HIT_STROKE_WIDTH}
           onMouseDown={handlePathSelect}
         />
       )}
-
-      {Array.from({ length: segmentCount }, (_, index) => {
-        const start = vertices[index]
-        const end = vertices[index + 1]
-        const isSelected = selectedSegmentIndex === index
-        const isLast = index === segmentCount - 1
-
-        return (
-          <g key={`segment-${index}`} className="route-segment-group">
-            <line
-              x1={start.x}
-              y1={start.y}
-              x2={end.x}
-              y2={end.y}
-              className={isSelected ? 'route-segment route-segment-selected' : 'route-segment'}
-              markerEnd={
-                isLast && lastSegmentUsesArrowMarker(endpointMarker)
-                  ? 'url(#route-arrow)'
-                  : undefined
-              }
-              onMouseDown={
-                readOnly
-                  ? undefined
-                  : (event) => {
-                      if (event.button !== 0) return
-                      event.stopPropagation()
-                      onSegmentSelect?.(index)
-                    }
-              }
-            />
-          </g>
-        )
-      })}
 
       {!readOnly &&
         vertices.map((vertex, index) => {

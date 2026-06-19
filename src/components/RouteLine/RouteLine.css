@@ -3,13 +3,12 @@
 }
 
 .route-segment-group {
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .route-path-hit {
   fill: none;
   stroke: transparent;
-  stroke-width: 2.8;
   stroke-linecap: round;
   stroke-linejoin: round;
   cursor: pointer;
@@ -22,7 +21,7 @@
   stroke-width: 0.21;
   stroke-linecap: round;
   stroke-linejoin: round;
-  pointer-events: stroke;
+  pointer-events: none;
   cursor: pointer;
 }
 

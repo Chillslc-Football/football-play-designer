@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import { ENABLE_ROUTE_BEAUTIFY } from '../../config/featureFlags'
 import type { DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
 import type { DefenderLabel } from '../../types/defender'
 import '../FieldActionContextMenu/FieldActionContextMenu.css'
@@ -14,8 +15,11 @@ type DefenderMovementContextMenuProps = {
   drawingMode: DrawingMode
   canDeleteSegment: boolean
   canDeleteEntire: boolean
+  canBeautifyPath: boolean
+  beautifyPathLabel: string
   onDeleteSegment: () => void
   onDeleteEntire: () => void
+  onBeautifyPath: () => void
   onDrawingModeChange: (mode: DrawingMode) => void
   onClose: () => void
 }
@@ -25,8 +29,11 @@ export function DefenderMovementContextMenu({
   drawingMode,
   canDeleteSegment,
   canDeleteEntire,
+  canBeautifyPath,
+  beautifyPathLabel,
   onDeleteSegment,
   onDeleteEntire,
+  onBeautifyPath,
   onDrawingModeChange,
   onClose,
 }: DefenderMovementContextMenuProps) {
@@ -78,6 +85,19 @@ export function DefenderMovementContextMenu({
           Delete Entire Movement
         </button>
       </div>
+
+      {ENABLE_ROUTE_BEAUTIFY && (
+        <div className="field-action-context-menu-section">
+          <button
+            type="button"
+            className="field-action-context-menu-item"
+            disabled={!canBeautifyPath}
+            onClick={() => run(onBeautifyPath)}
+          >
+            {beautifyPathLabel}
+          </button>
+        </div>
+      )}
 
       <div className="field-action-context-menu-section">
         <span className="field-action-context-menu-label">Change Drawing Mode</span>

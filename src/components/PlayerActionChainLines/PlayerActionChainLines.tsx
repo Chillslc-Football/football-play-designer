@@ -21,7 +21,7 @@ type PlayerActionChainLinesProps = {
   routeEditSelection: RouteEditSelection | null
   motionEditSelection: RouteEditSelection | null
   blockEditSelection: RouteEditSelection | null
-  routePreviewOverrides?: Record<string, Position[]>
+  pathPreviewOverrides?: Record<string, Position[]>
   onRouteSegmentSelect: (playerId: PlayerLabel, actionId: string, segmentIndex: number) => void
   onRouteVertexSelect: (playerId: PlayerLabel, actionId: string, vertexIndex: number) => void
   onMotionSegmentSelect: (playerId: PlayerLabel, actionId: string, segmentIndex: number) => void
@@ -58,7 +58,7 @@ export function PlayerActionChainLines({
   onBlockVertexSelect,
   onActionEndpointPointerDown,
   onActionContextMenu,
-  routePreviewOverrides,
+  pathPreviewOverrides,
 }: PlayerActionChainLinesProps) {
   return (
     <>
@@ -69,17 +69,15 @@ export function PlayerActionChainLines({
           const startPosition = getActionStartPosition(player.position, chain, actionIndex)
           const endpointMarker = resolveEndpointMarker(action)
           const key = `${player.id}-${action.id}`
-          const routePoints =
-            action.type === 'route'
-              ? (routePreviewOverrides?.[key] ?? action.points)
-              : action.points
+          const previewPoints = pathPreviewOverrides?.[key]
+          const displayPoints = previewPoints ?? action.points
 
           if (action.type === 'block') {
             return (
               <BlockLine
                 key={key}
                 playerPosition={startPosition}
-                block={{ playerId: player.id, points: action.points }}
+                block={{ playerId: player.id, points: displayPoints }}
                 endpointMarker={endpointMarker}
                 readOnly={!blocksEditable}
                 showIntermediateVertices={
@@ -122,7 +120,7 @@ export function PlayerActionChainLines({
                 motion={{
                   playerId: player.id,
                   motionType: action.motionType ?? 'jog',
-                  points: action.points,
+                  points: displayPoints,
                 }}
                 endpointMarker={endpointMarker}
                 readOnly={!motionsEditable}
@@ -162,7 +160,7 @@ export function PlayerActionChainLines({
             <RouteLine
               key={key}
               playerPosition={startPosition}
-              route={{ playerId: player.id, points: routePoints }}
+              route={{ playerId: player.id, points: displayPoints }}
               endpointMarker={endpointMarker}
               readOnly={!routesEditable}
               showIntermediateVertices={

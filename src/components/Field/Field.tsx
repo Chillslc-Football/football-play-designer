@@ -43,6 +43,7 @@ import {
 import { canDeleteBlockSegmentSelection, type BlockEditSelection } from '../../utils/blockEdit'
 import {
   getFieldViewBounds,
+  getFieldPositionFromClientPoint,
   getHashMarks,
   getMajorYardLabels,
   getOpponentEndzoneRenderBounds,
@@ -50,6 +51,7 @@ import {
   getOwnEndzoneRenderBounds,
   getOwnGoalLineViewY,
   getYardLines,
+  isInsideFieldDrawingArea,
 } from '../../utils/fieldView'
 import { resolveEndpointMarker } from '../../utils/endpointMarker'
 import {
@@ -78,6 +80,7 @@ import {
   beautifyRoutePoints,
   canBeautifyRoutePoints,
   DEFAULT_BEAUTIFY_INTENSITY,
+  getBeautifyPathLabel,
 } from '../../utils/routeBeautify'
 import { BeautifyRouteControl } from '../BeautifyRouteControl/BeautifyRouteControl'
 import { ENABLE_ROUTE_BEAUTIFY } from '../../config/featureFlags'
@@ -112,11 +115,43 @@ const DESKTOP_CONTEXT_MENU_MEDIA = '(min-width: 1024px)'
 
 const DRAG_THRESHOLD = 5
 
-type BeautifyRouteSession = {
-  playerId: PlayerLabel
-  actionId: string
-  originalPoints: Position[]
-  intensity: number
+type BeautifyPathSession =
+  | {
+      kind: 'playerAction'
+      playerId: PlayerLabel
+      actionId: string
+      actionType: PlayerActionType
+      originalPoints: Position[]
+      intensity: number
+    }
+  | {
+      kind: 'defenderRoute'
+      defenderId: DefenderLabel
+      originalPoints: Position[]
+      intensity: number
+    }
+
+function pathSelectionMatchesBeautifySession(
+  session: BeautifyPathSession,
+  routeEditSelection: RouteEditSelection | null,
+  motionEditSelection: RouteEditSelection | null,
+  blockEditSelection: RouteEditSelection | null,
+  defenderRouteEditSelection: DefenderRouteEditSelection | null,
+): boolean {
+  if (session.kind === 'playerAction') {
+    const selection =
+      session.actionType === 'route'
+        ? routeEditSelection
+        : session.actionType === 'motion'
+          ? motionEditSelection
+          : blockEditSelection
+
+    return (
+      selection?.playerId === session.playerId && selection.actionId === session.actionId
+    )
+  }
+
+  return defenderRouteEditSelection?.defenderId === session.defenderId
 }
 
 function findMarkerEditTarget(
@@ -313,7 +348,7 @@ export function Field({
   )
   const [defenderMovementContextMenu, setDefenderMovementContextMenu] =
     useState<DefenderMovementContextMenuState | null>(null)
-  const [beautifyRouteSession, setBeautifyRouteSession] = useState<BeautifyRouteSession | null>(
+  const [beautifyPathSession, setBeautifyPathSession] = useState<BeautifyPathSession | null>(
     null,
   )
 
@@ -381,15 +416,20 @@ export function Field({
     const svg = svgRef.current
     if (!svg) return { x: 0, y: 0 }
 
-    const point = svg.createSVGPoint()
-    point.x = clientX
-    point.y = clientY
-    const svgPoint = point.matrixTransform(svg.getScreenCTM()!.inverse())
+    const fieldPosition = getFieldPositionFromClientPoint(svg, clientX, clientY)
+    if (!fieldPosition) return { x: 0, y: 0 }
 
-    return clampPosition({
-      x: svgPoint.x - FIELD_PADDING_LEFT,
-      y: svgPoint.y - FIELD_PLAY_AREA_Y,
-    })
+    return clampPosition(fieldPosition)
+  }
+
+  function isPointerInsideDrawingField(clientX: number, clientY: number): boolean {
+    const svg = svgRef.current
+    if (!svg) return false
+
+    const fieldPosition = getFieldPositionFromClientPoint(svg, clientX, clientY)
+    if (!fieldPosition) return false
+
+    return isInsideFieldDrawingArea(fieldPosition)
   }
 
   function getPlayerPosition(playerId: PlayerLabel): Position {
@@ -1038,25 +1078,6 @@ export function Field({
     setDeleteEntireDefenderRouteOpen(true)
   }, [selectedDefenderId, defenderRoutes, defenderRoutesEditable])
 
-  const toggleBlockSegmentSelection = useCallback(
-    (playerId: PlayerLabel, actionId: string, segmentIndex: number) => {
-      clearRouteEditSelection()
-      clearMotionEditSelection()
-      setBlockEditSelection((current) => {
-        if (
-          current?.playerId === playerId &&
-          current.actionId === actionId &&
-          current.kind === 'segment' &&
-          current.segmentIndex === segmentIndex
-        ) {
-          return null
-        }
-        return { playerId, actionId, kind: 'segment', segmentIndex }
-      })
-    },
-    [clearRouteEditSelection, clearMotionEditSelection],
-  )
-
   const toggleBlockVertexSelection = useCallback(
     (playerId: PlayerLabel, actionId: string, vertexIndex: number) => {
       clearRouteEditSelection()
@@ -1076,23 +1097,42 @@ export function Field({
     [clearRouteEditSelection, clearMotionEditSelection],
   )
 
-  const toggleSegmentSelection = useCallback(
+  const selectRouteSegment = useCallback(
     (playerId: PlayerLabel, actionId: string, segmentIndex: number) => {
       clearMotionEditSelection()
       clearBlockEditSelection()
-      setRouteEditSelection((current) => {
-        if (
-          current?.playerId === playerId &&
-          current.actionId === actionId &&
-          current.kind === 'segment' &&
-          current.segmentIndex === segmentIndex
-        ) {
-          return null
-        }
-        return { playerId, actionId, kind: 'segment', segmentIndex }
-      })
+      setRouteEditSelection({ playerId, actionId, kind: 'segment', segmentIndex })
+      onSelectPlayer(playerId)
     },
-    [clearMotionEditSelection, clearBlockEditSelection],
+    [clearMotionEditSelection, clearBlockEditSelection, onSelectPlayer],
+  )
+
+  const selectMotionSegment = useCallback(
+    (playerId: PlayerLabel, actionId: string, segmentIndex: number) => {
+      clearRouteEditSelection()
+      clearBlockEditSelection()
+      setMotionEditSelection({ playerId, actionId, kind: 'segment', segmentIndex })
+      onSelectPlayer(playerId)
+    },
+    [clearRouteEditSelection, clearBlockEditSelection, onSelectPlayer],
+  )
+
+  const selectBlockSegment = useCallback(
+    (playerId: PlayerLabel, actionId: string, segmentIndex: number) => {
+      clearRouteEditSelection()
+      clearMotionEditSelection()
+      setBlockEditSelection({ playerId, actionId, kind: 'segment', segmentIndex })
+      onSelectPlayer(playerId)
+    },
+    [clearRouteEditSelection, clearMotionEditSelection, onSelectPlayer],
+  )
+
+  const selectDefenderRouteSegment = useCallback(
+    (defenderId: DefenderLabel, segmentIndex: number) => {
+      setDefenderRouteEditSelection({ defenderId, kind: 'segment', segmentIndex })
+      onSelectDefender(defenderId)
+    },
+    [onSelectDefender],
   )
 
   const toggleVertexSelection = useCallback(
@@ -1114,25 +1154,6 @@ export function Field({
     [clearMotionEditSelection, clearBlockEditSelection],
   )
 
-  const toggleMotionSegmentSelection = useCallback(
-    (playerId: PlayerLabel, actionId: string, segmentIndex: number) => {
-      clearRouteEditSelection()
-      clearBlockEditSelection()
-      setMotionEditSelection((current) => {
-        if (
-          current?.playerId === playerId &&
-          current.actionId === actionId &&
-          current.kind === 'segment' &&
-          current.segmentIndex === segmentIndex
-        ) {
-          return null
-        }
-        return { playerId, actionId, kind: 'segment', segmentIndex }
-      })
-    },
-    [clearRouteEditSelection, clearBlockEditSelection],
-  )
-
   const toggleMotionVertexSelection = useCallback(
     (playerId: PlayerLabel, actionId: string, vertexIndex: number) => {
       clearRouteEditSelection()
@@ -1150,22 +1171,6 @@ export function Field({
       })
     },
     [clearRouteEditSelection, clearBlockEditSelection],
-  )
-
-  const toggleDefenderSegmentSelection = useCallback(
-    (defenderId: DefenderLabel, segmentIndex: number) => {
-      setDefenderRouteEditSelection((current) => {
-        if (
-          current?.defenderId === defenderId &&
-          current.kind === 'segment' &&
-          current.segmentIndex === segmentIndex
-        ) {
-          return null
-        }
-        return { defenderId, kind: 'segment', segmentIndex }
-      })
-    },
-    [],
   )
 
   const toggleDefenderVertexSelection = useCallback(
@@ -1542,6 +1547,10 @@ export function Field({
       return
     }
 
+    if (!isPointerInsideDrawingField(event.clientX, event.clientY)) {
+      return
+    }
+
     if (drawingMode === 'route' && playType === 'offensive') {
       const anchor = resolveDrawAnchor()
       if (!anchor) {
@@ -1629,8 +1638,6 @@ export function Field({
     clearBlockEditSelection()
     clearDefenderRouteEditSelection()
   }, [
-    selectedPlayerId,
-    selectedDefenderId,
     playType,
     clearRouteDrag,
     clearMotionDrag,
@@ -1642,6 +1649,26 @@ export function Field({
     clearBlockEditSelection,
     clearDefenderRouteEditSelection,
   ])
+
+  useEffect(() => {
+    setRouteEditSelection((current) =>
+      current && selectedPlayerId && current.playerId !== selectedPlayerId ? null : current,
+    )
+    setMotionEditSelection((current) =>
+      current && selectedPlayerId && current.playerId !== selectedPlayerId ? null : current,
+    )
+    setBlockEditSelection((current) =>
+      current && selectedPlayerId && current.playerId !== selectedPlayerId ? null : current,
+    )
+  }, [selectedPlayerId])
+
+  useEffect(() => {
+    setDefenderRouteEditSelection((current) =>
+      current && selectedDefenderId && current.defenderId !== selectedDefenderId
+        ? null
+        : current,
+    )
+  }, [selectedDefenderId])
 
   useEffect(() => {
     function handleMouseMove(event: MouseEvent) {
@@ -1859,13 +1886,21 @@ export function Field({
       const pointerStart = pointerStartRef.current
       if (pointerStart?.kind === 'offense' && offenseEditable) {
         onSelectPlayer(pointerStart.id)
-        clearRouteEditSelection()
-        clearMotionEditSelection()
-        clearBlockEditSelection()
+        if (routeEditSelectionRef.current?.playerId !== pointerStart.id) {
+          clearRouteEditSelection()
+        }
+        if (motionEditSelectionRef.current?.playerId !== pointerStart.id) {
+          clearMotionEditSelection()
+        }
+        if (blockEditSelectionRef.current?.playerId !== pointerStart.id) {
+          clearBlockEditSelection()
+        }
         pointerStartRef.current = null
       } else if (pointerStart?.kind === 'defense' && defenseEditable) {
         onSelectDefender(pointerStart.id)
-        clearDefenderRouteEditSelection()
+        if (defenderRouteEditSelectionRef.current?.defenderId !== pointerStart.id) {
+          clearDefenderRouteEditSelection()
+        }
         pointerStartRef.current = null
       } else if (pointerStart) {
         pointerStartRef.current = null
@@ -2386,6 +2421,8 @@ export function Field({
         setBlockEditSelection(segmentSelection)
       }
 
+      onSelectPlayer(playerId)
+
       event.preventDefault()
       event.stopPropagation()
       setDefenderMovementContextMenu(null)
@@ -2406,6 +2443,7 @@ export function Field({
       clearRouteEditSelection,
       clearMotionEditSelection,
       clearBlockEditSelection,
+      onSelectPlayer,
     ],
   )
 
@@ -2443,6 +2481,8 @@ export function Field({
         segmentIndex,
       })
 
+      onSelectDefender(defenderId)
+
       clearRouteEditSelection()
       clearMotionEditSelection()
       clearBlockEditSelection()
@@ -2466,6 +2506,7 @@ export function Field({
       clearRouteEditSelection,
       clearMotionEditSelection,
       clearBlockEditSelection,
+      onSelectDefender,
     ],
   )
 
@@ -2504,7 +2545,7 @@ export function Field({
     requestDeleteEntireBlock,
   ])
 
-  const handleOpenBeautifyRoute = useCallback(() => {
+  const handleOpenBeautifyPathFromActionMenu = useCallback(() => {
     if (!actionContextMenu) return
 
     const action = findActionInChain(
@@ -2512,47 +2553,87 @@ export function Field({
       actionContextMenu.playerId,
       actionContextMenu.actionId,
     )
-    if (!action || action.type !== 'route' || !canBeautifyRoutePoints(action.points)) {
+    if (!action || !canBeautifyRoutePoints(action.points)) {
       return
     }
 
-    setBeautifyRouteSession({
+    setBeautifyPathSession({
+      kind: 'playerAction',
       playerId: actionContextMenu.playerId,
       actionId: actionContextMenu.actionId,
+      actionType: action.type,
       originalPoints: action.points.map((point) => ({ ...point })),
       intensity: DEFAULT_BEAUTIFY_INTENSITY,
     })
   }, [actionContextMenu, playerActions])
 
-  const handleBeautifyIntensityChange = useCallback((intensity: number) => {
-    setBeautifyRouteSession((session) => (session ? { ...session, intensity } : null))
-  }, [])
+  const handleOpenBeautifyPathFromDefenderMenu = useCallback(() => {
+    if (!defenderMovementContextMenu) return
 
-  const handleBeautifyApply = useCallback(() => {
-    if (!beautifyRouteSession) return
-
-    const action = findActionInChain(
-      playerActions,
-      beautifyRouteSession.playerId,
-      beautifyRouteSession.actionId,
+    const route = defenderRoutes.find(
+      (entry) => entry.defenderId === defenderMovementContextMenu.defenderId,
     )
-    if (!action || action.type !== 'route') {
-      setBeautifyRouteSession(null)
+    if (!route || !canBeautifyRoutePoints(route.points)) {
       return
     }
 
-    onPlayerActionComplete(beautifyRouteSession.playerId, {
-      ...action,
+    setBeautifyPathSession({
+      kind: 'defenderRoute',
+      defenderId: defenderMovementContextMenu.defenderId,
+      originalPoints: route.points.map((point) => ({ ...point })),
+      intensity: DEFAULT_BEAUTIFY_INTENSITY,
+    })
+  }, [defenderMovementContextMenu, defenderRoutes])
+
+  const handleBeautifyIntensityChange = useCallback((intensity: number) => {
+    setBeautifyPathSession((session) => (session ? { ...session, intensity } : null))
+  }, [])
+
+  const handleBeautifyApply = useCallback(() => {
+    if (!beautifyPathSession) return
+
+    if (beautifyPathSession.kind === 'playerAction') {
+      const action = findActionInChain(
+        playerActions,
+        beautifyPathSession.playerId,
+        beautifyPathSession.actionId,
+      )
+      if (!action || action.type !== beautifyPathSession.actionType) {
+        setBeautifyPathSession(null)
+        return
+      }
+
+      onPlayerActionComplete(beautifyPathSession.playerId, {
+        ...action,
+        points: beautifyRoutePoints(
+          beautifyPathSession.originalPoints,
+          beautifyPathSession.intensity,
+        ),
+      })
+      setBeautifyPathSession(null)
+      return
+    }
+
+    const route = defenderRoutes.find(
+      (entry) => entry.defenderId === beautifyPathSession.defenderId,
+    )
+    if (!route) {
+      setBeautifyPathSession(null)
+      return
+    }
+
+    onDefenderRouteComplete({
+      ...route,
       points: beautifyRoutePoints(
-        beautifyRouteSession.originalPoints,
-        beautifyRouteSession.intensity,
+        beautifyPathSession.originalPoints,
+        beautifyPathSession.intensity,
       ),
     })
-    setBeautifyRouteSession(null)
-  }, [beautifyRouteSession, playerActions, onPlayerActionComplete])
+    setBeautifyPathSession(null)
+  }, [beautifyPathSession, playerActions, defenderRoutes, onPlayerActionComplete, onDefenderRouteComplete])
 
   const handleBeautifyCancel = useCallback(() => {
-    setBeautifyRouteSession(null)
+    setBeautifyPathSession(null)
   }, [])
 
   const handleChangeSelectedActionType = useCallback(
@@ -2640,48 +2721,88 @@ export function Field({
       )
     : null
 
-  const contextCanBeautifyRoute = Boolean(
-    contextMenuTargetAction?.type === 'route' &&
-      canBeautifyRoutePoints(contextMenuTargetAction.points),
+  const contextCanBeautifyPath = Boolean(
+    contextMenuTargetAction && canBeautifyRoutePoints(contextMenuTargetAction.points),
   )
 
-  const routePreviewOverrides = useMemo(() => {
-    if (!beautifyRouteSession) return undefined
+  const contextBeautifyPathLabel = contextMenuTargetAction
+    ? getBeautifyPathLabel(contextMenuTargetAction.type)
+    : getBeautifyPathLabel('route')
+
+  const defenderContextCanBeautifyPath = Boolean(
+    defenderContextTargetRoute && canBeautifyRoutePoints(defenderContextTargetRoute.points),
+  )
+
+  const pathPreviewOverrides = useMemo(() => {
+    if (!beautifyPathSession || beautifyPathSession.kind !== 'playerAction') {
+      return undefined
+    }
 
     const previewPoints = beautifyRoutePoints(
-      beautifyRouteSession.originalPoints,
-      beautifyRouteSession.intensity,
+      beautifyPathSession.originalPoints,
+      beautifyPathSession.intensity,
     )
 
     return {
-      [`${beautifyRouteSession.playerId}-${beautifyRouteSession.actionId}`]: previewPoints,
+      [`${beautifyPathSession.playerId}-${beautifyPathSession.actionId}`]: previewPoints,
     }
-  }, [beautifyRouteSession])
+  }, [beautifyPathSession])
 
-  useEffect(() => {
-    if (!beautifyRouteSession) return
+  const defenderRoutePreviewPoints = useMemo(() => {
+    if (!beautifyPathSession || beautifyPathSession.kind !== 'defenderRoute') {
+      return undefined
+    }
 
-    const action = findActionInChain(
-      playerActions,
-      beautifyRouteSession.playerId,
-      beautifyRouteSession.actionId,
+    return beautifyRoutePoints(
+      beautifyPathSession.originalPoints,
+      beautifyPathSession.intensity,
     )
-    if (!action || action.type !== 'route') {
-      setBeautifyRouteSession(null)
-    }
-  }, [beautifyRouteSession, playerActions])
+  }, [beautifyPathSession])
 
   useEffect(() => {
-    if (!beautifyRouteSession) return
+    if (!beautifyPathSession) return
 
-    const selectionMatchesSession =
-      routeEditSelection?.playerId === beautifyRouteSession.playerId &&
-      routeEditSelection.actionId === beautifyRouteSession.actionId
+    if (beautifyPathSession.kind === 'playerAction') {
+      const action = findActionInChain(
+        playerActions,
+        beautifyPathSession.playerId,
+        beautifyPathSession.actionId,
+      )
+      if (!action || action.type !== beautifyPathSession.actionType) {
+        setBeautifyPathSession(null)
+      }
+      return
+    }
+
+    const route = defenderRoutes.find(
+      (entry) => entry.defenderId === beautifyPathSession.defenderId,
+    )
+    if (!route) {
+      setBeautifyPathSession(null)
+    }
+  }, [beautifyPathSession, playerActions, defenderRoutes])
+
+  useEffect(() => {
+    if (!beautifyPathSession) return
+
+    const selectionMatchesSession = pathSelectionMatchesBeautifySession(
+      beautifyPathSession,
+      routeEditSelection,
+      motionEditSelection,
+      blockEditSelection,
+      defenderRouteEditSelection,
+    )
 
     if (!selectionMatchesSession) {
-      setBeautifyRouteSession(null)
+      setBeautifyPathSession(null)
     }
-  }, [beautifyRouteSession, routeEditSelection])
+  }, [
+    beautifyPathSession,
+    routeEditSelection,
+    motionEditSelection,
+    blockEditSelection,
+    defenderRouteEditSelection,
+  ])
 
   useEffect(() => {
     if (actionContextMenu && !contextMenuTargetAction) {
@@ -2793,7 +2914,14 @@ export function Field({
     return null
   })()
 
-  const showBeautifyRouteControl = ENABLE_ROUTE_BEAUTIFY && beautifyRouteSession !== null
+  const showBeautifyRouteControl = ENABLE_ROUTE_BEAUTIFY && beautifyPathSession !== null
+
+  const beautifyControlTitle =
+    beautifyPathSession?.kind === 'playerAction'
+      ? getBeautifyPathLabel(beautifyPathSession.actionType)
+      : beautifyPathSession?.kind === 'defenderRoute'
+        ? getBeautifyPathLabel('defenderPath')
+        : getBeautifyPathLabel('route')
 
   const showRouteDrawControls =
     hintText ||
@@ -2815,9 +2943,10 @@ export function Field({
     showRouteDrawControls ? (
       <div className="route-draw-controls">
         {hintText && <span className="route-draw-hint">{hintText}</span>}
-        {showBeautifyRouteControl && beautifyRouteSession && (
+        {showBeautifyRouteControl && beautifyPathSession && (
           <BeautifyRouteControl
-            intensity={beautifyRouteSession.intensity}
+            title={beautifyControlTitle}
+            intensity={beautifyPathSession.intensity}
             onIntensityChange={handleBeautifyIntensityChange}
             onApply={handleBeautifyApply}
             onCancel={handleBeautifyCancel}
@@ -2945,10 +3074,11 @@ export function Field({
           endpointMarker={resolveEndpointMarker(contextMenuTargetAction)}
           canDeleteSegment={contextCanDeleteSegment}
           canDeleteEntire={contextCanDeleteEntire}
-          canBeautifyRoute={contextCanBeautifyRoute}
+          canBeautifyPath={contextCanBeautifyPath}
+          beautifyPathLabel={contextBeautifyPathLabel}
           onDeleteSegment={handleContextDeleteSegment}
           onDeleteEntire={handleContextDeleteEntire}
-          onBeautifyRoute={handleOpenBeautifyRoute}
+          onBeautifyPath={handleOpenBeautifyPathFromActionMenu}
           onEndpointMarkerChange={handleEndpointMarkerChange}
           onDrawingModeChange={onDrawingModeChange}
           onDrawingModeMotionSelect={handleContextDrawingModeMotionSelect}
@@ -2963,8 +3093,11 @@ export function Field({
           drawingMode={drawingMode}
           canDeleteSegment={defenderContextCanDeleteSegment}
           canDeleteEntire={defenderContextCanDeleteEntire}
+          canBeautifyPath={defenderContextCanBeautifyPath}
+          beautifyPathLabel={getBeautifyPathLabel('defenderPath')}
           onDeleteSegment={handleDefenderContextDeleteSegment}
           onDeleteEntire={handleDefenderContextDeleteEntire}
+          onBeautifyPath={handleOpenBeautifyPathFromDefenderMenu}
           onDrawingModeChange={onDrawingModeChange}
           onClose={closeActionContextMenu}
         />
@@ -2985,7 +3118,6 @@ export function Field({
           preserveAspectRatio="xMidYMid meet"
           role="img"
           aria-label="50-yard football field with offensive and defensive players"
-          onMouseDown={handleFieldMouseDown}
         >
           <defs>
             <filter id="turf-grain" x="0" y="0" width="100%" height="100%">
@@ -3019,7 +3151,11 @@ export function Field({
             className="field-viewbox-bg"
           />
 
-          <g className="field-play-area" transform={`translate(${FIELD_PADDING_LEFT}, ${FIELD_PLAY_AREA_Y})`}>
+          <g
+            className="field-play-area"
+            transform={`translate(${FIELD_PADDING_LEFT}, ${FIELD_PLAY_AREA_Y})`}
+            onMouseDown={handleFieldMouseDown}
+          >
             <g className="field-turf-surface" filter="url(#turf-grain)">
               <rect
                 x={0}
@@ -3189,7 +3325,7 @@ export function Field({
               blockEditSelection={blockEditSelection}
               onRouteSegmentSelect={(playerId, actionId, segmentIndex) => {
                 if (!routesEditable || routeDragRef.current || endpointDragRef.current) return
-                toggleSegmentSelection(playerId, actionId, segmentIndex)
+                selectRouteSegment(playerId, actionId, segmentIndex)
               }}
               onRouteVertexSelect={(playerId, actionId, vertexIndex) => {
                 if (!routesEditable || routeDragRef.current || endpointDragRef.current) return
@@ -3197,7 +3333,7 @@ export function Field({
               }}
               onMotionSegmentSelect={(playerId, actionId, segmentIndex) => {
                 if (!motionsEditable || motionDragRef.current || endpointDragRef.current) return
-                toggleMotionSegmentSelection(playerId, actionId, segmentIndex)
+                selectMotionSegment(playerId, actionId, segmentIndex)
               }}
               onMotionVertexSelect={(playerId, actionId, vertexIndex) => {
                 if (!motionsEditable || motionDragRef.current || endpointDragRef.current) return
@@ -3205,7 +3341,7 @@ export function Field({
               }}
               onBlockSegmentSelect={(playerId, actionId, segmentIndex) => {
                 if (!blocksEditable || blockDragRef.current || endpointDragRef.current) return
-                toggleBlockSegmentSelection(playerId, actionId, segmentIndex)
+                selectBlockSegment(playerId, actionId, segmentIndex)
               }}
               onBlockVertexSelect={(playerId, actionId, vertexIndex) => {
                 if (!blocksEditable || blockDragRef.current || endpointDragRef.current) return
@@ -3213,16 +3349,24 @@ export function Field({
               }}
               onActionEndpointPointerDown={handleActionEndpointPointerDown}
               onActionContextMenu={handleActionContextMenu}
-              routePreviewOverrides={routePreviewOverrides}
+              pathPreviewOverrides={pathPreviewOverrides}
             />
 
-            {defenderRoutes.map((route) => (
+            {defenderRoutes.map((route) => {
+              const defenderRoutePoints =
+                beautifyPathSession?.kind === 'defenderRoute' &&
+                beautifyPathSession.defenderId === route.defenderId &&
+                defenderRoutePreviewPoints
+                  ? defenderRoutePreviewPoints
+                  : route.points
+
+              return (
               <RouteLine
                 key={`defender-route-${route.defenderId}`}
                 playerPosition={getDefenderPosition(route.defenderId)}
                 route={{
                   playerId: route.defenderId as unknown as PlayerLabel,
-                  points: route.points,
+                  points: defenderRoutePoints,
                 }}
                 readOnly={!defenderRoutesEditable}
                 showIntermediateVertices={
@@ -3242,7 +3386,7 @@ export function Field({
                 }
                 onSegmentSelect={(segmentIndex) => {
                   if (!defenderRoutesEditable || defenderRouteDragRef.current) return
-                  toggleDefenderSegmentSelection(route.defenderId, segmentIndex)
+                  selectDefenderRouteSegment(route.defenderId, segmentIndex)
                 }}
                 onVertexSelect={(vertexIndex) => {
                   if (!defenderRoutesEditable || defenderRouteDragRef.current) return
@@ -3255,7 +3399,8 @@ export function Field({
                   handleDefenderRouteContextMenu(route.defenderId, event)
                 }}
               />
-            ))}
+              )
+            })}
 
             {freehandBlockForDisplay && drawingMode === 'block' && playType === 'offensive' && (
               <BlockLine

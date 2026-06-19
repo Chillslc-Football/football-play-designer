@@ -64,6 +64,16 @@ export function canBeautifyRoutePoints(points: Position[]): boolean {
   return points.length >= MIN_POINTS_FOR_BEAUTIFY
 }
 
+/** Context menu label for manual path beautify by drawn path type. */
+export function getBeautifyPathLabel(
+  pathType: 'route' | 'motion' | 'block' | 'defenderPath',
+): string {
+  if (pathType === 'route') return 'Beautify Route'
+  if (pathType === 'motion') return 'Beautify Motion'
+  if (pathType === 'block') return 'Beautify Block'
+  return 'Beautify Path'
+}
+
 function clampIntensity(intensity: number): number {
   return Math.max(MIN_BEAUTIFY_INTENSITY, Math.min(MAX_BEAUTIFY_INTENSITY, intensity))
 }

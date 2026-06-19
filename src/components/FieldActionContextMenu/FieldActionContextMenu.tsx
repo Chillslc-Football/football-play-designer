@@ -22,10 +22,11 @@ type FieldActionContextMenuProps = {
   endpointMarker: EndpointMarker
   canDeleteSegment: boolean
   canDeleteEntire: boolean
-  canBeautifyRoute: boolean
+  canBeautifyPath: boolean
+  beautifyPathLabel: string
   onDeleteSegment: () => void
   onDeleteEntire: () => void
-  onBeautifyRoute: () => void
+  onBeautifyPath: () => void
   onEndpointMarkerChange: (marker: EndpointMarker) => void
   onDrawingModeChange: (mode: DrawingMode) => void
   onDrawingModeMotionSelect: (motionType: MotionType) => void
@@ -121,10 +122,11 @@ export function FieldActionContextMenu({
   endpointMarker,
   canDeleteSegment,
   canDeleteEntire,
-  canBeautifyRoute,
+  canBeautifyPath,
+  beautifyPathLabel,
   onDeleteSegment,
   onDeleteEntire,
-  onBeautifyRoute,
+  onBeautifyPath,
   onEndpointMarkerChange,
   onDrawingModeChange,
   onDrawingModeMotionSelect,
@@ -180,15 +182,15 @@ export function FieldActionContextMenu({
         </button>
       </div>
 
-      {ENABLE_ROUTE_BEAUTIFY && actionType === 'route' && (
+      {ENABLE_ROUTE_BEAUTIFY && (
         <div className="field-action-context-menu-section">
           <button
             type="button"
             className="field-action-context-menu-item"
-            disabled={!canBeautifyRoute}
-            onClick={() => run(onBeautifyRoute)}
+            disabled={!canBeautifyPath}
+            onClick={() => run(onBeautifyPath)}
           >
-            Beautify Route
+            {beautifyPathLabel}
           </button>
         </div>
       )}

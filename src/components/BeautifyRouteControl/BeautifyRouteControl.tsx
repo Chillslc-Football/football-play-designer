@@ -5,6 +5,7 @@ import {
 import './BeautifyRouteControl.css'
 
 type BeautifyRouteControlProps = {
+  title: string
   intensity: number
   onIntensityChange: (intensity: number) => void
   onApply: () => void
@@ -12,6 +13,7 @@ type BeautifyRouteControlProps = {
 }
 
 export function BeautifyRouteControl({
+  title,
   intensity,
   onIntensityChange,
   onApply,
@@ -19,7 +21,7 @@ export function BeautifyRouteControl({
 }: BeautifyRouteControlProps) {
   return (
     <div className="beautify-route-control">
-      <span className="beautify-route-control-title">Beautify Route</span>
+      <span className="beautify-route-control-title">{title}</span>
       <label className="beautify-route-control-slider-label">
         <span className="beautify-route-control-label">Intensity</span>
         <input
