@@ -3,6 +3,7 @@ import type { PlayType } from '../../types/playType'
 import type { CustomFormation } from '../../utils/formationStorage'
 import { getResolvedFormationTemplates, getResolvedFrontTemplates } from '../../utils/schemeTemplateStore'
 import type { NewPlaySetupDefaults, NewPlaySetupInput } from '../../utils/newPlaySetup'
+import { handleModalBackdropMouseDown } from '../../utils/modalBackdrop'
 import { CategorySelector } from '../CategorySelector/CategorySelector'
 import '../ConfirmDialog/ConfirmDialog.css'
 import './NewPlaySetupDialog.css'
@@ -77,17 +78,14 @@ export function NewPlaySetupDialog({
     <div
       className="confirm-dialog-overlay"
       role="presentation"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) {
-          onCancel()
-        }
-      }}
+      onMouseDown={(event) => handleModalBackdropMouseDown(event, onCancel)}
     >
       <div
         className="confirm-dialog new-play-setup-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-play-setup-title"
+        onMouseDown={(event) => event.stopPropagation()}
       >
         <h2 id="new-play-setup-title" className="new-play-setup-dialog-title">
           {isEditMode ? 'Edit Play Setup' : 'Create New Play'}

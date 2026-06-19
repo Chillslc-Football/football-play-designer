@@ -532,8 +532,25 @@ function App() {
 
   function handleNewPlaySetupSubmit(setup: NewPlaySetupInput) {
     if (playSetupMode === 'edit') {
+      const formationChanged =
+        play.playType === 'offensive' &&
+        setup.formationId !== '' &&
+        setup.formationId !== play.formationId
+      const frontChanged =
+        setup.frontId !== null &&
+        (setup.frontId !== play.frontId || play.defenders.length === 0)
+      const opposingFormationChanged =
+        play.playType === 'defensive' &&
+        setup.formationId !== (play.opponentFormationId ?? '')
+
       const next = applyPlaySetupEdit(play, setup, customFormations)
       setPlay(next)
+
+      if (formationChanged || frontChanged || opposingFormationChanged) {
+        setSelectedPlayerId(null)
+        setSelectedDefenderId(null)
+      }
+
       setNewPlaySetupOpen(false)
       return
     }

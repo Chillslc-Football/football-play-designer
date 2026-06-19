@@ -16,6 +16,7 @@ import {
   type PlayFilterId,
 } from '../../utils/formationUtils'
 import { filterPlaysByFront, getFrontFilterOptions } from '../../utils/frontUtils'
+import { handleModalBackdropMouseDown } from '../../utils/modalBackdrop'
 import './LoadPlayModal.css'
 
 type LoadPlayModalProps = {
@@ -120,17 +121,14 @@ export function LoadPlayModal({
     <div
       className="load-play-overlay"
       role="presentation"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose()
-        }
-      }}
+      onMouseDown={(event) => handleModalBackdropMouseDown(event, onClose)}
     >
       <div
         className="load-play-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="load-play-title"
+        onMouseDown={(event) => event.stopPropagation()}
       >
         <h2 id="load-play-title" className="load-play-dialog-title">
           Load Play
