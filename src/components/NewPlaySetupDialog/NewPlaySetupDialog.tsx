@@ -8,7 +8,7 @@ import { CategorySelector } from '../CategorySelector/CategorySelector'
 import '../ConfirmDialog/ConfirmDialog.css'
 import './NewPlaySetupDialog.css'
 
-export type PlaySetupDialogMode = 'create' | 'edit'
+export type PlaySetupDialogMode = 'create' | 'edit' | 'save-as'
 
 type NewPlaySetupDialogProps = {
   open: boolean
@@ -17,6 +17,8 @@ type NewPlaySetupDialogProps = {
   customFormations: CustomFormation[]
   availableCategories: string[]
   defaults: NewPlaySetupDefaults
+  /** Returns an inline error message when the play name is invalid for this mode. */
+  validatePlayName?: (name: string) => string | null
   onSubmit: (setup: NewPlaySetupInput) => void
   onCancel: () => void
 }
@@ -28,6 +30,7 @@ export function NewPlaySetupDialog({
   customFormations,
   availableCategories,
   defaults,
+  validatePlayName,
   onSubmit,
   onCancel,
 }: NewPlaySetupDialogProps) {
@@ -36,6 +39,7 @@ export function NewPlaySetupDialog({
   const [frontId, setFrontId] = useState(defaults.frontId)
   const [categories, setCategories] = useState<string[]>(defaults.categories)
   const [notes, setNotes] = useState(defaults.notes)
+  const [nameError, setNameError] = useState<string | null>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -58,13 +62,32 @@ export function NewPlaySetupDialog({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [open, defaults, onCancel])
 
+  useEffect(() => {
+    if (!open || !validatePlayName) {
+      setNameError(null)
+      return
+    }
+
+    setNameError(validatePlayName(name))
+  }, [open, validatePlayName, name])
+
   if (!open) return null
 
   const isDefensive = playType === 'defensive'
   const isEditMode = mode === 'edit'
+  const isSaveAsMode = mode === 'save-as'
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
+
+    if (validatePlayName) {
+      const error = validatePlayName(name)
+      if (error) {
+        setNameError(error)
+        return
+      }
+    }
+
     onSubmit({
       name,
       formationId,
@@ -88,7 +111,7 @@ export function NewPlaySetupDialog({
         onMouseDown={(event) => event.stopPropagation()}
       >
         <h2 id="new-play-setup-title" className="new-play-setup-dialog-title">
-          {isEditMode ? 'Edit Play Setup' : 'Create New Play'}
+          {isSaveAsMode ? 'Save As New Play' : isEditMode ? 'Edit Play Setup' : 'Create New Play'}
         </h2>
 
         <form className="new-play-setup-dialog-form" onSubmit={handleSubmit}>
@@ -100,11 +123,22 @@ export function NewPlaySetupDialog({
               ref={nameInputRef}
               id="new-play-setup-name"
               type="text"
-              className="input-field"
+              className={`input-field${nameError ? ' input-field-invalid' : ''}`}
               value={name}
               onChange={(event) => setName(event.target.value)}
               autoComplete="off"
+              aria-invalid={nameError ? true : undefined}
+              aria-describedby={nameError ? 'new-play-setup-name-error' : undefined}
             />
+            {nameError && (
+              <p
+                id="new-play-setup-name-error"
+                className="new-play-setup-dialog-field-error"
+                role="alert"
+              >
+                {nameError}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -187,8 +221,12 @@ export function NewPlaySetupDialog({
             <button type="button" className="btn" onClick={onCancel}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
-              {isEditMode ? 'Save Setup' : 'Create Play'}
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={Boolean(nameError)}
+            >
+              {isSaveAsMode ? 'Save As New Play' : isEditMode ? 'Save Setup' : 'Create Play'}
             </button>
           </div>
         </form>

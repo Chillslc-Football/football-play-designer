@@ -35,3 +35,13 @@
   justify-content: flex-end;
   margin-top: var(--space-xs);
 }
+
+.new-play-setup-dialog-field-error {
+  margin: 6px 0 0;
+  color: #b42318;
+  font-size: 0.85rem;
+}
+
+.new-play-setup-dialog-form .input-field-invalid {
+  border-color: #b42318;
+}

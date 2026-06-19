@@ -39,10 +39,20 @@ export function getAllSavedPlays(): Play[] {
   return readRawPlays().map(normalizePlay)
 }
 
-export function findSavedPlayByName(name: string, plays?: Play[]): Play | undefined {
+export const DUPLICATE_PLAY_NAME_MESSAGE = 'A play with this name already exists.'
+
+export function findSavedPlayByName(
+  name: string,
+  plays?: Play[],
+  excludePlayId?: string | null,
+): Play | undefined {
   const list = plays ?? getAllSavedPlays()
   const target = normalizePlayName(name).toLowerCase()
-  return list.find((saved) => normalizePlayName(saved.name).toLowerCase() === target)
+  return list.find(
+    (saved) =>
+      saved.id !== excludePlayId &&
+      normalizePlayName(saved.name).toLowerCase() === target,
+  )
 }
 
 export function upsertPlayById(play: Play, id: string): Play {

@@ -104,6 +104,8 @@ import {
   findSavedPlayByName,
   getAllSavedPlays,
   getPlayById,
+  DUPLICATE_PLAY_NAME_MESSAGE,
+  normalizePlayName,
   removeCategoryFromAllPlays,
   upsertPlayById,
 } from './utils/playStorage'
@@ -513,6 +515,27 @@ function App() {
     void executeAction(action)
   }
 
+  function findDuplicatePlayName(
+    name: string,
+    excludePlayId: string | null | undefined = activeSavedPlayId,
+  ): Play | undefined {
+    return useCloud
+      ? cloudPlayRepository.findSavedPlayByName(name, savedPlays, excludePlayId)
+      : findSavedPlayByName(name, savedPlays, excludePlayId)
+  }
+
+  const validateSetupPlayName = useCallback(
+    (name: string): string | null => {
+      if (playSetupMode === 'edit') return null
+
+      const excludePlayId = playSetupMode === 'create' ? null : activeSavedPlayId
+      return findDuplicatePlayName(name, excludePlayId)
+        ? DUPLICATE_PLAY_NAME_MESSAGE
+        : null
+    },
+    [playSetupMode, savedPlays, activeSavedPlayId, useCloud],
+  )
+
   function openNewPlaySetup() {
     setPlaySetupMode('create')
     setNewPlaySetupDefaults(getNewPlaySetupDefaults(play))
@@ -526,11 +549,31 @@ function App() {
     setNewPlaySetupOpen(true)
   }
 
+  function openSaveAsDuplicateRecovery() {
+    setCategoryReminderOpen(false)
+    setPlaySetupMode('save-as')
+    setNewPlaySetupDefaults(getPlaySetupDefaultsFromPlay(play))
+    setNewPlaySetupOpen(true)
+  }
+
   function handleNewPlaySetupCancel() {
     setNewPlaySetupOpen(false)
   }
 
+  async function handleSaveAsSetupSubmit(setup: NewPlaySetupInput) {
+    const updatedPlay = applyPlaySetupEdit(play, setup, customFormations)
+    const saved = await executeSaveAsNew(updatedPlay, { openRecoveryOnDuplicate: false })
+    if (saved) {
+      setNewPlaySetupOpen(false)
+    }
+  }
+
   function handleNewPlaySetupSubmit(setup: NewPlaySetupInput) {
+    if (playSetupMode === 'save-as') {
+      void handleSaveAsSetupSubmit(setup)
+      return
+    }
+
     if (playSetupMode === 'edit') {
       const formationChanged =
         play.playType === 'offensive' &&
@@ -706,49 +749,34 @@ function App() {
     await executeSaveChanges()
   }
 
-  async function executeSaveAsNew(categoriesOverride?: string[]) {
-    if (!canEdit || isSavingRef.current) return
+  async function executeSaveAsNew(
+    sourcePlay?: Play,
+    options?: { openRecoveryOnDuplicate?: boolean },
+  ): Promise<boolean> {
+    if (!canEdit || isSavingRef.current) return false
+
+    const playToSaveAs = sourcePlay ?? play
+    const openRecoveryOnDuplicate = options?.openRecoveryOnDuplicate ?? true
 
     isSavingRef.current = true
     setIsSaving(true)
 
     try {
-      let nameToUse = play.name
-      const findByName = useCloud
-        ? (name: string, plays: Play[]) => cloudPlayRepository.findSavedPlayByName(name, plays)
-        : findSavedPlayByName
-
-      if (findByName(nameToUse, savedPlays)) {
-        const prompted = window.prompt(
-          'That play name already exists. Enter a different name:',
-          nameToUse,
-        )
-
-        if (!prompted || !prompted.trim()) {
-          showSaveMessage('Save cancelled — name must be unique.')
-          return
+      if (findDuplicatePlayName(playToSaveAs.name)) {
+        if (openRecoveryOnDuplicate) {
+          openSaveAsDuplicateRecovery()
+          showSaveMessage(DUPLICATE_PLAY_NAME_MESSAGE)
         }
-
-        if (findByName(prompted, savedPlays)) {
-          showSaveMessage('That name also exists. Please choose a unique name.')
-          return
-        }
-
-        nameToUse = prompted.trim()
+        return false
       }
 
-      const sourcePlay =
-        categoriesOverride !== undefined
-          ? { ...play, categories: normalizeCategories(categoriesOverride) }
-          : play
-
-      const duplicatedPlay = duplicatePlay(sourcePlay, nameToUse)
-      const playToSave = preparePlayForSave(duplicatedPlay)
+      const duplicatedPlay = duplicatePlay(playToSaveAs, normalizePlayName(playToSaveAs.name))
+      const preparedPlay = preparePlayForSave(duplicatedPlay)
 
       if (useCloud && activeTeamId) {
         const saved = await cloudPlayRepository.addNewPlay(
           activeTeamId,
-          playToSave,
+          preparedPlay,
           customFormations,
           user?.id,
         )
@@ -757,17 +785,19 @@ function App() {
         setSelectedDefenderId(null)
         await loadTeamData()
         showSaveMessage('Play saved.')
-        return
+        return true
       }
 
-      const saved = addNewPlay(playToSave)
+      const saved = addNewPlay(preparedPlay)
       syncEditorAfterSave(duplicatedPlay, saved.id)
       setSelectedPlayerId(null)
       setSelectedDefenderId(null)
       setSavedPlays(getAllSavedPlays())
       showSaveMessage('Play saved.')
+      return true
     } catch (error) {
       showSaveMessage(error instanceof Error ? error.message : 'Failed to save play.')
+      return false
     } finally {
       isSavingRef.current = false
       setIsSaving(false)
@@ -789,16 +819,21 @@ function App() {
     setCategoryReminderOpen(false)
   }
 
-  function handleCategoryReminderSaveWithoutCategory() {
-    setCategoryReminderOpen(false)
-    void executeSaveAsNew()
+  async function handleCategoryReminderSaveWithoutCategory() {
+    const saved = await executeSaveAsNew()
+    if (saved) {
+      setCategoryReminderOpen(false)
+    }
   }
 
   async function handleCategoryReminderSaveWithCategory(categories: string[]) {
     const normalized = normalizeCategories(categories)
-    setCategoryReminderOpen(false)
-    setPlay((current) => ({ ...current, categories: normalized }))
-    await executeSaveAsNew(normalized)
+    const playWithCategories = { ...play, categories: normalized }
+    setPlay(playWithCategories)
+    const saved = await executeSaveAsNew(playWithCategories)
+    if (saved) {
+      setCategoryReminderOpen(false)
+    }
   }
 
   function handleSaveAsNew() {
@@ -1659,7 +1694,7 @@ function App() {
         open={categoryReminderOpen}
         playType={play.playType}
         availableCategories={availableCategories}
-        onSaveWithoutCategory={handleCategoryReminderSaveWithoutCategory}
+        onSaveWithoutCategory={() => void handleCategoryReminderSaveWithoutCategory()}
         onSaveWithCategory={(categories) => void handleCategoryReminderSaveWithCategory(categories)}
         onCancel={handleCategoryReminderCancel}
       />
@@ -1671,6 +1706,7 @@ function App() {
         customFormations={customFormations}
         availableCategories={availableCategories}
         defaults={newPlaySetupDefaults}
+        validatePlayName={playSetupMode === 'edit' ? undefined : validateSetupPlayName}
         onSubmit={handleNewPlaySetupSubmit}
         onCancel={handleNewPlaySetupCancel}
       />

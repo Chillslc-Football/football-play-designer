@@ -263,7 +263,15 @@ export async function deletePlay(teamId: string, playId: string): Promise<void> 
   }
 }
 
-export function findSavedPlayByName(name: string, plays: Play[]): Play | undefined {
+export function findSavedPlayByName(
+  name: string,
+  plays: Play[],
+  excludePlayId?: string | null,
+): Play | undefined {
   const target = normalizePlayName(name).toLowerCase()
-  return plays.find((saved) => normalizePlayName(saved.name).toLowerCase() === target)
+  return plays.find(
+    (saved) =>
+      saved.id !== excludePlayId &&
+      normalizePlayName(saved.name).toLowerCase() === target,
+  )
 }
