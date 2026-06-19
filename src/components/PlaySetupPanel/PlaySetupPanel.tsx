@@ -82,6 +82,7 @@ type PlaySetupPanelProps = {
   onMotionTypeChange: (motionType: MotionType) => void
   onDrawingModeChange: (mode: DrawingMode) => void
   onNewPlay: () => void
+  onOpenLoadPlay: () => void
   onEditPlaySetup: () => void
   onSaveChanges: () => void
   onSaveAsNew: () => void
@@ -215,6 +216,7 @@ export function PlaySetupPanel({
   onMotionTypeChange,
   onDrawingModeChange,
   onNewPlay,
+  onOpenLoadPlay,
   onEditPlaySetup,
   onSaveChanges,
   onSaveAsNew,
@@ -253,7 +255,6 @@ export function PlaySetupPanel({
     libraryPlays,
     selectedLoadId,
     onLoadPlay,
-    onEditPlaySetup,
   }
 
   const schemeSectionTitle = playType === 'defensive' ? 'Front' : 'Formation'
@@ -355,6 +356,8 @@ export function PlaySetupPanel({
                 canEdit={canEdit}
                 selectedLoadId={selectedLoadId}
                 onNewPlay={onNewPlay}
+                onOpenLoadPlay={onOpenLoadPlay}
+                onEditPlaySetup={onEditPlaySetup}
                 onSaveChanges={onSaveChanges}
                 onSaveAsNew={onSaveAsNew}
                 onDeletePlay={onDeletePlay}

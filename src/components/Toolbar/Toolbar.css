@@ -1,17 +1,34 @@
-.play-actions-grid {
+.play-actions-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.play-actions-group {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
   width: 100%;
 }
 
-.play-actions-grid .sidebar-btn {
+.play-actions-group-single {
+  grid-template-columns: 1fr;
+}
+
+.play-actions-groups .sidebar-btn {
   width: 100%;
   min-height: 32px;
   padding: 6px 8px;
   font-size: 12px;
 }
 
-.toolbar-mirror-btn {
+.play-actions-full-width {
   grid-column: 1 / -1;
+}
+
+.play-actions-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 2px 0;
 }

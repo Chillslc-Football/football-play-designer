@@ -8,6 +8,7 @@ import * as formationRepository from './repositories/formationRepository'
 import * as cloudPlayRepository from './repositories/playRepository'
 import * as schemeTemplateRepository from './repositories/schemeTemplateRepository'
 import { AdminTemplateEditBar } from './components/AdminTemplateEditBar/AdminTemplateEditBar'
+import { LoadPlayModal } from './components/LoadPlayModal/LoadPlayModal'
 import { NewPlaySetupDialog, type PlaySetupDialogMode } from './components/NewPlaySetupDialog/NewPlaySetupDialog'
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog'
 import { CategoryReminderDialog } from './components/CategoryReminderDialog/CategoryReminderDialog'
@@ -184,6 +185,7 @@ function App() {
   const [dialog, setDialog] = useState<DialogState>(null)
   const [categoryReminderOpen, setCategoryReminderOpen] = useState(false)
   const [newPlaySetupOpen, setNewPlaySetupOpen] = useState(false)
+  const [loadPlayModalOpen, setLoadPlayModalOpen] = useState(false)
   const [playSetupMode, setPlaySetupMode] = useState<PlaySetupDialogMode>('create')
   const [newPlaySetupDefaults, setNewPlaySetupDefaults] = useState(() =>
     getNewPlaySetupDefaults(createEmptyPlay()),
@@ -832,6 +834,19 @@ function App() {
     if (playId === activeSavedPlayId) return
 
     requestAction({ type: 'loadPlay', playId })
+  }
+
+  function handleOpenLoadPlayModal() {
+    setLoadPlayModalOpen(true)
+  }
+
+  function handleLoadPlayFromModal(playId: string) {
+    setLoadPlayModalOpen(false)
+    handleLoadPlay(playId)
+  }
+
+  function handleLoadPlayModalClose() {
+    setLoadPlayModalOpen(false)
   }
 
   function handlePlayFilterChange(filterId: PlayFilterId) {
@@ -1643,6 +1658,16 @@ function App() {
         onCancel={handleNewPlaySetupCancel}
       />
 
+      <LoadPlayModal
+        open={loadPlayModalOpen}
+        playType={play.playType}
+        savedPlays={savedPlays}
+        customFormations={customFormations}
+        customCategories={customCategories}
+        onLoadPlay={handleLoadPlayFromModal}
+        onClose={handleLoadPlayModalClose}
+      />
+
       <div className={`app-body ${setupPanelOpen && !adminTemplateEdit ? '' : 'setup-collapsed'}`}>
         {!adminTemplateEdit && (
         <PlaySetupPanel
@@ -1694,6 +1719,7 @@ function App() {
           onMotionTypeChange={setMotionType}
           onDrawingModeChange={setDrawingMode}
           onNewPlay={handleNewPlay}
+          onOpenLoadPlay={handleOpenLoadPlayModal}
           onEditPlaySetup={openEditPlaySetup}
           onSaveChanges={handleSaveChanges}
           onSaveAsNew={handleSaveAsNew}
