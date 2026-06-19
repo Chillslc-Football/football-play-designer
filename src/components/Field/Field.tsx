@@ -1189,6 +1189,56 @@ export function Field({
     [],
   )
 
+  function getFieldPointerPosition(clientX: number, clientY: number): Position | null {
+    const svg = svgRef.current
+    if (!svg) return null
+    return getFieldPositionFromClientPoint(svg, clientX, clientY)
+  }
+
+  function trySelectOtherSameSidePlayerAtPointer(
+    event: React.MouseEvent,
+    activeSameSideId: PlayerLabel | DefenderLabel | null | undefined,
+  ): boolean {
+    if (drawingMode === 'position' || !activeSameSideId) return false
+
+    const clickPosition = getFieldPointerPosition(event.clientX, event.clientY)
+    if (!clickPosition) return false
+
+    if (
+      playType === 'offensive' &&
+      offenseEditable &&
+      (drawingMode === 'route' || drawingMode === 'motion' || drawingMode === 'block')
+    ) {
+      const nearest = findNearestByPosition(clickPosition, players, PLAYER_SELECTION_RADIUS)
+      if (!nearest || nearest.id === activeSameSideId) return false
+
+      pointerStartRef.current = {
+        kind: 'offense',
+        id: nearest.id,
+        x: event.clientX,
+        y: event.clientY,
+      }
+      event.preventDefault()
+      return true
+    }
+
+    if (playType === 'defensive' && defenseEditable && drawingMode === 'route') {
+      const nearest = findNearestByPosition(clickPosition, defenders, PLAYER_SELECTION_RADIUS)
+      if (!nearest || nearest.id === activeSameSideId) return false
+
+      pointerStartRef.current = {
+        kind: 'defense',
+        id: nearest.id,
+        x: event.clientX,
+        y: event.clientY,
+      }
+      event.preventDefault()
+      return true
+    }
+
+    return false
+  }
+
   function beginOffensePointerSelection(event: React.MouseEvent, playerId: PlayerLabel) {
     if (!offenseEditable) return
     event.stopPropagation()
@@ -1479,11 +1529,29 @@ export function Field({
   }
 
   function handlePlayerPointerDown(playerId: PlayerLabel, event: React.MouseEvent) {
+    if (
+      drawingMode !== 'position' &&
+      playType === 'offensive' &&
+      playerId !== selectedPlayerId
+    ) {
+      beginOffensePointerSelection(event, playerId)
+      return
+    }
+
     if (tryBeginSelectedPlayerActionDrag(event, playerId)) return
     beginOffensePointerSelection(event, playerId)
   }
 
   function handleDefenderPointerDown(defenderId: DefenderLabel, event: React.MouseEvent) {
+    if (
+      drawingMode !== 'position' &&
+      playType === 'defensive' &&
+      defenderId !== selectedDefenderId
+    ) {
+      beginDefensePointerSelection(event, defenderId)
+      return
+    }
+
     if (tryBeginSelectedDefenderActionDrag(event, defenderId)) return
     beginDefensePointerSelection(event, defenderId)
   }
@@ -1559,6 +1627,10 @@ export function Field({
         return
       }
 
+      if (trySelectOtherSameSidePlayerAtPointer(event, anchor.playerId)) {
+        return
+      }
+
       event.preventDefault()
       startRouteDrag(event, anchor)
       return
@@ -1569,6 +1641,10 @@ export function Field({
       if (!anchor) {
         clearMotionEditSelection()
         if (tryBeginNearestOffenseSelection(event)) return
+        return
+      }
+
+      if (trySelectOtherSameSidePlayerAtPointer(event, anchor.playerId)) {
         return
       }
 
@@ -1585,6 +1661,10 @@ export function Field({
         return
       }
 
+      if (trySelectOtherSameSidePlayerAtPointer(event, anchor.defenderId)) {
+        return
+      }
+
       event.preventDefault()
       startDefenderRouteDrag(event, anchor)
       return
@@ -1595,6 +1675,10 @@ export function Field({
       if (!anchor) {
         clearBlockEditSelection()
         if (tryBeginNearestOffenseSelection(event)) return
+        return
+      }
+
+      if (trySelectOtherSameSidePlayerAtPointer(event, anchor.playerId)) {
         return
       }
 
