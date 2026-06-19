@@ -1,0 +1,37 @@
+.new-play-setup-dialog {
+  width: min(100%, 520px);
+}
+
+.new-play-setup-dialog-title {
+  margin: 0 0 var(--space-md);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-on-surface);
+}
+
+.new-play-setup-dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.new-play-setup-dialog-form .form-group {
+  margin: 0;
+}
+
+.new-play-setup-dialog-category .category-multiselect-panel-inline {
+  max-height: 180px;
+}
+
+.new-play-setup-dialog-notes {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.new-play-setup-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: var(--space-xs);
+}

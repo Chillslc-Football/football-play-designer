@@ -41,6 +41,7 @@ export type PlayControlsProps = {
   libraryPlays: Play[]
   selectedLoadId: string
   onLoadPlay: (playId: string) => void
+  onEditPlaySetup?: () => void
 }
 
 type PlayControlsContextValue = PlayControlsProps & {
@@ -231,6 +232,7 @@ export function PlayControlsInformationSection() {
     availableCategories,
     onPlayCategoriesChange,
     openManageCategories,
+    onEditPlaySetup,
   } = usePlayControlsContext()
 
   return (
@@ -249,6 +251,17 @@ export function PlayControlsInformationSection() {
           disabled={!canEdit}
         />
       </div>
+
+      {onEditPlaySetup && (
+        <button
+          type="button"
+          className="btn sidebar-btn play-controls-edit-setup-btn"
+          onClick={onEditPlaySetup}
+          disabled={!canEdit}
+        >
+          Edit Play Setup
+        </button>
+      )}
 
       <CategorySelector
         playType={playType}

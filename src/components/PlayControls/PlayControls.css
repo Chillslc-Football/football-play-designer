@@ -17,7 +17,8 @@
 }
 
 .play-controls-manage-btn,
-.play-controls-library-btn {
+.play-controls-library-btn,
+.play-controls-edit-setup-btn {
   width: 100%;
 }
 

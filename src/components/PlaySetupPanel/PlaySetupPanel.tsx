@@ -82,6 +82,7 @@ type PlaySetupPanelProps = {
   onMotionTypeChange: (motionType: MotionType) => void
   onDrawingModeChange: (mode: DrawingMode) => void
   onNewPlay: () => void
+  onEditPlaySetup: () => void
   onSaveChanges: () => void
   onSaveAsNew: () => void
   onMirrorPlay: () => void
@@ -214,6 +215,7 @@ export function PlaySetupPanel({
   onMotionTypeChange,
   onDrawingModeChange,
   onNewPlay,
+  onEditPlaySetup,
   onSaveChanges,
   onSaveAsNew,
   onMirrorPlay,
@@ -251,6 +253,7 @@ export function PlaySetupPanel({
     libraryPlays,
     selectedLoadId,
     onLoadPlay,
+    onEditPlaySetup,
   }
 
   const schemeSectionTitle = playType === 'defensive' ? 'Front' : 'Formation'

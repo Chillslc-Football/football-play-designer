@@ -8,6 +8,7 @@ import * as formationRepository from './repositories/formationRepository'
 import * as cloudPlayRepository from './repositories/playRepository'
 import * as schemeTemplateRepository from './repositories/schemeTemplateRepository'
 import { AdminTemplateEditBar } from './components/AdminTemplateEditBar/AdminTemplateEditBar'
+import { NewPlaySetupDialog, type PlaySetupDialogMode } from './components/NewPlaySetupDialog/NewPlaySetupDialog'
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog'
 import { CategoryReminderDialog } from './components/CategoryReminderDialog/CategoryReminderDialog'
 import { Field } from './components/Field/Field'
@@ -26,7 +27,6 @@ import type { DriveStartYardLine } from './types/driveStart'
 import { createEmptyBlocks } from './types/block'
 import {
   createEmptyPlay,
-  createPlayFromCurrentScheme,
   duplicatePlay,
   type Play,
 } from './types/play'
@@ -126,6 +126,13 @@ import {
   readPlayDesignerDraft,
   writePlayDesignerDraft,
 } from './utils/playDesignerDraftStorage'
+import {
+  buildNewPlayFromSetup,
+  applyPlaySetupEdit,
+  getNewPlaySetupDefaults,
+  getPlaySetupDefaultsFromPlay,
+  type NewPlaySetupInput,
+} from './utils/newPlaySetup'
 import './App.css'
 
 type PendingAction =
@@ -176,6 +183,11 @@ function App() {
   const [playBaseline, setPlayBaseline] = useState(() => playToComparable(createEmptyPlay()))
   const [dialog, setDialog] = useState<DialogState>(null)
   const [categoryReminderOpen, setCategoryReminderOpen] = useState(false)
+  const [newPlaySetupOpen, setNewPlaySetupOpen] = useState(false)
+  const [playSetupMode, setPlaySetupMode] = useState<PlaySetupDialogMode>('create')
+  const [newPlaySetupDefaults, setNewPlaySetupDefaults] = useState(() =>
+    getNewPlaySetupDefaults(createEmptyPlay()),
+  )
   const [deletingCategory, setDeletingCategory] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [templateCreateLabel, setTemplateCreateLabel] = useState('')
@@ -499,8 +511,32 @@ function App() {
     void executeAction(action)
   }
 
-  function executeNewPlay() {
-    const next = createPlayFromCurrentScheme(play)
+  function openNewPlaySetup() {
+    setPlaySetupMode('create')
+    setNewPlaySetupDefaults(getNewPlaySetupDefaults(play))
+    setNewPlaySetupOpen(true)
+  }
+
+  function openEditPlaySetup() {
+    if (!canEdit) return
+    setPlaySetupMode('edit')
+    setNewPlaySetupDefaults(getPlaySetupDefaultsFromPlay(play))
+    setNewPlaySetupOpen(true)
+  }
+
+  function handleNewPlaySetupCancel() {
+    setNewPlaySetupOpen(false)
+  }
+
+  function handleNewPlaySetupSubmit(setup: NewPlaySetupInput) {
+    if (playSetupMode === 'edit') {
+      const next = applyPlaySetupEdit(play, setup, customFormations)
+      setPlay(next)
+      setNewPlaySetupOpen(false)
+      return
+    }
+
+    const next = buildNewPlayFromSetup(play, setup, customFormations)
     setPlay(next)
     setSelectedLoadId('')
     setActiveSavedPlayId(null)
@@ -508,6 +544,12 @@ function App() {
     setSelectedDefenderId(null)
     setSaveMessage('')
     updatePlayBaseline(next)
+    clearPlayDesignerDraft(user?.id ?? null, activeTeamId)
+    setNewPlaySetupOpen(false)
+  }
+
+  function executeNewPlay() {
+    openNewPlaySetup()
   }
 
   function handleNewPlay() {
@@ -1590,6 +1632,17 @@ function App() {
         onCancel={handleCategoryReminderCancel}
       />
 
+      <NewPlaySetupDialog
+        open={newPlaySetupOpen}
+        mode={playSetupMode}
+        playType={play.playType}
+        customFormations={customFormations}
+        availableCategories={availableCategories}
+        defaults={newPlaySetupDefaults}
+        onSubmit={handleNewPlaySetupSubmit}
+        onCancel={handleNewPlaySetupCancel}
+      />
+
       <div className={`app-body ${setupPanelOpen && !adminTemplateEdit ? '' : 'setup-collapsed'}`}>
         {!adminTemplateEdit && (
         <PlaySetupPanel
@@ -1641,6 +1694,7 @@ function App() {
           onMotionTypeChange={setMotionType}
           onDrawingModeChange={setDrawingMode}
           onNewPlay={handleNewPlay}
+          onEditPlaySetup={openEditPlaySetup}
           onSaveChanges={handleSaveChanges}
           onSaveAsNew={handleSaveAsNew}
           onMirrorPlay={handleMirrorPlay}
