@@ -207,3 +207,26 @@
     align-self: flex-end;
   }
 }
+
+@media (max-width: 768px) {
+  .team-messaging-page-screen.app-shell-page-screen {
+    overflow: visible;
+  }
+
+  .team-messaging-messages {
+    min-height: 240px;
+    max-height: 50vh;
+  }
+
+  .team-messaging-compose-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .team-messaging-compose .btn,
+  .team-messaging-compose-send {
+    width: 100%;
+    min-height: 44px;
+    align-self: stretch;
+  }
+}

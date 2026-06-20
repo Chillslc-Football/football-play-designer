@@ -19,3 +19,14 @@
   flex-wrap: wrap;
   gap: 10px;
 }
+
+@media (max-width: 768px) {
+  .accept-invite-actions {
+    flex-direction: column;
+  }
+
+  .accept-invite-actions .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}

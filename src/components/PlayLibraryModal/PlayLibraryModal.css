@@ -178,6 +178,20 @@
 }
 
 @media (max-width: 768px) {
+  .play-library-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .play-library-dialog {
+    width: 100%;
+    max-width: none;
+    max-height: 100dvh;
+    height: 100dvh;
+    padding: var(--space-md);
+    border-radius: 0;
+  }
+
   .play-library-header {
     flex-direction: column;
   }
@@ -185,6 +199,22 @@
   .play-library-header-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .play-library-header-actions .btn {
+    min-height: 44px;
+  }
+
+  .play-library-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto !important;
+    min-height: 200px;
+    gap: 10px;
+  }
+
+  .play-library-pagination .btn {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 

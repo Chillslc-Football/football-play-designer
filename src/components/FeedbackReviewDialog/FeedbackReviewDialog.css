@@ -135,3 +135,21 @@
   justify-content: flex-end;
   margin-top: var(--space-sm);
 }
+
+@media (max-width: 768px) {
+  .feedback-review-dialog {
+    width: 100%;
+    max-height: calc(100dvh - var(--space-md) * 2);
+  }
+
+  .feedback-review-resolve-btn {
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .feedback-review-dialog-actions .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}

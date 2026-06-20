@@ -36,3 +36,21 @@
   font-weight: 600;
   color: var(--success-text, #1f6b3a);
 }
+
+@media (max-width: 768px) {
+  .share-playbook-dialog-overlay {
+    padding: var(--space-sm);
+  }
+
+  .share-playbook-dialog {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - var(--space-md) * 2);
+    overflow-y: auto;
+  }
+
+  .share-playbook-form .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}

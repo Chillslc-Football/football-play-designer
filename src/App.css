@@ -184,6 +184,24 @@
   overflow: hidden;
 }
 
+.play-designer-mobile-notice {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--text-light);
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.app-theme-light .play-designer-mobile-notice {
+  color: #3d5240;
+  background: #e8ece8;
+  border: 1px solid #c5d4c4;
+}
+
 @media (max-width: 768px) {
   .app {
     height: auto;

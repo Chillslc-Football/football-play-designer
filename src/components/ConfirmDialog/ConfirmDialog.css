@@ -31,3 +31,26 @@
   gap: 10px;
   justify-content: flex-end;
 }
+
+@media (max-width: 768px) {
+  .confirm-dialog-overlay {
+    padding: var(--space-sm);
+    align-items: center;
+  }
+
+  .confirm-dialog {
+    width: 100%;
+    max-height: calc(100dvh - var(--space-md) * 2);
+    overflow-y: auto;
+  }
+
+  .confirm-dialog-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .confirm-dialog-actions .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}

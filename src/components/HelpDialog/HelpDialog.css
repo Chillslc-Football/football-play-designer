@@ -115,3 +115,23 @@
 .help-dialog-list li + li {
   margin-top: 6px;
 }
+
+@media (max-width: 768px) {
+  .help-dialog {
+    width: 100%;
+    max-height: calc(100dvh - var(--space-md) * 2);
+  }
+
+  .help-dialog-header {
+    padding: var(--space-md);
+  }
+
+  .help-dialog-body {
+    padding: var(--space-sm) var(--space-md) var(--space-md);
+  }
+
+  .help-accordion-header {
+    min-height: 44px;
+    padding: 10px 0;
+  }
+}

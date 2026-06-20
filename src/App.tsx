@@ -136,7 +136,10 @@ import {
   getPlaySetupDefaultsFromPlay,
   type NewPlaySetupInput,
 } from './utils/newPlaySetup'
+import { useMediaQuery } from './hooks/useMediaQuery'
 import './App.css'
+
+const MOBILE_VIEWPORT_MEDIA = '(max-width: 768px)'
 
 type PendingAction =
   | { type: 'newPlay' }
@@ -159,6 +162,7 @@ type DialogState =
 const UNSAVED_MESSAGE = 'You have unsaved changes. Save before continuing?'
 
 function App() {
+  const isMobileViewport = useMediaQuery(MOBILE_VIEWPORT_MEDIA)
   const { user, signOut } = useAuth()
   const shell = useAppShell()
   const adminTemplateEdit = shell?.adminTemplateEdit ?? null
@@ -1804,6 +1808,12 @@ function App() {
 
           {!canEdit && !adminTemplateEdit && !dataLoading && !saveMessage && (
             <p className="save-message save-message-readonly">View only — contact your coach to edit.</p>
+          )}
+
+          {isMobileViewport && (
+            <p className="play-designer-mobile-notice" role="status">
+              Play Designer editing works best on desktop. You can still view your playbook from mobile.
+            </p>
           )}
 
           <div className="field-stage">

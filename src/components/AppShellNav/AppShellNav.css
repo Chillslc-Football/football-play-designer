@@ -24,6 +24,29 @@
   border-color: var(--border-strong);
 }
 
+@media (max-width: 768px) {
+  .app-shell-nav {
+    order: 2;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+
+  .app-shell-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-shell-nav-btn {
+    min-height: 44px;
+    padding: 8px 14px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+}
+
 @media print {
   .app-shell-nav {
     display: none !important;

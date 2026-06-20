@@ -210,6 +210,26 @@
   justify-content: center;
 }
 
+.team-hub-quick-actions-buttons .btn {
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .team-hub-row {
+    grid-template-columns: 1fr;
+  }
+
+  .team-hub-quick-actions-buttons {
+    flex-direction: column;
+  }
+
+  .team-hub-quick-actions-buttons .btn,
+  .team-hub-card-actions .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
 @media (max-width: 1100px) {
   .team-hub-row {
     grid-template-columns: 1fr;

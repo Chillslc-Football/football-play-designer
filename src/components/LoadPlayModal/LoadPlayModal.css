@@ -109,3 +109,38 @@
   margin-top: var(--space-md);
   flex-shrink: 0;
 }
+
+@media (max-width: 768px) {
+  .load-play-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .load-play-dialog {
+    width: 100%;
+    max-width: none;
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0;
+    padding: var(--space-md);
+  }
+
+  .load-play-filters-row {
+    grid-template-columns: 1fr;
+  }
+
+  .load-play-list {
+    max-height: none;
+    flex: 1 1 auto;
+  }
+
+  .load-play-dialog-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .load-play-dialog-actions .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}

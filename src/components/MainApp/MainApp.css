@@ -50,3 +50,35 @@
   background: rgba(180, 35, 24, 0.08);
   border-bottom: 1px solid rgba(180, 35, 24, 0.2);
 }
+
+@media (max-width: 768px) {
+  .main-app {
+    height: auto;
+    min-height: 100svh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .main-app-body {
+    overflow: visible;
+    flex: 1 1 auto;
+  }
+
+  .main-app-body > .team-hub-page,
+  .main-app-body > .team-updates-page,
+  .main-app-body > .team-messaging-page,
+  .main-app-body > .team-calendar-page,
+  .main-app-body > .team-management-page,
+  .main-app-body > .wristband-page,
+  .main-app-body > .admin-templates-page {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .main-app-body > .app {
+    flex: 1 1 auto;
+    min-height: 50vh;
+    overflow: hidden;
+  }
+}

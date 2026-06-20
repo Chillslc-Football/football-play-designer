@@ -154,3 +154,9 @@
 .form-group-grow {
   flex: 2 1 220px;
 }
+
+@media (max-width: 768px) {
+  .app-shell-page .btn {
+    min-height: 44px;
+  }
+}

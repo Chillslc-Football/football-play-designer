@@ -31,3 +31,17 @@
   font-weight: 600;
   color: var(--success-text, #1f6b3a);
 }
+
+@media (max-width: 768px) {
+  .invite-member-dialog {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - var(--space-md) * 2);
+    overflow-y: auto;
+  }
+
+  .invite-member-form .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}
