@@ -138,17 +138,16 @@ import {
   type NewPlaySetupInput,
 } from './utils/newPlaySetup'
 import { useMediaQuery } from './hooks/useMediaQuery'
+import { PHONE_VIEWPORT_MEDIA } from './constants/viewportBreakpoints'
 import {
   clearOpenPlayLibraryPending,
   shouldOpenPlayLibrary,
 } from './utils/playbookLink'
 import './App.css'
 
-const MOBILE_VIEWPORT_MEDIA = '(max-width: 768px)'
-
 function readInitialSetupPanelOpen(): boolean {
   if (typeof window === 'undefined') return true
-  return !window.matchMedia(MOBILE_VIEWPORT_MEDIA).matches
+  return !window.matchMedia(PHONE_VIEWPORT_MEDIA).matches
 }
 
 type PendingAction =
@@ -172,7 +171,7 @@ type DialogState =
 const UNSAVED_MESSAGE = 'You have unsaved changes. Save before continuing?'
 
 function App() {
-  const isMobileViewport = useMediaQuery(MOBILE_VIEWPORT_MEDIA)
+  const isPhoneViewport = useMediaQuery(PHONE_VIEWPORT_MEDIA)
   const { user, signOut } = useAuth()
   const shell = useAppShell()
   const adminTemplateEdit = shell?.adminTemplateEdit ?? null
@@ -180,7 +179,7 @@ function App() {
   const { activeTeamId, switchTeam } = useTeam()
   const canEdit = useCanEdit()
   const fieldCanEdit = canEdit || Boolean(adminTemplateEdit)
-  const fieldViewOnly = !fieldCanEdit || isMobileViewport
+  const fieldViewOnly = !fieldCanEdit || isPhoneViewport
   const useCloud = Boolean(user?.id && activeTeamId)
 
   const [play, setPlay] = useState<Play>(createEmptyPlay)
@@ -1856,7 +1855,7 @@ function App() {
             <p className="save-message save-message-readonly">View only — contact your coach to edit.</p>
           )}
 
-          {isMobileViewport && (
+          {isPhoneViewport && (
             <>
               <p className="play-designer-mobile-notice" role="status">
                 Play editing works best on desktop. You can load and view plays here.

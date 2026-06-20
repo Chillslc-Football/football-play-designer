@@ -206,7 +206,7 @@
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .play-designer-mobile-access {
     display: flex;
     flex-wrap: wrap;
@@ -275,5 +275,26 @@
 
   .field-column .field-viewport {
     width: 100%;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .play-setup-panel {
+    width: 280px;
+    max-height: none;
+  }
+
+  .play-setup-panel .sidebar-btn,
+  .play-setup-panel .drawing-mode-toggle-btn,
+  .play-setup-panel .motion-type-toggle-btn {
+    min-height: 44px;
+  }
+
+  .field-column {
+    overscroll-behavior: none;
+  }
+
+  .field-container.is-interacting .field-column {
+    overflow: hidden;
   }
 }

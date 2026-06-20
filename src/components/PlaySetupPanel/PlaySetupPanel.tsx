@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { PHONE_VIEWPORT_MEDIA } from '../../constants/viewportBreakpoints'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { FormationSelector } from '../FormationSelector/FormationSelector'
 import { Notes } from '../Notes/Notes'
@@ -236,7 +237,7 @@ export function PlaySetupPanel({
   playNotes,
   onPlayNotesChange,
 }: PlaySetupPanelProps) {
-  const isMobileViewport = useMediaQuery('(max-width: 768px)')
+  const isPhoneViewport = useMediaQuery(PHONE_VIEWPORT_MEDIA)
 
   const playControlsProps: PlayControlsProps = {
     playType,
@@ -299,7 +300,7 @@ export function PlaySetupPanel({
               title="Saved Plays & Playbooks"
               helpContent={SECTION_HELP.savedPlays}
               className="sidebar-section-library"
-              defaultExpanded={isMobileViewport}
+              defaultExpanded={isPhoneViewport}
             >
               <PlayControlsLibrarySection />
             </SidebarCollapsibleSection>

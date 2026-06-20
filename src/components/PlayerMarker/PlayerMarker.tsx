@@ -27,7 +27,9 @@ export function PlayerMarker({
       className={`player-marker ${isSelected ? 'player-marker-selected' : ''} ${isLocked ? 'player-marker-locked' : ''}`}
       transform={`translate(${x}, ${y})`}
       aria-label={`Offense ${player.label}${isLocked ? ' (locked)' : ''}`}
-      onMouseDown={isLocked ? undefined : (event) => onPointerDown(player.id, event)}
+      onPointerDown={
+        isLocked ? undefined : (event) => onPointerDown(player.id, event as React.MouseEvent)
+      }
     >
       <rect
         x={-PLAYBOOK_HIT_SIZE}

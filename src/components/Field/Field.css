@@ -353,3 +353,14 @@
 .field-svg .block-end-bar-draft {
   opacity: 0.7;
 }
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .field-viewport,
+  .field-svg {
+    touch-action: none;
+  }
+
+  .field-container.is-interacting {
+    touch-action: none;
+  }
+}

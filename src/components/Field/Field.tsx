@@ -306,6 +306,7 @@ export function Field({
   }, [defenders, selectedDefenderId])
   const [draggingOffensePlayerId, setDraggingOffensePlayerId] = useState<PlayerLabel | null>(null)
   const [pointerOffensePlayerId, setPointerOffensePlayerId] = useState<PlayerLabel | null>(null)
+  const [fieldInteractionActive, setFieldInteractionActive] = useState(false)
   const svgRef = useRef<SVGSVGElement>(null)
   const draggingTargetRef = useRef<DragTarget | null>(null)
   const drawingModeRef = useRef<DrawingMode>(drawingMode)
@@ -1241,6 +1242,7 @@ export function Field({
 
   function beginOffensePointerSelection(event: React.MouseEvent, playerId: PlayerLabel) {
     if (!offenseEditable) return
+    setFieldInteractionActive(true)
     event.stopPropagation()
     event.preventDefault()
     const clickPosition = getSvgPosition(event.clientX, event.clientY)
@@ -1256,6 +1258,7 @@ export function Field({
 
   function beginDefensePointerSelection(event: React.MouseEvent, defenderId: DefenderLabel) {
     if (!defenseEditable) return
+    setFieldInteractionActive(true)
     event.stopPropagation()
     event.preventDefault()
     const clickPosition = getSvgPosition(event.clientX, event.clientY)
@@ -1579,6 +1582,14 @@ export function Field({
       defenderId,
       vertexIndex: vertices.length - 1,
     })
+  }
+
+  function handleFieldPointerDown(event: React.PointerEvent) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+    if (!viewOnly && (event.pointerType === 'touch' || event.pointerType === 'pen')) {
+      setFieldInteractionActive(true)
+    }
+    handleFieldMouseDown(event as unknown as React.MouseEvent)
   }
 
   function handleFieldMouseDown(event: React.MouseEvent) {
@@ -2085,6 +2096,7 @@ export function Field({
       draggingTargetRef.current = null
       setDraggingOffensePlayerId(null)
       setPointerOffensePlayerId(null)
+      setFieldInteractionActive(false)
     }
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -2199,13 +2211,27 @@ export function Field({
       }
     }
 
+    function handlePointerMove(event: PointerEvent) {
+      handleMouseMove(event as unknown as MouseEvent)
+    }
+
+    function handlePointerUp(event: PointerEvent) {
+      handleMouseUp(event as unknown as MouseEvent)
+    }
+
     window.addEventListener('mousemove', handleMouseMove)
     window.addEventListener('mouseup', handleMouseUp)
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointercancel', handlePointerUp)
     window.addEventListener('keydown', handleKeyDown)
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerUp)
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [
@@ -3193,7 +3219,7 @@ export function Field({
 
       <div className="field-zoom-scaler">
         <div className="field-stack">
-          <div className={`field-container field-display-${FIELD_DISPLAY_THEME}`}>
+          <div className={`field-container field-display-${FIELD_DISPLAY_THEME}${fieldInteractionActive ? ' is-interacting' : ''}`}>
             <div className="field-viewport">
         <svg
           ref={svgRef}
@@ -3238,7 +3264,7 @@ export function Field({
           <g
             className="field-play-area"
             transform={`translate(${FIELD_PADDING_LEFT}, ${FIELD_PLAY_AREA_Y})`}
-            onMouseDown={handleFieldMouseDown}
+            onPointerDown={handleFieldPointerDown}
           >
             <g className="field-turf-surface" filter="url(#turf-grain)">
               <rect
@@ -3541,9 +3567,9 @@ export function Field({
                 className={`defender-marker ${selectedDefenderId === defender.id ? 'defender-marker-selected' : ''} ${!defenseEditable ? 'defender-marker-locked' : ''}`}
                 transform={`translate(${defender.position.x}, ${defender.position.y})`}
                 aria-label={`Defense ${defender.label}${!defenseEditable ? ' (locked)' : ''}`}
-                onMouseDown={
+                onPointerDown={
                   defenseEditable
-                    ? (event) => handleDefenderPointerDown(defender.id, event)
+                    ? (event) => handleDefenderPointerDown(defender.id, event as React.MouseEvent)
                     : undefined
                 }
               >

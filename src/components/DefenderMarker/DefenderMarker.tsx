@@ -20,7 +20,7 @@ export function DefenderMarker({ defender, onPointerDown }: DefenderMarkerProps)
       className="defender-marker"
       transform={`translate(${x}, ${y})`}
       aria-label={`Defense ${defender.label}`}
-      onMouseDown={(event) => onPointerDown(defender.id, event)}
+      onPointerDown={(event) => onPointerDown(defender.id, event as React.MouseEvent)}
     >
       <rect
         x={-PLAYBOOK_HIT_SIZE}
