@@ -8,6 +8,7 @@ import { APP_DISPLAY_THEME } from '../constants/appDisplayTheme'
 import { useAppShell } from '../context/AppShellContext'
 import { useCanEdit } from '../hooks/useCanEdit'
 import { useTeam } from '../hooks/useTeam'
+import { useTeamFormat } from '../hooks/useTeamFormat'
 import * as playRepository from '../repositories/playRepository'
 import * as wristbandRepository from '../repositories/wristbandCardRepository'
 import type { Play } from '../types/play'
@@ -28,6 +29,7 @@ export function WristbandCardsPage() {
   const launchMode = shell?.launchMode
   const clearLaunchMode = shell?.clearLaunchMode
   const { team, activeTeamId } = useTeam()
+  const teamFormat = useTeamFormat()
   const canEdit = useCanEdit()
 
   const [cards, setCards] = useState<WristbandCard[]>([])
@@ -48,7 +50,7 @@ export function WristbandCardsPage() {
     try {
       const [loadedCards, loadedPlays] = await Promise.all([
         wristbandRepository.getWristbandCardsByTeam(activeTeamId),
-        playRepository.getPlaysByTeam(activeTeamId, []),
+        playRepository.getPlaysByTeam(activeTeamId, [], teamFormat),
       ])
       setCards(loadedCards)
       setPlays(loadedPlays)
@@ -57,7 +59,7 @@ export function WristbandCardsPage() {
     } finally {
       setLoading(false)
     }
-  }, [activeTeamId])
+  }, [activeTeamId, teamFormat])
 
   useEffect(() => {
     void loadData()

@@ -1,16 +1,19 @@
 import { createEmptyBlocks } from '../types/block'
 import { createEmptyMotions } from '../types/motion'
 import { createEmptyDefenderRoutes } from '../types/defenderRoute'
-import { createPlayFromCurrentScheme, type Play } from '../types/play'
+import { createEmptyPlay, type Play } from '../types/play'
 import { createEmptyPlayerActionChains } from '../types/playerAction'
 import { createEmptyRoutes } from '../types/route'
 import { normalizeCategories } from './categoryUtils'
-import { createDefendersForFront, getFrontById } from './frontUtils'
-import {
-  createPlayersForFormation,
-  getFormationById,
-} from './formationUtils'
+import { getFrontById } from './frontUtils'
+import { getFormationById } from './formationUtils'
 import type { CustomFormation } from './formationStorage'
+import { DEFAULT_TEAM_FORMAT, type TeamFormat } from '../types/teamFormat'
+import {
+  applyTeamFormatToPlay,
+  createDefendersForTeamFormat,
+  createPlayersForTeamFormat,
+} from './teamFormatUtils'
 import { clampDefensePosition, clampOffensePosition, clampPlayPositions } from './losClamp'
 import { normalizePlayName } from './playStorage'
 
@@ -27,48 +30,61 @@ export function applyFormationChangeToPlay(
   current: Play,
   formationId: string,
   customFormations: CustomFormation[],
+  teamFormat: TeamFormat = DEFAULT_TEAM_FORMAT,
 ): Play {
   const formation = getFormationById(formationId, customFormations)
   if (!formation) return current
 
-  const players = createPlayersForFormation(formationId, customFormations).map((player) => ({
-    ...player,
-    position: clampOffensePosition(player.position),
-  }))
+  const players = createPlayersForTeamFormat(teamFormat, formationId, customFormations).map(
+    (player) => ({
+      ...player,
+      position: clampOffensePosition(player.position),
+    }),
+  )
 
-  return {
-    ...current,
-    formationId,
-    formationName: formation.label,
-    players,
-    routes: createEmptyRoutes(),
-    blocks: createEmptyBlocks(),
-    motions: createEmptyMotions(),
-    playerActions: createEmptyPlayerActionChains(),
-    defenderRoutes: createEmptyDefenderRoutes(),
-    notes: current.notes,
-    playerNotes: current.playerNotes,
-    mirrored: false,
-  }
+  return applyTeamFormatToPlay(
+    {
+      ...current,
+      formationId,
+      formationName: formation.label,
+      players,
+      routes: createEmptyRoutes(),
+      blocks: createEmptyBlocks(),
+      motions: createEmptyMotions(),
+      playerActions: createEmptyPlayerActionChains(),
+      defenderRoutes: createEmptyDefenderRoutes(),
+      notes: current.notes,
+      playerNotes: current.playerNotes,
+      mirrored: false,
+    },
+    teamFormat,
+  )
 }
 
 /** Same defender layout update as sidebar front change (clears defender routes). */
-export function applyFrontChangeToPlay(current: Play, frontId: string): Play {
+export function applyFrontChangeToPlay(
+  current: Play,
+  frontId: string,
+  teamFormat: TeamFormat = DEFAULT_TEAM_FORMAT,
+): Play {
   const front = getFrontById(frontId)
   if (!front) return current
 
-  const defenders = createDefendersForFront(frontId).map((defender) => ({
+  const defenders = createDefendersForTeamFormat(teamFormat, frontId).map((defender) => ({
     ...defender,
     position: clampDefensePosition(defender.position),
   }))
 
-  return {
-    ...current,
-    frontId,
-    frontName: front.label,
-    defenders,
-    defenderRoutes: createEmptyDefenderRoutes(),
-  }
+  return applyTeamFormatToPlay(
+    {
+      ...current,
+      frontId,
+      frontName: front.label,
+      defenders,
+      defenderRoutes: createEmptyDefenderRoutes(),
+    },
+    teamFormat,
+  )
 }
 
 /** Loads opposing offense onto a defensive play (same as Load Offensive Formation). */
@@ -76,23 +92,29 @@ export function applyOpposingFormationToPlay(
   current: Play,
   formationId: string,
   customFormations: CustomFormation[],
+  teamFormat: TeamFormat = DEFAULT_TEAM_FORMAT,
 ): Play {
   const formation = getFormationById(formationId, customFormations)
   if (!formation) return current
 
-  const players = createPlayersForFormation(formationId, customFormations).map((player) => ({
-    ...player,
-    position: clampOffensePosition(player.position),
-  }))
+  const players = createPlayersForTeamFormat(teamFormat, formationId, customFormations).map(
+    (player) => ({
+      ...player,
+      position: clampOffensePosition(player.position),
+    }),
+  )
 
-  return {
-    ...current,
-    formationId: formation.id,
-    formationName: formation.label,
-    opponentFormationId: formationId,
-    opponentFormationName: formation.label,
-    players,
-  }
+  return applyTeamFormatToPlay(
+    {
+      ...current,
+      formationId: formation.id,
+      formationName: formation.label,
+      opponentFormationId: formationId,
+      opponentFormationName: formation.label,
+      players,
+    },
+    teamFormat,
+  )
 }
 
 function withSetupMetadata(current: Play, setup: NewPlaySetupInput): Play {
@@ -104,13 +126,14 @@ function withSetupMetadata(current: Play, setup: NewPlaySetupInput): Play {
   }
 }
 
-/** Builds a fresh play from the current editor scheme plus setup modal values. */
+/** Builds a fresh play from setup modal values — never copies players from the current play. */
 export function buildNewPlayFromSetup(
   source: Play,
   setup: NewPlaySetupInput,
   customFormations: CustomFormation[],
+  teamFormat: TeamFormat = DEFAULT_TEAM_FORMAT,
 ): Play {
-  let next = createPlayFromCurrentScheme(source)
+  let next = createEmptyPlay(source.playType, teamFormat)
 
   next = {
     ...next,
@@ -122,18 +145,16 @@ export function buildNewPlayFromSetup(
   if (next.playType === 'offensive') {
     const formation = getFormationById(setup.formationId, customFormations)
     if (formation) {
-      const players = createPlayersForFormation(setup.formationId, customFormations).map(
-        (player) => ({
-          ...player,
-          position: clampOffensePosition(player.position),
-        }),
-      )
-
       next = {
         ...next,
         formationId: setup.formationId,
         formationName: formation.label,
-        players,
+        players: createPlayersForTeamFormat(teamFormat, setup.formationId, customFormations).map(
+          (player) => ({
+            ...player,
+            position: clampOffensePosition(player.position),
+          }),
+        ),
         routes: createEmptyRoutes(),
         blocks: createEmptyBlocks(),
         motions: createEmptyMotions(),
@@ -142,30 +163,52 @@ export function buildNewPlayFromSetup(
     }
   }
 
-  if (next.playType === 'defensive' && setup.formationId) {
-    const opponentFormation = getFormationById(setup.formationId, customFormations)
-    if (opponentFormation) {
-      next = {
-        ...next,
-        opponentFormationId: setup.formationId,
-        opponentFormationName: opponentFormation.label,
+  if (next.playType === 'defensive') {
+    if (setup.frontId) {
+      const front = getFrontById(setup.frontId)
+      if (front) {
+        next = {
+          ...next,
+          frontId: setup.frontId,
+          frontName: front.label,
+          defenders: createDefendersForTeamFormat(teamFormat, setup.frontId).map((defender) => ({
+            ...defender,
+            position: clampDefensePosition(defender.position),
+          })),
+          defenderRoutes: createEmptyDefenderRoutes(),
+        }
+      }
+    }
+
+    if (setup.formationId) {
+      const opponentFormation = getFormationById(setup.formationId, customFormations)
+      if (opponentFormation) {
+        next = {
+          ...next,
+          opponentFormationId: setup.formationId,
+          opponentFormationName: opponentFormation.label,
+          players: createPlayersForTeamFormat(teamFormat, setup.formationId, customFormations).map(
+            (player) => ({
+              ...player,
+              position: clampOffensePosition(player.position),
+            }),
+          ),
+        }
       }
     }
   }
 
-  if (setup.frontId) {
+  if (next.playType === 'offensive' && setup.frontId) {
     const front = getFrontById(setup.frontId)
     if (front) {
-      const defenders = createDefendersForFront(setup.frontId).map((defender) => ({
-        ...defender,
-        position: clampDefensePosition(defender.position),
-      }))
-
       next = {
         ...next,
         frontId: setup.frontId,
         frontName: front.label,
-        defenders,
+        defenders: createDefendersForTeamFormat(teamFormat, setup.frontId).map((defender) => ({
+          ...defender,
+          position: clampDefensePosition(defender.position),
+        })),
         defenderRoutes: createEmptyDefenderRoutes(),
       }
     }
@@ -177,7 +220,7 @@ export function buildNewPlayFromSetup(
     }
   }
 
-  return clampPlayPositions(next)
+  return applyTeamFormatToPlay(clampPlayPositions(next), teamFormat)
 }
 
 export type NewPlaySetupDefaults = {
@@ -213,13 +256,14 @@ export function applyPlaySetupEdit(
   current: Play,
   setup: NewPlaySetupInput,
   customFormations: CustomFormation[],
+  teamFormat: TeamFormat = DEFAULT_TEAM_FORMAT,
 ): Play {
   let next = withSetupMetadata(current, setup)
 
   if (next.playType === 'offensive') {
     if (setup.formationId && setup.formationId !== current.formationId) {
       next = withSetupMetadata(
-        applyFormationChangeToPlay(next, setup.formationId, customFormations),
+        applyFormationChangeToPlay(next, setup.formationId, customFormations, teamFormat),
         setup,
       )
     } else if (setup.formationId) {
@@ -237,7 +281,7 @@ export function applyPlaySetupEdit(
       const shouldLoadFront =
         setup.frontId !== current.frontId || current.defenders.length === 0
       if (shouldLoadFront) {
-        next = withSetupMetadata(applyFrontChangeToPlay(next, setup.frontId), setup)
+        next = withSetupMetadata(applyFrontChangeToPlay(next, setup.frontId, teamFormat), setup)
       }
     } else if (current.defenders.length > 0) {
       next = {
@@ -247,17 +291,17 @@ export function applyPlaySetupEdit(
       }
     }
 
-    return clampPlayPositions(next)
+    return applyTeamFormatToPlay(clampPlayPositions(next), teamFormat)
   }
 
   if (setup.frontId && setup.frontId !== current.frontId) {
-    next = withSetupMetadata(applyFrontChangeToPlay(next, setup.frontId), setup)
+    next = withSetupMetadata(applyFrontChangeToPlay(next, setup.frontId, teamFormat), setup)
   }
 
   if (setup.formationId) {
     if (setup.formationId !== (current.opponentFormationId ?? '')) {
       next = withSetupMetadata(
-        applyOpposingFormationToPlay(next, setup.formationId, customFormations),
+        applyOpposingFormationToPlay(next, setup.formationId, customFormations, teamFormat),
         setup,
       )
     } else {
@@ -278,5 +322,5 @@ export function applyPlaySetupEdit(
     }
   }
 
-  return clampPlayPositions(next)
+  return applyTeamFormatToPlay(clampPlayPositions(next), teamFormat)
 }

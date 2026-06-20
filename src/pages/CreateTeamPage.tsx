@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useTeam } from '../hooks/useTeam'
+import { DEFAULT_TEAM_FORMAT, TEAM_FORMAT_OPTIONS, type TeamFormat } from '../types/teamFormat'
 import './AuthPages.css'
 
 export function CreateTeamPage() {
   const { user, signOut } = useAuth()
   const { createTeam } = useTeam()
   const [teamName, setTeamName] = useState('')
+  const [teamFormat, setTeamFormat] = useState<TeamFormat>(DEFAULT_TEAM_FORMAT)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -15,7 +17,7 @@ export function CreateTeamPage() {
     setError(null)
     setSubmitting(true)
 
-    const result = await createTeam(teamName)
+    const result = await createTeam(teamName, teamFormat)
     if (result.error) {
       setError(result.error)
     }
@@ -51,6 +53,29 @@ export function CreateTeamPage() {
               value={teamName}
               onChange={(event) => setTeamName(event.target.value)}
             />
+          </div>
+
+          <div className="form-group">
+            <span className="field-label" id="team-format-label">
+              Team format
+            </span>
+            <div className="auth-format-options" role="radiogroup" aria-labelledby="team-format-label">
+              {TEAM_FORMAT_OPTIONS.map((option) => (
+                <label key={option.value} className="auth-format-option">
+                  <input
+                    type="radio"
+                    name="team-format"
+                    value={option.value}
+                    checked={teamFormat === option.value}
+                    onChange={() => setTeamFormat(option.value)}
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
+            <p className="auth-format-hint">
+              Sets how many players appear in the Play Designer for this team.
+            </p>
           </div>
 
           <button type="submit" className="btn btn-primary" disabled={submitting}>

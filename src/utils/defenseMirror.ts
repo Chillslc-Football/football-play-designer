@@ -1,7 +1,7 @@
 import type { Defender, DefenderLabel } from '../types/defender'
 import type { DefenderRoute } from '../types/defenderRoute'
-import type { Player, Position } from '../types/player'
-import { getCenterPlayerX, mirrorPositionLaterally } from './mirror'
+import type { Position } from '../types/player'
+import { clampMirroredPoint, mirrorPositionLaterally } from './mirror'
 
 const DEFENSE_MIRROR_PARTNER: Record<DefenderLabel, DefenderLabel> = {
   LE: 'RE',
@@ -47,22 +47,20 @@ export function getDefenderMirrorPartner(label: DefenderLabel): DefenderLabel {
 
 export function mirrorDefenderRoutes(
   defenderRoutes: DefenderRoute[],
-  centerX: number,
+  mirrorAxisX: number,
 ): DefenderRoute[] {
   return defenderRoutes.map((route) => ({
     ...route,
     defenderId: getDefenderMirrorPartner(route.defenderId),
-    points: route.points.map((point) => mirrorPositionLaterally(point, centerX)),
+    points: route.points.map((point) => clampMirroredPoint(point, mirrorAxisX)),
   }))
 }
 
-export function mirrorDefenders(defenders: Defender[], players: Player[]): Defender[] {
-  const centerX = getCenterPlayerX(players)
-
+export function mirrorDefenders(defenders: Defender[], mirrorAxisX: number): Defender[] {
   const mirroredPositions = Object.fromEntries(
     defenders.map((defender) => [
       defender.id,
-      mirrorPositionLaterally(defender.position, centerX),
+      mirrorPositionLaterally(defender.position, mirrorAxisX),
     ]),
   ) as Record<DefenderLabel, Position>
 

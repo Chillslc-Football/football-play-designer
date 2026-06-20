@@ -53,7 +53,12 @@ export function isBackfieldPlacementAllowed(
   players: PlayerLike[],
   playerId: PlayerLabel,
   proposedPosition: Position,
+  enforceBackfieldLimit = true,
 ): boolean {
+  if (!enforceBackfieldLimit) {
+    return true
+  }
+
   return backfieldCountAfterMove(players, playerId, proposedPosition) <= MAX_BACKFIELD_PLAYERS
 }
 
@@ -72,10 +77,11 @@ export function resolveOffensePlayerPosition(
   players: PlayerLike[],
   playerId: PlayerLabel,
   position: Position,
+  enforceBackfieldLimit = true,
 ): Position {
   const clamped = clampOffensePosition(position)
 
-  if (isBackfieldPlacementAllowed(players, playerId, clamped)) {
+  if (isBackfieldPlacementAllowed(players, playerId, clamped, enforceBackfieldLimit)) {
     return clamped
   }
 
@@ -87,7 +93,14 @@ export function resolveOffensePlayerPosition(
   return { x: clamped.x, y: OFFENSE_MAX_Y }
 }
 
-export function isBackfieldLimitExceeded(players: Pick<PlayerLike, 'position'>[]): boolean {
+export function isBackfieldLimitExceeded(
+  players: Pick<PlayerLike, 'position'>[],
+  enforceBackfieldLimit = true,
+): boolean {
+  if (!enforceBackfieldLimit) {
+    return false
+  }
+
   return countBackfieldPlayers(players) > MAX_BACKFIELD_PLAYERS
 }
 

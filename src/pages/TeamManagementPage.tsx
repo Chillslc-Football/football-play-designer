@@ -14,6 +14,7 @@ import { INVITE_ROLE_LABELS } from '../types/invite'
 import type { RosterRow } from '../types/teamRoster'
 import { buildAcceptInviteUrl } from '../utils/inviteToken'
 import { TEAM_ROLE_LABELS } from '../utils/roleLabels'
+import { TEAM_FORMAT_OPTIONS } from '../types/teamFormat'
 import {
   buildRosterRows,
   canRemoveTeamMember,
@@ -58,6 +59,8 @@ export function TeamManagementPage() {
   const userEmail = user?.email?.trim() || null
   const userLabel = displayName || userEmail || '—'
   const roleLabelText = role ? TEAM_ROLE_LABELS[role] : '—'
+  const formatLabel =
+    TEAM_FORMAT_OPTIONS.find((option) => option.value === team?.format)?.label ?? '11v11 (standard)'
 
   const [rows, setRows] = useState<RosterRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -347,6 +350,10 @@ export function TeamManagementPage() {
               <div className="team-overview-item">
                 <dt>Email</dt>
                 <dd>{userEmail ?? '—'}</dd>
+              </div>
+              <div className="team-overview-item">
+                <dt>Format</dt>
+                <dd>{formatLabel}</dd>
               </div>
               <div className="team-overview-item">
                 <dt>Role</dt>

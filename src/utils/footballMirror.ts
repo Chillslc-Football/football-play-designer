@@ -14,7 +14,8 @@ import {
   type PlayerNotes,
 } from '../types/playerNotes'
 import type { Route } from '../types/route'
-import { getCenterPlayerX, mirrorPositionLaterally } from './mirror'
+import type { TeamFormat } from '../types/teamFormat'
+import { clampMirroredPoint, getMirrorAxisX, mirrorPositionLaterally } from './mirror'
 
 /**
  * Football mirror — swap the play from one side to the other WITHOUT reversing direction.
@@ -93,12 +94,12 @@ function swapPairedPositions(
  */
 function mirrorAndReassignPaths<T extends { playerId: PlayerLabel; points: Position[] }>(
   paths: T[],
-  centerX: number,
+  mirrorAxisX: number,
 ): T[] {
   return paths.map((path) => ({
     ...path,
     playerId: getMirrorPartner(path.playerId),
-    points: path.points.map((point) => mirrorPositionLaterally(point, centerX)),
+    points: path.points.map((point) => clampMirroredPoint(point, mirrorAxisX)),
   }))
 }
 
@@ -140,14 +141,14 @@ function swapWord(text: string, wordA: string, wordB: string): string {
  * Full football mirror — call this from Mirror Play.
  * Overall play notes are left unchanged.
  */
-export function mirrorFootballPlay(play: Play): Play {
-  const centerX = getCenterPlayerX(play.players)
+export function mirrorFootballPlay(play: Play, teamFormat?: TeamFormat): Play {
+  const mirrorAxisX = getMirrorAxisX(play.players, teamFormat)
 
-  // Step 1: flip x across C (y unchanged — offense still attacks north)
+  // Step 1: flip x across mirror axis (y unchanged — offense still attacks north)
   const mirroredPositions = Object.fromEntries(
     play.players.map((player) => [
       player.id,
-      mirrorPositionLaterally(player.position, centerX),
+      mirrorPositionLaterally(player.position, mirrorAxisX),
     ]),
   ) as Record<PlayerLabel, Position>
 
@@ -159,12 +160,12 @@ export function mirrorFootballPlay(play: Play): Play {
     position: finalPositions[player.id],
   }))
 
-  const routes: Route[] = mirrorAndReassignPaths(play.routes, centerX)
-  const blocks: Block[] = mirrorAndReassignPaths(play.blocks, centerX)
-  const motions: Motion[] = mirrorAndReassignPaths(play.motions ?? [], centerX)
+  const routes: Route[] = mirrorAndReassignPaths(play.routes, mirrorAxisX)
+  const blocks: Block[] = mirrorAndReassignPaths(play.blocks, mirrorAxisX)
+  const motions: Motion[] = mirrorAndReassignPaths(play.motions ?? [], mirrorAxisX)
   const playerActions = mirrorPlayerActionChains(
     play.playerActions ?? {},
-    centerX,
+    mirrorAxisX,
   )
   const playerNotes = mirrorPlayerNotes(play.playerNotes)
 
@@ -173,12 +174,12 @@ export function mirrorFootballPlay(play: Play): Play {
     mirrored: !play.mirrored,
     name: mirrorPlayName(play.name),
     players,
-    defenders: mirrorDefenders(play.defenders, players),
+    defenders: mirrorDefenders(play.defenders, mirrorAxisX),
     routes,
     blocks,
     motions,
     playerActions,
-    defenderRoutes: mirrorDefenderRoutes(play.defenderRoutes, centerX),
+    defenderRoutes: mirrorDefenderRoutes(play.defenderRoutes, mirrorAxisX),
     playerNotes,
     notes: play.notes,
   }

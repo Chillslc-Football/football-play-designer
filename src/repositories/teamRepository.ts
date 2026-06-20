@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
+import { DEFAULT_TEAM_FORMAT, normalizeTeamFormat, type TeamFormat } from '../types/teamFormat'
 import type { Profile, Team, TeamMembership, TeamRole } from '../types/team'
 
 type TeamMemberRow = {
@@ -116,15 +117,52 @@ export async function fetchMemberships(userId: string): Promise<TeamMembership[]
 export async function fetchTeamById(teamId: string): Promise<Team | null> {
   const { data, error } = await supabase
     .from('teams')
-    .select('id, name, created_by, created_at')
+    .select('id, name, created_by, created_at, team_format')
     .eq('id', teamId)
     .maybeSingle()
 
   if (error) {
+    const missingFormatColumn =
+      error.message.includes('team_format') ||
+      error.code === '42703' ||
+      error.code === 'PGRST204'
+
+    if (missingFormatColumn) {
+      const fallback = await supabase
+        .from('teams')
+        .select('id, name, created_by, created_at')
+        .eq('id', teamId)
+        .maybeSingle()
+
+      if (fallback.error) {
+        throw new Error(fallback.error.message)
+      }
+
+      if (!fallback.data) return null
+
+      return {
+        ...fallback.data,
+        format: DEFAULT_TEAM_FORMAT,
+      }
+    }
+
     throw new Error(error.message)
   }
 
-  return data
+  if (!data) return null
+
+  const rawFormat = data.team_format
+  const format = normalizeTeamFormat(
+    typeof rawFormat === 'string' ? rawFormat : String(rawFormat ?? ''),
+  )
+
+  return {
+    id: data.id,
+    name: data.name,
+    created_by: data.created_by,
+    created_at: data.created_at,
+    format,
+  }
 }
 
 export async function updateLastTeamId(userId: string, teamId: string): Promise<void> {
@@ -138,8 +176,13 @@ export async function updateLastTeamId(userId: string, teamId: string): Promise<
   }
 }
 
-export async function createTeam(name: string): Promise<string> {
-  const { data, error } = await supabase.rpc('create_team', { p_name: name.trim() })
+export async function createTeam(name: string, format: TeamFormat = DEFAULT_TEAM_FORMAT): Promise<string> {
+  const teamFormat = normalizeTeamFormat(format)
+
+  const { data, error } = await supabase.rpc('create_team', {
+    p_name: name.trim(),
+    p_team_format: teamFormat,
+  })
 
   if (error) {
     throw new Error(error.message)

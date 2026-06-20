@@ -3,7 +3,9 @@ import { useAuth } from './hooks/useAuth'
 import { useSchemeTemplates } from './context/SchemeTemplateProvider'
 import { useAppShell } from './context/AppShellContext'
 import { useCanEdit } from './hooks/useCanEdit'
+import { useTeamFormat } from './hooks/useTeamFormat'
 import { useTeam } from './hooks/useTeam'
+import { enforcesBackfieldLimit } from './types/teamFormat'
 import * as formationRepository from './repositories/formationRepository'
 import * as cloudPlayRepository from './repositories/playRepository'
 import * as schemeTemplateRepository from './repositories/schemeTemplateRepository'
@@ -73,7 +75,6 @@ import {
   type CategoryFilterId,
 } from './utils/categoryUtils'
 import {
-  createDefendersForFront,
   filterPlaysByFront,
   getFrontById,
   getFrontFilterOptions,
@@ -88,7 +89,6 @@ import { hasFormationPositionChanges } from './utils/formationDirty'
 import { playToComparable } from './utils/playDirty'
 import {
   ALL_PLAYS_FILTER,
-  createPlayersForFormation,
   filterPlaysByFormation,
   getFormationById,
   getPlayFilterOptions,
@@ -99,6 +99,12 @@ import {
   type PlayFilterId,
   withFormationSnapshot,
 } from './utils/formationUtils'
+import {
+  applyTeamFormatToPlay,
+  createDefendersForTeamFormat,
+  createPlayersForTeamFormat,
+  playMatchesTeamFormat,
+} from './utils/teamFormatUtils'
 import {
   addNewPlay,
   deletePlayFromStorage,
@@ -176,7 +182,10 @@ function App() {
   const shell = useAppShell()
   const adminTemplateEdit = shell?.adminTemplateEdit ?? null
   const { loading: schemeTemplatesLoading, refreshTemplates } = useSchemeTemplates()
-  const { activeTeamId, switchTeam } = useTeam()
+  const { activeTeamId, switchTeam, team } = useTeam()
+  const teamFormat = useTeamFormat()
+  const enforceBackfieldLimit = enforcesBackfieldLimit(teamFormat)
+  const teamFormatReady = Boolean(team && activeTeamId && team.id === activeTeamId)
   const canEdit = useCanEdit()
   const fieldCanEdit = canEdit || Boolean(adminTemplateEdit)
   const fieldViewOnly = !fieldCanEdit || isPhoneViewport
@@ -290,7 +299,7 @@ function App() {
   const loadRequestRef = useRef(0)
 
   const resetEditor = useCallback(() => {
-    const empty = createEmptyPlay()
+    const empty = applyTeamFormatToPlay(createEmptyPlay(undefined, teamFormat), teamFormat)
     setPlay(empty)
     setSelectedLoadId('')
     setActiveSavedPlayId(null)
@@ -300,7 +309,7 @@ function App() {
     setCategoryFilterId(ALL_CATEGORIES_FILTER)
     setCustomCategories(getCustomCategories(activeTeamId ?? null))
     setPlayBaseline(playToComparable(empty))
-  }, [activeTeamId])
+  }, [activeTeamId, team?.format, team?.name, teamFormat])
 
   const loadTeamData = useCallback(async () => {
     const requestId = ++loadRequestRef.current
@@ -319,7 +328,7 @@ function App() {
       if (requestId !== loadRequestRef.current) return
 
       setCustomFormations(formations)
-      const plays = await cloudPlayRepository.getPlaysByTeam(activeTeamId, formations)
+      const plays = await cloudPlayRepository.getPlaysByTeam(activeTeamId, formations, teamFormat)
       if (requestId !== loadRequestRef.current) return
 
       setSavedPlays(plays)
@@ -338,7 +347,7 @@ function App() {
         setDataLoading(false)
       }
     }
-  }, [activeTeamId, showSaveMessage, userId])
+  }, [activeTeamId, showSaveMessage, teamFormat, userId])
 
   useEffect(() => {
     void loadTeamData()
@@ -351,7 +360,10 @@ function App() {
     prevActiveTeamIdRef.current = activeTeamId
   }, [activeTeamId, userId])
 
-  const editorScopeKey = userId && activeTeamId ? `${userId}:${activeTeamId}` : null
+  const editorScopeKey =
+    userId && activeTeamId && teamFormatReady
+      ? `${userId}:${activeTeamId}:${teamFormat}`
+      : null
 
   useEffect(() => {
     if (schemeTemplatesLoading || adminTemplateEdit) return
@@ -368,9 +380,12 @@ function App() {
 
     editorInitializedForRef.current = editorScopeKey
 
-    const draft = readPlayDesignerDraft(userId, activeTeamId)
+    const draft = readPlayDesignerDraft(userId, activeTeamId, teamFormat)
     if (draft) {
-      const restoredPlay = ensurePlayPlayerActions(draft.play)
+      const restoredPlay = applyTeamFormatToPlay(
+        ensurePlayPlayerActions(draft.play),
+        teamFormat,
+      )
       setPlay(restoredPlay)
       setActiveSavedPlayId(draft.activeSavedPlayId)
       setSelectedLoadId(draft.selectedLoadId)
@@ -397,8 +412,25 @@ function App() {
     editorScopeKey,
     resetEditor,
     schemeTemplatesLoading,
+    teamFormat,
     userId,
+    team?.format,
+    team?.name,
   ])
+
+  useEffect(() => {
+    if (!teamFormatReady || adminTemplateEdit || schemeTemplatesLoading) {
+      return
+    }
+
+    setPlay((current) => {
+      if (playMatchesTeamFormat(current, teamFormat)) {
+        return current
+      }
+
+      return ensurePlayPlayerActions(applyTeamFormatToPlay(current, teamFormat))
+    })
+  }, [activeTeamId, adminTemplateEdit, schemeTemplatesLoading, teamFormat, teamFormatReady])
 
   useEffect(() => {
     if (!adminTemplateEdit) return
@@ -491,6 +523,7 @@ function App() {
       writePlayDesignerDraft({
         userId,
         activeTeamId,
+        teamFormat,
         play,
         activeSavedPlayId,
         selectedLoadId,
@@ -509,6 +542,7 @@ function App() {
     playBaseline,
     selectedLoadId,
     userId,
+    teamFormat,
   ])
 
   function needsPlayGuard(action: PendingAction): boolean {
@@ -588,7 +622,7 @@ function App() {
   }
 
   async function handleSaveAsSetupSubmit(setup: NewPlaySetupInput) {
-    const updatedPlay = applyPlaySetupEdit(play, setup, customFormations)
+    const updatedPlay = applyPlaySetupEdit(play, setup, customFormations, teamFormat)
     const saved = await executeSaveAsNew(updatedPlay, { openRecoveryOnDuplicate: false })
     if (saved) {
       setNewPlaySetupOpen(false)
@@ -613,7 +647,7 @@ function App() {
         play.playType === 'defensive' &&
         setup.formationId !== (play.opponentFormationId ?? '')
 
-      const next = applyPlaySetupEdit(play, setup, customFormations)
+      const next = applyPlaySetupEdit(play, setup, customFormations, teamFormat)
       setPlay(next)
 
       if (formationChanged || frontChanged || opposingFormationChanged) {
@@ -625,7 +659,7 @@ function App() {
       return
     }
 
-    const next = buildNewPlayFromSetup(play, setup, customFormations)
+    const next = buildNewPlayFromSetup(play, setup, customFormations, teamFormat)
     setPlay(next)
     setSelectedLoadId('')
     setActiveSavedPlayId(null)
@@ -872,7 +906,12 @@ function App() {
     try {
       const loaded =
         useCloud && activeTeamId
-          ? await cloudPlayRepository.getPlayById(activeTeamId, playId, customFormations)
+          ? await cloudPlayRepository.getPlayById(
+              activeTeamId,
+              playId,
+              customFormations,
+              teamFormat,
+            )
           : getPlayById(playId)
 
       if (!loaded) {
@@ -885,7 +924,7 @@ function App() {
         players: loaded.players.map((player) => ({ id: player.id, ...player.position })),
         defenders: loaded.defenders.map((defender) => ({ id: defender.id, ...defender.position })),
       })
-      setPlay(ensurePlayPlayerActions(loaded))
+      setPlay(ensurePlayPlayerActions(applyTeamFormatToPlay(loaded, teamFormat)))
       setSelectedLoadId(playId)
       setActiveSavedPlayId(playId)
       setPlayFilterId(
@@ -966,7 +1005,7 @@ function App() {
       setActiveSavedPlayId(null)
 
       if (play.id === deletedId || activeSavedPlayId === deletedId) {
-        const empty = createEmptyPlay(play.playType)
+        const empty = createEmptyPlay(play.playType, teamFormat)
         setPlay(empty)
         setSelectedPlayerId(null)
         setSelectedDefenderId(null)
@@ -997,7 +1036,7 @@ function App() {
 
   function handleMirrorPlay() {
     if (!canEdit) return
-    setPlay((current) => mirrorFootballPlay(current))
+    setPlay((current) => mirrorFootballPlay(current, teamFormat))
     setSelectedPlayerId((current) => (current ? getMirrorPartner(current) : null))
     setSelectedDefenderId((current) => (current ? getDefenderMirrorPartner(current) : null))
   }
@@ -1026,7 +1065,7 @@ function App() {
           playType,
           frontId: front.id,
           frontName: front.label,
-          defenders: createDefendersForFront(front.id),
+          defenders: createDefendersForTeamFormat(teamFormat, front.id),
           defenderRoutes: createEmptyDefenderRoutes(),
           categories: filterCategoriesForPlayType(current.categories, 'defensive'),
         }
@@ -1055,10 +1094,12 @@ function App() {
     const formation = getFormationById(formationId, customFormations)
     if (!formation) return
 
-    const players = createPlayersForFormation(formationId, customFormations).map((player) => ({
-      ...player,
-      position: clampOffensePosition(player.position),
-    }))
+    const players = createPlayersForTeamFormat(teamFormat, formationId, customFormations).map(
+      (player) => ({
+        ...player,
+        position: clampOffensePosition(player.position),
+      }),
+    )
 
     setPlay((current) => {
       const next = {
@@ -1092,7 +1133,7 @@ function App() {
     const front = getFrontById(frontId)
     if (!front) return
 
-    const defenders = createDefendersForFront(frontId).map((defender) => ({
+    const defenders = createDefendersForTeamFormat(teamFormat, frontId).map((defender) => ({
       ...defender,
       position: clampDefensePosition(defender.position),
     }))
@@ -1140,7 +1181,11 @@ function App() {
     const formation = getFormationById(play.formationId, customFormations)
     if (!formation) return
 
-    const players = createPlayersForFormation(play.formationId, customFormations).map((player) => ({
+    const players = createPlayersForTeamFormat(
+      teamFormat,
+      play.formationId,
+      customFormations,
+    ).map((player) => ({
       ...player,
       position: clampOffensePosition(player.position),
     }))
@@ -1193,7 +1238,7 @@ function App() {
     const formation = customFormations.find((entry) => entry.id === play.formationId)
     if (!formation) return false
 
-    if (isBackfieldLimitExceeded(play.players)) {
+    if (isBackfieldLimitExceeded(play.players, enforceBackfieldLimit)) {
       showSaveMessage('Formation cannot be saved — maximum 5 players in the backfield.')
       return false
     }
@@ -1240,7 +1285,7 @@ function App() {
       return
     }
 
-    if (isBackfieldLimitExceeded(play.players)) {
+    if (isBackfieldLimitExceeded(play.players, enforceBackfieldLimit)) {
       showSaveMessage('Formation cannot be saved — maximum 5 players in the backfield.')
       return
     }
@@ -1485,7 +1530,12 @@ function App() {
     setPlay((current) => {
       const previous = current.players.find((player) => player.id === playerId)?.position
       const spacedPosition = applyPlayerSpacing(current.players, playerId, position)
-      const nextPosition = resolveOffensePlayerPosition(current.players, playerId, spacedPosition)
+      const nextPosition = resolveOffensePlayerPosition(
+        current.players,
+        playerId,
+        spacedPosition,
+        enforceBackfieldLimit,
+      )
 
       blockedBackfieldEntry =
         Boolean(previous) &&
@@ -1501,7 +1551,7 @@ function App() {
       }
     })
 
-    if (blockedBackfieldEntry) {
+    if (blockedBackfieldEntry && enforceBackfieldLimit) {
       showSaveMessage('Maximum 5 players in the backfield.')
     }
   }

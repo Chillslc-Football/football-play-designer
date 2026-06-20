@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useAuth } from '../hooks/useAuth'
 import * as teamRepository from '../repositories/teamRepository'
 import type { Team, TeamMembership, TeamRole } from '../types/team'
+import type { TeamFormat } from '../types/teamFormat'
 import { TeamContext, type TeamResult } from './teamContext'
 
 type TeamProviderProps = {
@@ -106,7 +107,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
   }, [refreshTeam])
 
   const createTeam = useCallback(
-    async (name: string): Promise<TeamResult> => {
+    async (name: string, format: TeamFormat = '11v11'): Promise<TeamResult> => {
       if (!user) {
         return { error: 'Not signed in' }
       }
@@ -119,7 +120,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
       setLoading(true)
 
       try {
-        const teamId = await teamRepository.createTeam(trimmed)
+        const teamId = await teamRepository.createTeam(trimmed, format)
         await teamRepository.loadActiveTeamAfterCreate(user.id, teamId)
         const result = await teamRepository.loadActiveTeamForUser(user.id)
         applyLoadResult(result, {
@@ -165,8 +166,9 @@ export function TeamProvider({ children }: TeamProviderProps) {
 
       try {
         await teamRepository.updateLastTeamId(user.id, teamId)
+        const freshTeam = await teamRepository.fetchTeamById(teamId)
         setActiveTeamId(teamId)
-        setTeam(membership.team)
+        setTeam(freshTeam ?? membership.team)
         setRole(membership.role)
         return { error: null }
       } catch (error) {

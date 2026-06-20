@@ -1,3 +1,5 @@
+import type { TeamFormat } from './teamFormat'
+
 export type TeamRole = 'team_owner' | 'coach' | 'player' | 'parent'
 
 export type Team = {
@@ -5,6 +7,7 @@ export type Team = {
   name: string
   created_by: string
   created_at: string
+  format: TeamFormat
 }
 
 export type TeamMembership = {

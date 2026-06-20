@@ -14,15 +14,20 @@ import { createEmptyPlayerActionChains } from '../types/playerAction'
 import { ensurePlayPlayerActions } from './playerActionChains'
 import { normalizeCategories } from './categoryUtils'
 import {
-  createDefendersForFront,
   getDefaultFrontName,
   getFrontLabel,
 } from './frontUtils'
 import {
-  createPlayersForFormation,
   getDefaultFormationName,
   getFormationLabel,
 } from './formationUtils'
+import type { TeamFormat } from '../types/teamFormat'
+import { DEFAULT_TEAM_FORMAT } from '../types/teamFormat'
+import {
+  applyTeamFormatToPlay,
+  createDefendersForTeamFormat,
+  createPlayersForTeamFormat,
+} from './teamFormatUtils'
 import { normalizePositionLabel, type Player } from '../types/player'
 import {
   COORDINATE_SPACE_DB,
@@ -40,6 +45,7 @@ export type LegacyPlay = Play & {
 export function normalizePlayRecord(
   play: LegacyPlay,
   customFormations: CustomFormation[],
+  teamFormat: TeamFormat = DEFAULT_TEAM_FORMAT,
 ): Play {
   const playType: PlayType = resolvePlayType(play.playType)
   const formationId = play.formationId ?? play.formation ?? DEFAULT_FORMATION_ID
@@ -64,14 +70,14 @@ export function normalizePlayRecord(
     ? savedPlayers
       ? play.players.map(normalizeLoadedPlayer)
       : []
-    : createPlayersForFormation(formationId, customFormations)
+    : createPlayersForTeamFormat(teamFormat, formationId, customFormations)
 
   const loadedDefenders = Array.isArray(play.defenders)
     ? play.defenders
-    : createDefendersForFront(frontId)
+    : createDefendersForTeamFormat(teamFormat, frontId)
 
   const normalized: Play = {
-    ...createEmptyPlay(playType),
+    ...createEmptyPlay(playType, teamFormat),
     ...play,
     formationId,
     formationName,
@@ -103,7 +109,13 @@ export function normalizePlayRecord(
     : migratePlayToFieldView(renderPlay)
 
   return ensurePlayPlayerActions({
-    ...clampPlayPositions(migrated),
+    ...applyTeamFormatToPlay(
+      {
+        ...clampPlayPositions(migrated),
+        positionFormat: COORDINATE_SPACE_RENDER,
+      },
+      teamFormat,
+    ),
     positionFormat: COORDINATE_SPACE_RENDER,
   })
 }

@@ -1,6 +1,7 @@
 import type { Play } from '../types/play'
+import { getTeamPlayerCount, type TeamFormat } from '../types/teamFormat'
 
-export const PLAY_DESIGNER_DRAFT_VERSION = 1 as const
+export const PLAY_DESIGNER_DRAFT_VERSION = 2 as const
 export const PLAY_DESIGNER_DRAFT_DEBOUNCE_MS = 500
 
 const DRAFT_KEY_PREFIX = 'football-play-designer-draft'
@@ -9,6 +10,7 @@ export type PlayDesignerDraft = {
   version: typeof PLAY_DESIGNER_DRAFT_VERSION
   userId: string
   activeTeamId: string
+  teamFormat: TeamFormat
   play: Play
   activeSavedPlayId: string | null
   selectedLoadId: string
@@ -59,9 +61,10 @@ export function validatePlayDesignerDraft(
   parsed: unknown,
   userId: string,
   activeTeamId: string,
+  teamFormat: TeamFormat,
 ): PlayDesignerDraft | null {
   if (!isRecord(parsed)) return null
-  if (parsed.version !== PLAY_DESIGNER_DRAFT_VERSION) return null
+  if (parsed.version !== PLAY_DESIGNER_DRAFT_VERSION && parsed.version !== 1) return null
   if (parsed.userId !== userId || parsed.activeTeamId !== activeTeamId) return null
   if (typeof parsed.playBaseline !== 'string') return null
   if (typeof parsed.savedAt !== 'number' || !Number.isFinite(parsed.savedAt)) return null
@@ -71,12 +74,48 @@ export function validatePlayDesignerDraft(
   if (typeof parsed.selectedLoadId !== 'string') return null
   if (!isPlayShape(parsed.play)) return null
 
-  return parsed as PlayDesignerDraft
+  const draftTeamFormat =
+    typeof parsed.teamFormat === 'string' ? (parsed.teamFormat as TeamFormat) : teamFormat
+  const targetCount = getTeamPlayerCount(teamFormat)
+
+  if (parsed.version === 1 && teamFormat !== '11v11') {
+    if (parsed.play.players.length > targetCount || parsed.play.defenders.length > targetCount) {
+      console.warn('[PlayDesigner] Discarding legacy draft with too many players for format', {
+        playerCount: parsed.play.players.length,
+        defenderCount: parsed.play.defenders.length,
+        teamFormat,
+        targetCount,
+      })
+      return null
+    }
+  }
+
+  if (draftTeamFormat !== teamFormat) {
+    console.warn('[PlayDesigner] Discarding draft — team format changed', {
+      draftTeamFormat,
+      teamFormat,
+    })
+    return null
+  }
+
+  if (parsed.play.players.length > targetCount && teamFormat !== '11v11') {
+    console.warn('[PlayDesigner] Draft has too many players for team format; will re-normalize', {
+      playerCount: parsed.play.players.length,
+      teamFormat,
+      targetCount,
+    })
+  }
+
+  return {
+    ...(parsed as PlayDesignerDraft),
+    teamFormat,
+  }
 }
 
 export function readPlayDesignerDraft(
   userId: string | null,
   activeTeamId: string | null,
+  teamFormat: TeamFormat,
 ): PlayDesignerDraft | null {
   if (!userId || !activeTeamId) return null
 
@@ -86,7 +125,7 @@ export function readPlayDesignerDraft(
     if (!raw) return null
 
     const parsed: unknown = JSON.parse(raw)
-    const draft = validatePlayDesignerDraft(parsed, userId, activeTeamId)
+    const draft = validatePlayDesignerDraft(parsed, userId, activeTeamId, teamFormat)
     if (!draft) {
       sessionStorage.removeItem(key)
       return null

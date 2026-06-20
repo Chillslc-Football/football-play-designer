@@ -9,12 +9,14 @@ import { createEmptyDefenderRoutes, type DefenderRoute } from './defenderRoute'
 import { createEmptyRoutes, type Route } from './route'
 import { DEFAULT_PLAY_TYPE, type PlayType } from './playType'
 import {
-  createPlayersForFormation,
-  getDefaultFormationName,
-} from '../utils/formationUtils'
+  createPlayersForTeamFormat,
+  createDefendersForTeamFormat,
+} from '../utils/teamFormatUtils'
+import { DEFAULT_TEAM_FORMAT, type TeamFormat } from '../types/teamFormat'
+import { getDefaultFormationName } from '../utils/formationUtils'
 import { COORDINATE_SPACE_RENDER } from '../utils/positionCoordinates'
 import { LOS_ANCHOR_VERSION } from '../constants/field'
-import { createDefendersForFront, getDefaultFrontName } from '../utils/frontUtils'
+import { getDefaultFrontName } from '../utils/frontUtils'
 import {
   getDefaultFormationTemplateId,
   getDefaultFrontTemplateId,
@@ -72,7 +74,10 @@ export type Play = {
 }
 
 /** Creates a fresh play for the given mode. */
-export function createEmptyPlay(playType: PlayType = DEFAULT_PLAY_TYPE): Play {
+export function createEmptyPlay(
+  playType: PlayType = DEFAULT_PLAY_TYPE,
+  teamFormat: TeamFormat = DEFAULT_TEAM_FORMAT,
+): Play {
   const defaultFormationId = getDefaultFormationTemplateId()
   const defaultFrontId = getDefaultFrontTemplateId()
 
@@ -105,13 +110,13 @@ export function createEmptyPlay(playType: PlayType = DEFAULT_PLAY_TYPE): Play {
     return clampPlayPositions({
       ...shared,
       players: [],
-      defenders: createDefendersForFront(defaultFrontId),
+      defenders: createDefendersForTeamFormat(teamFormat, defaultFrontId),
     })
   }
 
   return clampPlayPositions({
     ...shared,
-    players: createPlayersForFormation(defaultFormationId, []),
+    players: createPlayersForTeamFormat(teamFormat, defaultFormationId, []),
     defenders: [],
   })
 }

@@ -11,7 +11,7 @@ import {
 } from '../types/playerAction'
 import type { Route } from '../types/route'
 import { getMirrorPartner } from './footballMirror'
-import { mirrorPositionLaterally } from './mirror'
+import { clampMirroredPoint } from './mirror'
 import { pickMergedEndpointMarker } from './endpointMarker'
 
 export const NEW_ACTION_ID = '__new__'
@@ -330,7 +330,7 @@ export function migratePlayerActionChainPoints(
 
 export function mirrorPlayerActionChains(
   chains: PlayerActionChains,
-  centerX: number,
+  mirrorAxisX: number,
 ): PlayerActionChains {
   const mirrored = createEmptyPlayerActionChains()
 
@@ -338,7 +338,7 @@ export function mirrorPlayerActionChains(
     const partner = getMirrorPartner(playerId)
     mirrored[partner] = getSortedChain(chains, playerId).map((action) => ({
       ...action,
-      points: action.points.map((point) => mirrorPositionLaterally(point, centerX)),
+      points: action.points.map((point) => clampMirroredPoint(point, mirrorAxisX)),
     }))
   }
 

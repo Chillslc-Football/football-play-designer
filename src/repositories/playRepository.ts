@@ -9,6 +9,7 @@ type DbPlayType = 'offense' | 'defense'
 import { normalizePlayName } from '../utils/playStorage'
 import { renderPlayToDbPlay } from '../utils/positionCoordinates'
 import { normalizePlayRecord, type LegacyPlay } from '../utils/playNormalize'
+import { DEFAULT_TEAM_FORMAT, type TeamFormat } from '../types/teamFormat'
 import { createEmptyPlayerActionChains } from '../types/playerAction'
 
 type PlayRow = {
@@ -103,7 +104,11 @@ function playToUpdateRow(play: Play, userId?: string) {
   }
 }
 
-function rowToPlay(row: PlayRow, customFormations: CustomFormation[]): Play {
+function rowToPlay(
+  row: PlayRow,
+  customFormations: CustomFormation[],
+  teamFormat: TeamFormat = DEFAULT_TEAM_FORMAT,
+): Play {
   const stored = row.data ?? ({} as Partial<Play>)
 
   const legacy: LegacyPlay = {
@@ -132,12 +137,13 @@ function rowToPlay(row: PlayRow, customFormations: CustomFormation[]): Play {
     createdAt: stored.createdAt ?? row.created_at ?? new Date().toISOString(),
   }
 
-  return normalizePlayRecord(legacy, customFormations)
+  return normalizePlayRecord(legacy, customFormations, teamFormat)
 }
 
 export async function getPlaysByTeam(
   teamId: string,
   customFormations: CustomFormation[],
+  teamFormat: TeamFormat = DEFAULT_TEAM_FORMAT,
 ): Promise<Play[]> {
   const { data, error } = await supabase
     .from('plays')
@@ -150,13 +156,14 @@ export async function getPlaysByTeam(
     throw new Error(`Failed to load plays: ${error.message}`)
   }
 
-  return ((data ?? []) as PlayRow[]).map((row) => rowToPlay(row, customFormations))
+  return ((data ?? []) as PlayRow[]).map((row) => rowToPlay(row, customFormations, teamFormat))
 }
 
 export async function getPlayById(
   teamId: string,
   playId: string,
   customFormations: CustomFormation[],
+  teamFormat: TeamFormat = DEFAULT_TEAM_FORMAT,
 ): Promise<Play | null> {
   const { data, error } = await supabase
     .from('plays')
@@ -170,7 +177,7 @@ export async function getPlayById(
     throw new Error(`Failed to load play: ${error.message}`)
   }
 
-  return data ? rowToPlay(data as PlayRow, customFormations) : null
+  return data ? rowToPlay(data as PlayRow, customFormations, teamFormat) : null
 }
 
 export async function addPlay(

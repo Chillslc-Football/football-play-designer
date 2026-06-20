@@ -105,6 +105,34 @@
   font-size: 15px;
 }
 
+.auth-format-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-format-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-on-surface);
+  cursor: pointer;
+}
+
+.auth-format-option input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.auth-format-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #4a5f4a;
+}
+
 @media (max-width: 768px) {
   .auth-page {
     align-items: flex-start;
