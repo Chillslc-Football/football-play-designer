@@ -11,7 +11,7 @@ export type AppShellView =
   | 'calendar'
   | 'admin-templates'
 
-export type AppShellLaunchMode = 'create'
+export type AppShellLaunchMode = 'create' | 'play-library'
 
 export type DesignerHeaderHandlers = {
   onTeamChange: (teamId: string) => void

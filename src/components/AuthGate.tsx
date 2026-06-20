@@ -11,6 +11,7 @@ import {
   isAcceptInvitePath,
   savePendingInviteUrl,
 } from '../utils/inviteToken'
+import { capturePlaybookDeepLinkFromUrl } from '../utils/playbookLink'
 import { TeamGate } from './TeamGate'
 import '../pages/AuthPages.css'
 
@@ -48,6 +49,12 @@ export function AuthGate() {
   const { session, loading } = useAuth()
   const [authView, setAuthView] = useState<'login' | 'signup'>('login')
   const [resumingInvite, setResumingInvite] = useState(false)
+
+  useEffect(() => {
+    if (!isAcceptInvitePath()) {
+      capturePlaybookDeepLinkFromUrl()
+    }
+  }, [])
 
   useEffect(() => {
     if (!isAcceptInvitePath()) return

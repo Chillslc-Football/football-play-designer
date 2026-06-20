@@ -22,23 +22,38 @@ import type { AdminTemplateEditSession } from '../../types/adminTemplateEdit'
 import { APP_DISPLAY_THEME } from '../../constants/appDisplayTheme'
 import { readStoredAppShellView, writeStoredAppShellView } from '../../utils/appShellViewStorage'
 import {
-  clearPlaybookDeepLinkFromUrl,
+  clearPendingPlaybookDeepLink,
   markOpenPlayLibraryPending,
-  parsePlaybookDeepLinkFromUrl,
+  PLAYBOOK_ACCESS_DENIED_MESSAGE,
+  readPendingPlaybookDeepLink,
 } from '../../utils/playbookLink'
 import './MainApp.css'
 
 export type AppView = AppShellView
 
+function readInitialAppShellView(): AppShellView {
+  if (readPendingPlaybookDeepLink()) {
+    return 'designer'
+  }
+
+  return readStoredAppShellView()
+}
+
 function MainAppViews() {
-  const [view, setView] = useState<AppShellView>(() => readStoredAppShellView())
-  const [launchMode, setLaunchMode] = useState<AppShellLaunchMode | null>(null)
+  const [view, setView] = useState<AppShellView>(() => readInitialAppShellView())
+  const [launchMode, setLaunchMode] = useState<AppShellLaunchMode | null>(() =>
+    readPendingPlaybookDeepLink() ? 'play-library' : null,
+  )
   const [adminTemplateEdit, setAdminTemplateEdit] = useState<AdminTemplateEditSession | null>(null)
   const [pageToolbar, setPageToolbar] = useState<ReactNode | null>(null)
   const designerHeaderHandlersRef = useRef<DesignerHeaderHandlers | null>(null)
   const isAppAdmin = useAppAdmin()
-  const { profileLoaded, switchTeam } = useTeam()
+  const { profileLoaded, team, switchTeam } = useTeam()
   const playbookDeepLinkHandledRef = useRef(false)
+  const [playbookDeepLinkError, setPlaybookDeepLinkError] = useState<string | null>(null)
+  const [playbookDeepLinkProcessing, setPlaybookDeepLinkProcessing] = useState(() =>
+    Boolean(readPendingPlaybookDeepLink()),
+  )
 
   const setViewAndClearLaunch = (nextView: AppShellView) => {
     setLaunchMode(null)
@@ -65,26 +80,42 @@ function MainAppViews() {
   }, [view, isAppAdmin])
 
   useEffect(() => {
-    if (!profileLoaded || playbookDeepLinkHandledRef.current) return
+    if (!profileLoaded || !team || playbookDeepLinkHandledRef.current) {
+      return
+    }
 
-    const deepLink = parsePlaybookDeepLinkFromUrl()
-    if (!deepLink) return
+    const pending = readPendingPlaybookDeepLink()
+    if (!pending) {
+      setPlaybookDeepLinkProcessing(false)
+      return
+    }
 
     playbookDeepLinkHandledRef.current = true
-    clearPlaybookDeepLinkFromUrl()
 
     void (async () => {
-      const result = await switchTeam(deepLink.teamId)
+      setPlaybookDeepLinkProcessing(true)
+      setPlaybookDeepLinkError(null)
+
+      const result = await switchTeam(pending.teamId)
+      clearPendingPlaybookDeepLink()
+
       if (result.error) {
-        console.warn('[MainApp] playbook deep link team switch failed', result.error)
+        const isAccessDenied = /not a member/i.test(result.error)
+        setPlaybookDeepLinkError(
+          isAccessDenied ? PLAYBOOK_ACCESS_DENIED_MESSAGE : result.error,
+        )
+        setLaunchMode(null)
+        setView('team-hub')
+        setPlaybookDeepLinkProcessing(false)
         return
       }
 
       markOpenPlayLibraryPending()
-      setLaunchMode(null)
+      setLaunchMode('play-library')
       setView('designer')
+      setPlaybookDeepLinkProcessing(false)
     })()
-  }, [profileLoaded, switchTeam])
+  }, [profileLoaded, team, switchTeam])
 
   return (
     <AppShellProvider
@@ -102,6 +133,14 @@ function MainAppViews() {
       <div className={`main-app app-theme-${APP_DISPLAY_THEME}`}>
         <AppShellHeader />
         <AppShellPageToolbar />
+        {playbookDeepLinkProcessing && (
+          <p className="main-app-playbook-deep-link-status">Opening playbook…</p>
+        )}
+        {playbookDeepLinkError && (
+          <p className="main-app-playbook-deep-link-error" role="alert">
+            {playbookDeepLinkError}
+          </p>
+        )}
         <div className="main-app-body">
           {view === 'designer' ? (
             <App />

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useAppShell } from '../../context/AppShellContext'
 import { CategorySelector } from '../CategorySelector/CategorySelector'
 import { ManageCategoriesDialog } from '../ManageCategoriesDialog/ManageCategoriesDialog'
 import { PlayLibraryModal } from '../PlayLibraryModal/PlayLibraryModal'
@@ -6,7 +7,10 @@ import type { Play } from '../../types/play'
 import type { PlayType } from '../../types/playType'
 import type { CategoryFilterId } from '../../utils/categoryUtils'
 import type { PlayFilterId } from '../../utils/formationUtils'
-import { consumeOpenPlayLibraryPending } from '../../utils/playbookLink'
+import {
+  clearOpenPlayLibraryPending,
+  shouldOpenPlayLibrary,
+} from '../../utils/playbookLink'
 import './PlayControls.css'
 
 type FormationFilterOption = {
@@ -66,14 +70,21 @@ export function PlayControlsRoot({
   children,
   ...props
 }: PlayControlsProps & { children: ReactNode }) {
+  const shell = useAppShell()
   const [manageOpen, setManageOpen] = useState(false)
-  const [libraryOpen, setLibraryOpen] = useState(false)
+  const [libraryOpen, setLibraryOpen] = useState(() => shouldOpenPlayLibrary())
 
   useEffect(() => {
-    if (consumeOpenPlayLibraryPending()) {
+    if (shell?.launchMode === 'play-library') {
       setLibraryOpen(true)
     }
-  }, [])
+  }, [shell?.launchMode])
+
+  useEffect(() => {
+    if (!libraryOpen) return
+    clearOpenPlayLibraryPending()
+    shell?.clearLaunchMode()
+  }, [libraryOpen, shell])
 
   const sortedPlays = useMemo(
     () => [...props.filteredPlays].sort((a, b) => a.name.localeCompare(b.name)),

@@ -31,3 +31,22 @@
 .main-app-body > .team-management-page {
   overflow: auto;
 }
+
+.main-app-playbook-deep-link-status,
+.main-app-playbook-deep-link-error {
+  margin: 0;
+  padding: 8px 16px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.main-app-playbook-deep-link-status {
+  color: var(--text-muted);
+  background: var(--surface-muted, rgba(0, 0, 0, 0.04));
+}
+
+.main-app-playbook-deep-link-error {
+  color: var(--danger, #b42318);
+  background: rgba(180, 35, 24, 0.08);
+  border-bottom: 1px solid rgba(180, 35, 24, 0.2);
+}
