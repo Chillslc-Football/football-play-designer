@@ -6,7 +6,7 @@ import { LoginPage } from './LoginPage'
 import { SignupPage } from './SignupPage'
 import * as inviteRepository from '../repositories/inviteRepository'
 import { INVITE_ROLE_LABELS, type InvitePreview, type InvitePreviewStatus, type InviteRole } from '../types/invite'
-import { clearAcceptInviteUrl, getPendingInviteUrl, savePendingInviteUrl } from '../utils/inviteToken'
+import { clearAcceptInviteUrl, buildAcceptInviteUrl, savePendingInviteUrl } from '../utils/inviteToken'
 import './AuthPages.css'
 import './AcceptInvitePage.css'
 
@@ -41,24 +41,25 @@ function parsePreviewRpcData(data: unknown): InvitePreview | null {
 }
 
 function AcceptInviteLoggedOut({
+  token,
   teamName,
   roleLabel,
   invitedEmail,
-  inviteUrl,
 }: {
+  token: string
   teamName: string
   roleLabel: string
   invitedEmail: string
-  inviteUrl: string
 }) {
   const [view, setView] = useState<LoggedOutView>('details')
+  const inviteRedirectUrl = buildAcceptInviteUrl(token)
 
   if (view === 'signup') {
     return (
       <SignupPage
         defaultEmail={invitedEmail}
         lockedEmail={Boolean(invitedEmail)}
-        emailRedirectTo={inviteUrl}
+        emailRedirectTo={inviteRedirectUrl}
         title="Create account"
         subtitle={`Join ${teamName} as ${roleLabel}`}
         onSwitchToLogin={() => setView('login')}
@@ -185,7 +186,6 @@ function AcceptInviteLoggedIn({
 export function AcceptInvitePage() {
   const { user, loading: authLoading } = useAuth()
   const [token, setToken] = useState<string | null>(null)
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [preview, setPreview] = useState<InvitePreview | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(true)
@@ -195,13 +195,13 @@ export function AcceptInvitePage() {
 
     async function loadPreview() {
       const urlToken = new URLSearchParams(window.location.search).get('token')
-      const currentInviteUrl = window.location.href
 
-      savePendingInviteUrl(currentInviteUrl)
+      if (urlToken) {
+        savePendingInviteUrl(buildAcceptInviteUrl(urlToken))
+      }
 
       if (!cancelled) {
         setToken(urlToken)
-        setInviteUrl(currentInviteUrl)
       }
 
       if (!urlToken) {
@@ -286,7 +286,6 @@ export function AcceptInvitePage() {
   const invitedEmail = preview.email ?? ''
   const teamName = preview.teamName ?? 'this team'
   const roleLabel = preview.role ? INVITE_ROLE_LABELS[preview.role] : 'member'
-  const resolvedInviteUrl = inviteUrl ?? getPendingInviteUrl() ?? window.location.href
 
   if (status !== 'pending') {
     const message =
@@ -311,10 +310,10 @@ export function AcceptInvitePage() {
   if (!user) {
     return (
       <AcceptInviteLoggedOut
+        token={token}
         teamName={teamName}
         roleLabel={roleLabel}
         invitedEmail={invitedEmail}
-        inviteUrl={resolvedInviteUrl}
       />
     )
   }

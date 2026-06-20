@@ -1,5 +1,9 @@
 export const PENDING_INVITE_URL_KEY = 'pending_invite_url'
 
+export function buildAcceptInviteUrl(token: string): string {
+  return `${window.location.origin}/accept-invite?token=${encodeURIComponent(token)}`
+}
+
 export function getInviteTokenFromUrl(): string | null {
   return new URLSearchParams(window.location.search).get('token')
 }

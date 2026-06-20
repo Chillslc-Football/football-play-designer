@@ -3,6 +3,7 @@ import { MainApp } from './MainApp/MainApp'
 import { useAuth } from '../hooks/useAuth'
 import { useTeam } from '../hooks/useTeam'
 import { CreateTeamPage } from '../pages/CreateTeamPage'
+import { clearPendingInviteUrl } from '../utils/inviteToken'
 import '../pages/AuthPages.css'
 
 export function TeamGate() {
@@ -17,6 +18,10 @@ export function TeamGate() {
 
   useEffect(() => {
     if (!profileLoaded) return
+
+    if (!needsOnboarding) {
+      clearPendingInviteUrl()
+    }
 
     if (needsOnboarding) {
       console.log('[TeamGate] showing Create Team', {

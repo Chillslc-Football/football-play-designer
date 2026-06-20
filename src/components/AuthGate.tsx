@@ -4,7 +4,13 @@ import { useAuth } from '../hooks/useAuth'
 import { AcceptInvitePage } from '../pages/AcceptInvitePage'
 import { LoginPage } from '../pages/LoginPage'
 import { SignupPage } from '../pages/SignupPage'
-import { isAcceptInvitePath, savePendingInviteUrl } from '../utils/inviteToken'
+import {
+  buildAcceptInviteUrl,
+  getInviteTokenFromUrl,
+  getPendingInviteUrl,
+  isAcceptInvitePath,
+  savePendingInviteUrl,
+} from '../utils/inviteToken'
 import { TeamGate } from './TeamGate'
 import '../pages/AuthPages.css'
 
@@ -26,21 +32,56 @@ function AcceptInviteFlow() {
   return <AcceptInvitePage />
 }
 
+function shouldResumePendingInvite(): boolean {
+  const pending = getPendingInviteUrl()
+  if (!pending) return false
+
+  try {
+    const path = new URL(pending).pathname.replace(/\/+$/, '') || '/'
+    return path === '/accept-invite'
+  } catch {
+    return false
+  }
+}
+
 export function AuthGate() {
   const { session, loading } = useAuth()
   const [authView, setAuthView] = useState<'login' | 'signup'>('login')
+  const [resumingInvite, setResumingInvite] = useState(false)
 
   useEffect(() => {
-    if (isAcceptInvitePath()) {
-      savePendingInviteUrl()
+    if (!isAcceptInvitePath()) return
+
+    const token = getInviteTokenFromUrl()
+    if (token) {
+      savePendingInviteUrl(buildAcceptInviteUrl(token))
+      return
     }
+
+    savePendingInviteUrl()
   }, [])
+
+  useEffect(() => {
+    if (loading || isAcceptInvitePath() || !session || !shouldResumePendingInvite()) {
+      setResumingInvite(false)
+      return
+    }
+
+    const pending = getPendingInviteUrl()
+    if (!pending) {
+      setResumingInvite(false)
+      return
+    }
+
+    setResumingInvite(true)
+    window.location.replace(pending)
+  }, [loading, session])
 
   if (isAcceptInvitePath()) {
     return <AcceptInviteFlow />
   }
 
-  if (loading) {
+  if (loading || resumingInvite) {
     return <div className="auth-loading">Loading…</div>
   }
 

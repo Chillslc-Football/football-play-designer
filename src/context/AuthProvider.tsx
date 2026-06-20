@@ -71,10 +71,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       if (!data.session) {
-        return toAuthResult(
-          null,
-          'Account created. Check your email to confirm. After confirming, you will return to this invite to accept it.',
-        )
+        const redirectHint = options?.emailRedirectTo
+          ? ' After confirming, you will return to this invite to accept it.'
+          : ' Check your email to confirm your account.'
+        return toAuthResult(null, `Account created.${redirectHint}`)
       }
 
       return toAuthResult(null)
