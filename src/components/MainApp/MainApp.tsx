@@ -13,6 +13,7 @@ import { AdminTemplatesPage } from '../../pages/AdminTemplatesPage'
 import { TeamCalendarPage } from '../../pages/TeamCalendarPage'
 import { TeamHubPage } from '../../pages/TeamHubPage'
 import { TeamMessagingPage } from '../../pages/TeamMessagingPage'
+import { TeamManagementPage } from '../../pages/TeamManagementPage'
 import { TeamUpdatesPage } from '../../pages/TeamUpdatesPage'
 import { WristbandCardsPage } from '../../pages/WristbandCardsPage'
 import { useAppAdmin } from '../../hooks/useAppAdmin'
@@ -80,6 +81,8 @@ function MainAppViews() {
             <WristbandCardsPage />
           ) : view === 'team-updates' ? (
             <TeamUpdatesPage />
+          ) : view === 'team-management' ? (
+            <TeamManagementPage />
           ) : view === 'messages' ? (
             <TeamMessagingPage />
           ) : view === 'calendar' ? (

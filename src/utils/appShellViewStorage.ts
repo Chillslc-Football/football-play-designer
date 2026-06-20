@@ -5,6 +5,7 @@ export const APP_SHELL_VIEW_STORAGE_KEY = 'football-play-designer-current-view'
 const VALID_VIEWS: readonly AppShellView[] = [
   'designer',
   'team-hub',
+  'team-management',
   'wristbands',
   'team-updates',
   'messages',

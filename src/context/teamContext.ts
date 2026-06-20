@@ -9,6 +9,7 @@ export type TeamContextValue = {
   activeTeamId: string | null
   team: Team | null
   role: TeamRole | null
+  displayName: string | null
   memberships: TeamMembership[]
   loading: boolean
   profileLoaded: boolean

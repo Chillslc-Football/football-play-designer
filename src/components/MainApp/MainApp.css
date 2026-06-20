@@ -19,13 +19,15 @@
 .main-app-body > .team-updates-page,
 .main-app-body > .team-messaging-page,
 .main-app-body > .team-calendar-page,
-.main-app-body > .team-hub-page {
+.main-app-body > .team-hub-page,
+.main-app-body > .team-management-page {
   flex: 1;
   min-height: 0;
   height: 100%;
   overflow: hidden;
 }
 
-.main-app-body > .wristband-page {
+.main-app-body > .wristband-page,
+.main-app-body > .team-management-page {
   overflow: auto;
 }

@@ -1,14 +1,12 @@
 import { useState } from 'react'
+import { useAppShell } from '../../context/AppShellContext'
 import { useAppAdmin } from '../../hooks/useAppAdmin'
 import { useAuth } from '../../hooks/useAuth'
-import { useCanInvite } from '../../hooks/useCanInvite'
 import { useTeam } from '../../hooks/useTeam'
 import { TEAM_ROLE_LABELS } from '../../utils/roleLabels'
-import { DeleteTeamDialog } from '../DeleteTeamDialog/DeleteTeamDialog'
 import { FeedbackDialog } from '../FeedbackDialog/FeedbackDialog'
 import { FeedbackReviewDialog } from '../FeedbackReviewDialog/FeedbackReviewDialog'
 import { HelpDialog } from '../HelpDialog/HelpDialog'
-import { InviteMemberDialog } from '../InviteMemberDialog/InviteMemberDialog'
 import { AppShellNav } from '../AppShellNav/AppShellNav'
 import './Header.css'
 
@@ -18,22 +16,21 @@ type HeaderProps = {
 }
 
 export function Header({ onTeamChange, onLogout }: HeaderProps) {
+  const shell = useAppShell()
   const { user, signOut } = useAuth()
-  const { team, activeTeamId, memberships, role, deleteTeam } = useTeam()
-  const canInvite = useCanInvite()
+  const { team, activeTeamId, memberships, role } = useTeam()
   const isAppAdmin = useAppAdmin()
   const email = user?.email ?? ''
   const userId = user?.id ?? ''
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [feedbackReviewOpen, setFeedbackReviewOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
-  const [inviteOpen, setInviteOpen] = useState(false)
-  const [deleteTeamOpen, setDeleteTeamOpen] = useState(false)
-  const [deleteTeamError, setDeleteTeamError] = useState<string | null>(null)
-  const [deletingTeam, setDeletingTeam] = useState(false)
 
-  const isTeamOwner = role === 'team_owner'
-  const isLastTeam = memberships.length <= 1
+  const isTeamManagementView = shell?.view === 'team-management'
+
+  function openTeamManagement() {
+    shell?.setView('team-management')
+  }
 
   function handleTeamChange(teamId: string) {
     if (onTeamChange) {
@@ -49,58 +46,8 @@ export function Header({ onTeamChange, onLogout }: HeaderProps) {
     void signOut()
   }
 
-  function handleDeleteTeamClick() {
-    if (!isTeamOwner || !team) return
-    setDeleteTeamError(null)
-    setDeleteTeamOpen(true)
-  }
-
-  async function handleConfirmDeleteTeam() {
-    if (!team || !activeTeamId) return
-
-    setDeletingTeam(true)
-    setDeleteTeamError(null)
-
-    console.log('[Header] delete team confirm', {
-      teamId: activeTeamId,
-      teamName: team.name,
-      role,
-    })
-
-    const result = await deleteTeam(activeTeamId)
-    setDeletingTeam(false)
-
-    if (result.error) {
-      console.error('[Header] delete team failed', {
-        teamId: activeTeamId,
-        role,
-        error: result.error,
-      })
-      setDeleteTeamError(result.error)
-      return
-    }
-
-    console.log('[Header] delete team succeeded', { teamId: activeTeamId })
-    setDeleteTeamOpen(false)
-  }
-
   return (
     <header className="header no-print">
-      {team && (
-        <DeleteTeamDialog
-          open={deleteTeamOpen}
-          teamName={team.name}
-          isLastTeam={isLastTeam}
-          deleting={deletingTeam}
-          error={deleteTeamError}
-          onConfirm={() => void handleConfirmDeleteTeam()}
-          onCancel={() => {
-            if (deletingTeam) return
-            setDeleteTeamOpen(false)
-            setDeleteTeamError(null)
-          }}
-        />
-      )}
       {userId && (
         <FeedbackDialog
           open={feedbackOpen}
@@ -116,17 +63,16 @@ export function Header({ onTeamChange, onLogout }: HeaderProps) {
         />
       )}
       <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
-      {team && activeTeamId && canInvite && (
-        <InviteMemberDialog
-          open={inviteOpen}
-          teamId={activeTeamId}
-          onClose={() => setInviteOpen(false)}
-        />
-      )}
 
       <div className="header-inner">
         <div className="header-brand">
-          <h1 className="header-title">Winner&apos;s Choice</h1>
+          <a
+            className="header-brand-link"
+            href="https://www.winnerschoiceplaybook.com/"
+            rel="noopener noreferrer"
+          >
+            <h1 className="header-title">Winner&apos;s Choice</h1>
+          </a>
         </div>
 
         <AppShellNav />
@@ -158,22 +104,14 @@ export function Header({ onTeamChange, onLogout }: HeaderProps) {
                   {TEAM_ROLE_LABELS[role]}
                 </span>
               )}
-              {canInvite && team && (
+              {team && (
                 <button
                   type="button"
-                  className="btn header-action-btn"
-                  onClick={() => setInviteOpen(true)}
+                  className={`btn header-action-btn${isTeamManagementView ? ' is-active' : ''}`}
+                  aria-current={isTeamManagementView ? 'page' : undefined}
+                  onClick={openTeamManagement}
                 >
-                  Invite
-                </button>
-              )}
-              {isTeamOwner && team && (
-                <button
-                  type="button"
-                  className="btn btn-danger header-action-btn"
-                  onClick={handleDeleteTeamClick}
-                >
-                  Delete Team
+                  Team Management
                 </button>
               )}
             </div>

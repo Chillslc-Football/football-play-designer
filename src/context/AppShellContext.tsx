@@ -4,6 +4,7 @@ import type { AdminTemplateEditSession } from '../types/adminTemplateEdit'
 export type AppShellView =
   | 'designer'
   | 'team-hub'
+  | 'team-management'
   | 'wristbands'
   | 'team-updates'
   | 'messages'

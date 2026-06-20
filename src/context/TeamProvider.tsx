@@ -14,6 +14,7 @@ function applyLoadResult(
     setActiveTeamId: (id: string | null) => void
     setTeam: (team: Team | null) => void
     setRole: (role: TeamRole | null) => void
+    setDisplayName: (displayName: string | null) => void
     setMemberships: (memberships: TeamMembership[]) => void
     setNeedsOnboarding: (needs: boolean) => void
   },
@@ -21,6 +22,7 @@ function applyLoadResult(
   setters.setActiveTeamId(result.activeTeamId)
   setters.setTeam(result.team)
   setters.setRole(result.role)
+  setters.setDisplayName(result.profile?.display_name?.trim() || null)
   setters.setMemberships(result.memberships)
   setters.setNeedsOnboarding(result.needsOnboarding)
 }
@@ -32,6 +34,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null)
   const [team, setTeam] = useState<Team | null>(null)
   const [role, setRole] = useState<TeamRole | null>(null)
+  const [displayName, setDisplayName] = useState<string | null>(null)
   const [memberships, setMemberships] = useState<TeamMembership[]>([])
   const [loading, setLoading] = useState(true)
   const [profileLoaded, setProfileLoaded] = useState(false)
@@ -44,6 +47,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
       setActiveTeamId(null)
       setTeam(null)
       setRole(null)
+      setDisplayName(null)
       setMemberships([])
       setProfileLoaded(false)
       setIsAppAdmin(false)
@@ -64,6 +68,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
         setActiveTeamId,
         setTeam,
         setRole,
+        setDisplayName,
         setMemberships,
         setNeedsOnboarding,
       })
@@ -86,6 +91,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
       setActiveTeamId(null)
       setTeam(null)
       setRole(null)
+      setDisplayName(null)
       setMemberships([])
       setIsAppAdmin(false)
       setNeedsOnboarding(false)
@@ -120,6 +126,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
           setActiveTeamId,
           setTeam,
           setRole,
+          setDisplayName,
           setMemberships,
           setNeedsOnboarding,
         })
@@ -129,6 +136,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
         setActiveTeamId(null)
         setTeam(null)
         setRole(null)
+        setDisplayName(null)
         setMemberships([])
         setNeedsOnboarding(true)
         return { error: message }
@@ -207,6 +215,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
           setActiveTeamId,
           setTeam,
           setRole,
+          setDisplayName,
           setMemberships,
           setNeedsOnboarding,
         })
@@ -233,6 +242,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
       activeTeamId,
       team,
       role,
+      displayName,
       memberships,
       loading,
       profileLoaded,
@@ -247,6 +257,7 @@ export function TeamProvider({ children }: TeamProviderProps) {
       activeTeamId,
       team,
       role,
+      displayName,
       memberships,
       loading,
       profileLoaded,

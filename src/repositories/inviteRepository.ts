@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabaseClient'
-import type { InvitePreview, InvitePreviewStatus, InviteRole, TeamInvite } from '../types/invite'
+import type { InvitePreview, InvitePreviewStatus, InviteRole, TeamInvite, TeamInviteRecord } from '../types/invite'
+import type { TeamMemberRecord } from '../types/teamRoster'
+import type { TeamRole } from '../types/team'
 
 type PreviewRow = {
   team_name: string | null
@@ -153,4 +155,109 @@ export async function acceptTeamInvite(token: string): Promise<string> {
   }
 
   return data.trim()
+}
+
+type TeamMemberRow = {
+  user_id: string
+  role: TeamRole
+}
+
+type ProfileNameRow = {
+  id: string
+  display_name: string | null
+}
+
+const TEAM_INVITE_EDITOR_COLUMNS =
+  'id, team_id, role, email, token, expires_at, created_at, accepted_at, revoked_at'
+
+type TeamInviteRosterRow = Omit<TeamInviteRecord, 'token'>
+
+export async function fetchTeamInvitesForTeam(
+  teamId: string,
+  options: { includeToken: boolean },
+): Promise<TeamInviteRecord[]> {
+  if (options.includeToken) {
+    const { data, error } = await supabase
+      .from('team_invites')
+      .select(TEAM_INVITE_EDITOR_COLUMNS)
+      .eq('team_id', teamId)
+      .is('accepted_at', null)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return (data ?? []) as TeamInviteRecord[]
+  }
+
+  const { data, error } = await supabase.rpc('get_team_invite_roster', {
+    p_team_id: teamId,
+  })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return ((data ?? []) as TeamInviteRosterRow[]).map((row) => ({
+    ...row,
+    token: null,
+  }))
+}
+
+export async function revokeTeamInvite(inviteId: string): Promise<void> {
+  const { error } = await supabase
+    .from('team_invites')
+    .update({ revoked_at: new Date().toISOString() })
+    .eq('id', inviteId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
+
+async function fetchProfileDisplayNames(userIds: string[]): Promise<Map<string, string>> {
+  const uniqueIds = [...new Set(userIds.filter((id) => id.length > 0))]
+  if (uniqueIds.length === 0) {
+    return new Map()
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, display_name')
+    .in('id', uniqueIds)
+
+  if (error) {
+    throw new Error(`Failed to load member profiles: ${error.message}`)
+  }
+
+  const names = new Map<string, string>()
+  for (const row of (data ?? []) as ProfileNameRow[]) {
+    const trimmed = row.display_name?.trim()
+    if (trimmed) {
+      names.set(row.id, trimmed)
+    }
+  }
+
+  return names
+}
+
+export async function fetchTeamMembersForTeam(teamId: string): Promise<TeamMemberRecord[]> {
+  const { data, error } = await supabase
+    .from('team_members')
+    .select('user_id, role')
+    .eq('team_id', teamId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  const rows = (data ?? []) as TeamMemberRow[]
+  const displayNames = await fetchProfileDisplayNames(rows.map((row) => row.user_id))
+
+  return rows.map((row) => ({
+    user_id: row.user_id,
+    role: row.role,
+    display_name: displayNames.get(row.user_id) ?? null,
+  }))
 }
