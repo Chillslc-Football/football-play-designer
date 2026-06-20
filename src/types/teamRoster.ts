@@ -21,6 +21,7 @@ export type MemberRosterRow = RosterRowBase & {
   kind: 'member'
   role: TeamRole
   status: 'Active'
+  user_id: string
 }
 
 export type InviteRosterRow = RosterRowBase & {

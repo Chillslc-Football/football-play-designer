@@ -9,12 +9,14 @@ import { useAuth } from '../hooks/useAuth'
 import { useCanEdit } from '../hooks/useCanEdit'
 import { useTeam } from '../hooks/useTeam'
 import * as inviteRepository from '../repositories/inviteRepository'
+import * as teamRepository from '../repositories/teamRepository'
 import { INVITE_ROLE_LABELS } from '../types/invite'
 import type { RosterRow } from '../types/teamRoster'
 import { buildAcceptInviteUrl } from '../utils/inviteToken'
 import { TEAM_ROLE_LABELS } from '../utils/roleLabels'
 import {
   buildRosterRows,
+  canRemoveTeamMember,
   formatRosterDate,
   rosterEmailLabel,
   rosterNameLabel,
@@ -61,9 +63,12 @@ export function TeamManagementPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [revokeTargetId, setRevokeTargetId] = useState<string | null>(null)
   const [revoking, setRevoking] = useState(false)
+  const [removeTargetUserId, setRemoveTargetUserId] = useState<string | null>(null)
+  const [removing, setRemoving] = useState(false)
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(null)
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null)
   const [deleteTeamOpen, setDeleteTeamOpen] = useState(false)
@@ -152,6 +157,7 @@ export function TeamManagementPage() {
 
     setRevoking(true)
     setActionError(null)
+    setActionSuccess(null)
 
     try {
       await inviteRepository.revokeTeamInvite(revokeTargetId)
@@ -164,6 +170,28 @@ export function TeamManagementPage() {
       setRevokeTargetId(null)
     } finally {
       setRevoking(false)
+    }
+  }
+
+  async function handleConfirmRemoveMember() {
+    if (!canEdit || !activeTeamId || !removeTargetUserId) return
+
+    setRemoving(true)
+    setActionError(null)
+    setActionSuccess(null)
+
+    try {
+      await teamRepository.removeTeamMember(activeTeamId, removeTargetUserId)
+      setRemoveTargetUserId(null)
+      setActionSuccess('Member removed from the team.')
+      await loadRoster()
+    } catch (removeError) {
+      setActionError(
+        removeError instanceof Error ? removeError.message : 'Could not remove member',
+      )
+      setRemoveTargetUserId(null)
+    } finally {
+      setRemoving(false)
     }
   }
 
@@ -237,6 +265,20 @@ export function TeamManagementPage() {
 
       {canEdit && (
         <ConfirmDialog
+          open={removeTargetUserId !== null}
+          message="Remove this person from the team? Their account will stay active, but they will lose access to this team."
+          variant="delete"
+          confirmLabel={removing ? 'Removing…' : 'Remove from team'}
+          onConfirm={() => void handleConfirmRemoveMember()}
+          onCancel={() => {
+            if (removing) return
+            setRemoveTargetUserId(null)
+          }}
+        />
+      )}
+
+      {canEdit && (
+        <ConfirmDialog
           open={revokeTargetId !== null}
           message="Revoke this invite? The invite link will no longer work."
           variant="delete"
@@ -283,6 +325,9 @@ export function TeamManagementPage() {
 
         {error && <p className="team-management-page-error app-shell-page-error">{error}</p>}
         {actionError && <p className="team-management-page-error app-shell-page-error">{actionError}</p>}
+        {actionSuccess && (
+          <p className="team-management-page-success app-shell-page-success">{actionSuccess}</p>
+        )}
 
         <div className="team-management-content app-shell-page-body">
           <section
@@ -343,6 +388,9 @@ export function TeamManagementPage() {
                     const meta = inviteMeta(row)
                     const isPendingInvite =
                       canEdit && row.kind === 'invite' && row.status === 'Pending'
+                    const canRemoveMember =
+                      row.kind === 'member' &&
+                      canRemoveTeamMember(role, user?.id ?? null, row.user_id, row.role)
 
                     return (
                       <tr key={row.id}>
@@ -384,6 +432,21 @@ export function TeamManagementPage() {
                                     Revoke Invite
                                   </button>
                                 )}
+                              </div>
+                            ) : canRemoveMember ? (
+                              <div className="team-roster-actions">
+                                <button
+                                  type="button"
+                                  className="btn btn-danger team-roster-action-btn"
+                                  disabled={removing}
+                                  onClick={() => {
+                                    setActionError(null)
+                                    setActionSuccess(null)
+                                    setRemoveTargetUserId(row.user_id)
+                                  }}
+                                >
+                                  Remove
+                                </button>
                               </div>
                             ) : (
                               <span className="team-roster-no-actions">—</span>

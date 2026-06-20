@@ -338,3 +338,14 @@ export async function loadActiveTeamAfterCreate(
 
   return { role: membership.role as TeamRole, team }
 }
+
+export async function removeTeamMember(teamId: string, userId: string): Promise<void> {
+  const { error } = await supabase.rpc('remove_team_member', {
+    p_team_id: teamId,
+    p_user_id: userId,
+  })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}

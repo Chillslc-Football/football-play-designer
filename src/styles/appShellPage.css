@@ -50,6 +50,7 @@
 }
 
 .app-shell-page-error,
+.app-shell-page-success,
 .app-shell-page-readonly,
 .app-shell-page-loading,
 .app-shell-page-empty {
@@ -59,6 +60,10 @@
 
 .app-shell-page-error {
   color: var(--danger);
+}
+
+.app-shell-page-success {
+  color: var(--success-text, #1f6b3a);
 }
 
 @media (min-width: 769px) {

@@ -1,6 +1,22 @@
 import type { InviteDisplayStatus, TeamInviteRecord } from '../types/invite'
+import type { TeamRole } from '../types/team'
 import type { RosterRow, TeamMemberRecord } from '../types/teamRoster'
 import { formatTeamUpdateTimestamp } from './teamUpdateUtils'
+
+/** Whether the signed-in user may remove a member from the current team. */
+export function canRemoveTeamMember(
+  actorRole: TeamRole | null,
+  actorUserId: string | null,
+  targetUserId: string,
+  targetMemberRole: TeamRole,
+): boolean {
+  if (!actorRole || !actorUserId) return false
+  if (actorRole !== 'team_owner' && actorRole !== 'coach') return false
+  if (targetUserId === actorUserId) return false
+  if (targetMemberRole === 'team_owner') return false
+  if (actorRole === 'coach' && targetMemberRole === 'coach') return false
+  return targetMemberRole === 'coach' || targetMemberRole === 'player' || targetMemberRole === 'parent'
+}
 
 export function getInviteDisplayStatus(invite: TeamInviteRecord): InviteDisplayStatus {
   if (invite.revoked_at) {
@@ -33,6 +49,7 @@ export function buildRosterRows(
     .map((member) => ({
       id: `member-${member.user_id}`,
       kind: 'member' as const,
+      user_id: member.user_id,
       name: member.display_name?.trim() || null,
       email: null,
       role: member.role,
