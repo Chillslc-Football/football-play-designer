@@ -9,6 +9,7 @@ import * as cloudPlayRepository from './repositories/playRepository'
 import * as schemeTemplateRepository from './repositories/schemeTemplateRepository'
 import { AdminTemplateEditBar } from './components/AdminTemplateEditBar/AdminTemplateEditBar'
 import { LoadPlayModal } from './components/LoadPlayModal/LoadPlayModal'
+import { PlayLibraryModal } from './components/PlayLibraryModal/PlayLibraryModal'
 import { NewPlaySetupDialog, type PlaySetupDialogMode } from './components/NewPlaySetupDialog/NewPlaySetupDialog'
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog'
 import { CategoryReminderDialog } from './components/CategoryReminderDialog/CategoryReminderDialog'
@@ -137,9 +138,18 @@ import {
   type NewPlaySetupInput,
 } from './utils/newPlaySetup'
 import { useMediaQuery } from './hooks/useMediaQuery'
+import {
+  clearOpenPlayLibraryPending,
+  shouldOpenPlayLibrary,
+} from './utils/playbookLink'
 import './App.css'
 
 const MOBILE_VIEWPORT_MEDIA = '(max-width: 768px)'
+
+function readInitialSetupPanelOpen(): boolean {
+  if (typeof window === 'undefined') return true
+  return !window.matchMedia(MOBILE_VIEWPORT_MEDIA).matches
+}
 
 type PendingAction =
   | { type: 'newPlay' }
@@ -170,6 +180,7 @@ function App() {
   const { activeTeamId, switchTeam } = useTeam()
   const canEdit = useCanEdit()
   const fieldCanEdit = canEdit || Boolean(adminTemplateEdit)
+  const fieldViewOnly = !fieldCanEdit || isMobileViewport
   const useCloud = Boolean(user?.id && activeTeamId)
 
   const [play, setPlay] = useState<Play>(createEmptyPlay)
@@ -185,13 +196,14 @@ function App() {
   const [selectedDefenderId, setSelectedDefenderId] = useState<DefenderLabel | null>(null)
   const [drawingMode, setDrawingMode] = useState<DrawingMode>('position')
   const [motionType, setMotionType] = useState<MotionType>('jog')
-  const [setupPanelOpen, setSetupPanelOpen] = useState(true)
+  const [setupPanelOpen, setSetupPanelOpen] = useState(readInitialSetupPanelOpen)
   const [dataLoading, setDataLoading] = useState(false)
   const [playBaseline, setPlayBaseline] = useState(() => playToComparable(createEmptyPlay()))
   const [dialog, setDialog] = useState<DialogState>(null)
   const [categoryReminderOpen, setCategoryReminderOpen] = useState(false)
   const [newPlaySetupOpen, setNewPlaySetupOpen] = useState(false)
   const [loadPlayModalOpen, setLoadPlayModalOpen] = useState(false)
+  const [playLibraryOpen, setPlayLibraryOpen] = useState(() => shouldOpenPlayLibrary())
   const [playSetupMode, setPlaySetupMode] = useState<PlaySetupDialogMode>('create')
   const [newPlaySetupDefaults, setNewPlaySetupDefaults] = useState(() =>
     getNewPlaySetupDefaults(createEmptyPlay()),
@@ -455,6 +467,18 @@ function App() {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [formationHasUnsavedChanges, hasUnsavedPlayChanges])
+
+  useEffect(() => {
+    if (shell?.launchMode === 'play-library') {
+      setPlayLibraryOpen(true)
+    }
+  }, [shell?.launchMode])
+
+  useEffect(() => {
+    if (!playLibraryOpen) return
+    clearOpenPlayLibraryPending()
+    shell?.clearLaunchMode()
+  }, [playLibraryOpen, shell])
 
   useEffect(() => {
     if (!userId || !activeTeamId || !canEdit || adminTemplateEdit) return
@@ -896,8 +920,21 @@ function App() {
     setLoadPlayModalOpen(true)
   }
 
+  function handleOpenPlayLibrary() {
+    setPlayLibraryOpen(true)
+  }
+
+  function handlePlayLibraryClose() {
+    setPlayLibraryOpen(false)
+  }
+
   function handleLoadPlayFromModal(playId: string) {
     setLoadPlayModalOpen(false)
+    handleLoadPlay(playId)
+  }
+
+  function handleLoadPlayFromLibrary(playId: string) {
+    setPlayLibraryOpen(false)
     handleLoadPlay(playId)
   }
 
@@ -1725,6 +1762,14 @@ function App() {
         onClose={handleLoadPlayModalClose}
       />
 
+      <PlayLibraryModal
+        open={playLibraryOpen}
+        plays={savedPlays}
+        canSharePdf={canEdit}
+        onLoadPlay={handleLoadPlayFromLibrary}
+        onClose={handlePlayLibraryClose}
+      />
+
       <div className={`app-body ${setupPanelOpen && !adminTemplateEdit ? '' : 'setup-collapsed'}`}>
         {!adminTemplateEdit && (
         <PlaySetupPanel
@@ -1777,6 +1822,7 @@ function App() {
           onDrawingModeChange={setDrawingMode}
           onNewPlay={handleNewPlay}
           onOpenLoadPlay={handleOpenLoadPlayModal}
+          onOpenPlayLibrary={handleOpenPlayLibrary}
           onEditPlaySetup={openEditPlaySetup}
           onSaveChanges={handleSaveChanges}
           onSaveAsNew={handleSaveAsNew}
@@ -1811,9 +1857,28 @@ function App() {
           )}
 
           {isMobileViewport && (
-            <p className="play-designer-mobile-notice" role="status">
-              Play Designer editing works best on desktop. You can still view your playbook from mobile.
-            </p>
+            <>
+              <p className="play-designer-mobile-notice" role="status">
+                Play editing works best on desktop. You can load and view plays here.
+              </p>
+              <div className="play-designer-mobile-access">
+                <button type="button" className="btn" onClick={handleOpenLoadPlayModal}>
+                  Load Play
+                </button>
+                <button type="button" className="btn btn-primary" onClick={handleOpenPlayLibrary}>
+                  Play Library
+                </button>
+                {!setupPanelOpen && (
+                  <button
+                    type="button"
+                    className="btn play-designer-mobile-setup-btn"
+                    onClick={() => setSetupPanelOpen(true)}
+                  >
+                    All Controls
+                  </button>
+                )}
+              </div>
+            </>
           )}
 
           <div className="field-stage">
@@ -1826,7 +1891,7 @@ function App() {
                   >
                     <Field
                         playType={play.playType}
-                        viewOnly={!fieldCanEdit}
+                        viewOnly={fieldViewOnly}
                         schemePositionsOnly={Boolean(adminTemplateEdit)}
                         showAlignmentGrid={fieldGridEnabled}
                         players={play.players}

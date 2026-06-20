@@ -1,16 +1,10 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useAppShell } from '../../context/AppShellContext'
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 import { CategorySelector } from '../CategorySelector/CategorySelector'
 import { ManageCategoriesDialog } from '../ManageCategoriesDialog/ManageCategoriesDialog'
-import { PlayLibraryModal } from '../PlayLibraryModal/PlayLibraryModal'
 import type { Play } from '../../types/play'
 import type { PlayType } from '../../types/playType'
 import type { CategoryFilterId } from '../../utils/categoryUtils'
 import type { PlayFilterId } from '../../utils/formationUtils'
-import {
-  clearOpenPlayLibraryPending,
-  shouldOpenPlayLibrary,
-} from '../../utils/playbookLink'
 import './PlayControls.css'
 
 type FormationFilterOption = {
@@ -46,6 +40,7 @@ export type PlayControlsProps = {
   libraryPlays: Play[]
   selectedLoadId: string
   onLoadPlay: (playId: string) => void
+  onOpenPlayLibrary: () => void
 }
 
 type PlayControlsContextValue = PlayControlsProps & {
@@ -70,21 +65,7 @@ export function PlayControlsRoot({
   children,
   ...props
 }: PlayControlsProps & { children: ReactNode }) {
-  const shell = useAppShell()
   const [manageOpen, setManageOpen] = useState(false)
-  const [libraryOpen, setLibraryOpen] = useState(() => shouldOpenPlayLibrary())
-
-  useEffect(() => {
-    if (shell?.launchMode === 'play-library') {
-      setLibraryOpen(true)
-    }
-  }, [shell?.launchMode])
-
-  useEffect(() => {
-    if (!libraryOpen) return
-    clearOpenPlayLibraryPending()
-    shell?.clearLaunchMode()
-  }, [libraryOpen, shell])
 
   const sortedPlays = useMemo(
     () => [...props.filteredPlays].sort((a, b) => a.name.localeCompare(b.name)),
@@ -108,7 +89,7 @@ export function PlayControlsRoot({
       defaultCategoryOptions,
       customCategoryOptions,
       openManageCategories: () => setManageOpen(true),
-      openPlayLibrary: () => setLibraryOpen(true),
+      openPlayLibrary: props.onOpenPlayLibrary,
     }),
     [props, sortedPlays, defaultCategoryOptions, customCategoryOptions],
   )
@@ -124,13 +105,6 @@ export function PlayControlsRoot({
         onAddCustomCategory={props.onAddCustomCategory}
         onDeleteCategory={props.onDeleteCustomCategory}
         onClose={() => setManageOpen(false)}
-      />
-      <PlayLibraryModal
-        open={libraryOpen}
-        plays={props.libraryPlays}
-        canSharePdf={props.canEdit}
-        onLoadPlay={props.onLoadPlay}
-        onClose={() => setLibraryOpen(false)}
       />
     </PlayControlsContext.Provider>
   )

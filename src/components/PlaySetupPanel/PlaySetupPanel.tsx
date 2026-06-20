@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { FormationSelector } from '../FormationSelector/FormationSelector'
 import { Notes } from '../Notes/Notes'
 import {
@@ -83,6 +84,7 @@ type PlaySetupPanelProps = {
   onDrawingModeChange: (mode: DrawingMode) => void
   onNewPlay: () => void
   onOpenLoadPlay: () => void
+  onOpenPlayLibrary: () => void
   onEditPlaySetup: () => void
   onSaveChanges: () => void
   onSaveAsNew: () => void
@@ -217,6 +219,7 @@ export function PlaySetupPanel({
   onDrawingModeChange,
   onNewPlay,
   onOpenLoadPlay,
+  onOpenPlayLibrary,
   onEditPlaySetup,
   onSaveChanges,
   onSaveAsNew,
@@ -233,6 +236,8 @@ export function PlaySetupPanel({
   playNotes,
   onPlayNotesChange,
 }: PlaySetupPanelProps) {
+  const isMobileViewport = useMediaQuery('(max-width: 768px)')
+
   const playControlsProps: PlayControlsProps = {
     playType,
     canEdit,
@@ -255,6 +260,7 @@ export function PlaySetupPanel({
     libraryPlays,
     selectedLoadId,
     onLoadPlay,
+    onOpenPlayLibrary,
   }
 
   const schemeSectionTitle = playType === 'defensive' ? 'Front' : 'Formation'
@@ -293,6 +299,7 @@ export function PlaySetupPanel({
               title="Saved Plays & Playbooks"
               helpContent={SECTION_HELP.savedPlays}
               className="sidebar-section-library"
+              defaultExpanded={isMobileViewport}
             >
               <PlayControlsLibrarySection />
             </SidebarCollapsibleSection>

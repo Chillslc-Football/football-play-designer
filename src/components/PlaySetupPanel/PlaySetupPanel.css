@@ -243,7 +243,7 @@
 @media (max-width: 768px) {
   .play-setup-panel {
     width: 100%;
-    max-height: none;
+    max-height: min(45vh, 420px);
     border-right: none;
     border-bottom: 1px solid var(--sidebar-border);
   }
@@ -256,5 +256,7 @@
     writing-mode: horizontal-tb;
     border-radius: var(--radius-sm);
     border: 1px solid var(--sidebar-border);
+    min-height: 44px;
+    padding: 10px 14px;
   }
 }

@@ -202,11 +202,39 @@
   border: 1px solid #c5d4c4;
 }
 
+.play-designer-mobile-access {
+  display: none;
+}
+
 @media (max-width: 768px) {
+  .play-designer-mobile-access {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 var(--space-sm) 8px;
+    flex-shrink: 0;
+  }
+
+  .play-designer-mobile-access .btn {
+    flex: 1 1 calc(50% - 4px);
+    min-height: 44px;
+  }
+
+  .play-designer-mobile-setup-btn {
+    flex: 1 1 100%;
+  }
+
+  .play-designer-mobile-notice {
+    margin: 0 var(--space-sm) 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
   .app {
     height: auto;
     min-height: 100svh;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .app-body {
@@ -216,11 +244,24 @@
 
   .canvas-area {
     overflow: visible;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .field-stage {
+    flex: 1 1 auto;
+    min-height: 280px;
+  }
+
+  .field-column {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .field-zoom-slot,
   .field-zoom-scaler {
-    --field-base-w: 100cqw;
+    --field-base-w: min(100cqw, calc(100cqh * 60.3 / 54.5));
   }
 
   .field-column .field-zoom-scaler .field-stack {

@@ -42,3 +42,14 @@
   grid-template-columns: 1fr 1fr;
   gap: 6px;
 }
+
+@media (max-width: 768px) {
+  .play-controls-filters-row {
+    grid-template-columns: 1fr;
+  }
+
+  .play-controls-library-btn,
+  .play-controls-library .select-field {
+    min-height: 44px;
+  }
+}
