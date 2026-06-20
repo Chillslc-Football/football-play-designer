@@ -1,0 +1,28 @@
+.save-playbook-pdf-dialog-overlay {
+  z-index: 1200;
+}
+
+.save-playbook-pdf-dialog {
+  width: min(100%, 440px);
+}
+
+.save-playbook-pdf-dialog-title {
+  margin: 0 0 var(--space-sm);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-on-surface);
+}
+
+.save-playbook-pdf-dialog-message {
+  margin: 0 0 var(--space-md);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-on-surface);
+}
+
+.save-playbook-pdf-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}

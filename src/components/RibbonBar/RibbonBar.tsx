@@ -19,6 +19,7 @@ import {
   printPlaybook,
 } from '../../utils/playbookPrint'
 import { PlayTypeSelector } from '../PlayTypeSelector/PlayTypeSelector'
+import { SavePlaybookPdfDialog } from '../SavePlaybookPdfDialog/SavePlaybookPdfDialog'
 import type { DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
 import './RibbonBar.css'
 
@@ -107,6 +108,7 @@ export function RibbonBar({
   onNavigate,
 }: RibbonBarProps) {
   const [shareOpen, setShareOpen] = useState(false)
+  const [savePdfDialogOpen, setSavePdfDialogOpen] = useState(false)
   const shareRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -223,13 +225,19 @@ export function RibbonBar({
     setShareOpen((open) => !open)
   }
 
-  function handleShareAction(action: () => void) {
-    action()
+  function handleSaveAsPdf() {
     setShareOpen(false)
+    setSavePdfDialogOpen(true)
+  }
+
+  function handleSavePdfContinue() {
+    setSavePdfDialogOpen(false)
+    downloadPlaybookPdf()
   }
 
   return (
-    <div className="ribbon-bar no-print" aria-label="Play Designer ribbon">
+    <>
+      <div className="ribbon-bar no-print" aria-label="Play Designer ribbon">
       <div className="ribbon-bar-row">
         <RibbonSection label="File">
           <button
@@ -309,15 +317,18 @@ export function RibbonBar({
                   type="button"
                   className="btn"
                   role="menuitem"
-                  onClick={() => handleShareAction(downloadPlaybookPdf)}
+                  onClick={handleSaveAsPdf}
                 >
-                  Download PDF
+                  Save as PDF
                 </button>
                 <button
                   type="button"
                   className="btn"
                   role="menuitem"
-                  onClick={() => handleShareAction(emailPlaybookPdf)}
+                  onClick={() => {
+                    emailPlaybookPdf()
+                    setShareOpen(false)
+                  }}
                 >
                   Email PDF
                 </button>
@@ -438,5 +449,12 @@ export function RibbonBar({
         </RibbonSection>
       </div>
     </div>
+
+      <SavePlaybookPdfDialog
+        open={savePdfDialogOpen}
+        onContinue={handleSavePdfContinue}
+        onCancel={() => setSavePdfDialogOpen(false)}
+      />
+    </>
   )
 }

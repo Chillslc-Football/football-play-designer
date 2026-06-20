@@ -20,8 +20,8 @@ export function printPlaybook(): void {
 }
 
 /**
- * Generates the playbook via the same print pipeline; user chooses Save as PDF
- * in the print dialog to download the file.
+ * Opens the system print dialog so the user can choose Save as PDF.
+ * Call after showing SavePlaybookPdfDialog instructions.
  */
 export function downloadPlaybookPdf(): void {
   openEmailDraftAfterPrint = false

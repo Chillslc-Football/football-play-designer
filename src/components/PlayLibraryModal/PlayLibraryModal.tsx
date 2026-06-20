@@ -20,6 +20,7 @@ import {
   printPlaybook,
 } from '../../utils/playbookPrint'
 import { PlayThumbnail } from '../PlayThumbnail/PlayThumbnail'
+import { SavePlaybookPdfDialog } from '../SavePlaybookPdfDialog/SavePlaybookPdfDialog'
 import '../ConfirmDialog/ConfirmDialog.css'
 import './PlayLibraryModal.css'
 
@@ -51,6 +52,7 @@ export function PlayLibraryModal({
   const [layout, setLayout] = useState<PlayLibraryLayout>(DEFAULT_PLAY_LIBRARY_LAYOUT)
   const [playFilter, setPlayFilter] = useState<PlayLibraryFilter>(DEFAULT_PLAY_LIBRARY_FILTER)
   const [pageIndex, setPageIndex] = useState(0)
+  const [savePdfDialogOpen, setSavePdfDialogOpen] = useState(false)
 
   const filteredPlays = useMemo(
     () => filterLibraryPlays(plays, playFilter),
@@ -121,7 +123,12 @@ export function PlayLibraryModal({
     printPlaybook()
   }
 
-  function handleDownloadPdf() {
+  function handleSaveAsPdf() {
+    setSavePdfDialogOpen(true)
+  }
+
+  function handleSavePdfContinue() {
+    setSavePdfDialogOpen(false)
     downloadPlaybookPdf()
   }
 
@@ -237,8 +244,8 @@ export function PlayLibraryModal({
               {canSharePdf && (
                 <div className="play-library-share" aria-label="Share PDF">
                   <span className="play-library-share-label">Share PDF</span>
-                  <button type="button" className="btn" onClick={handleDownloadPdf}>
-                    Download PDF
+                  <button type="button" className="btn" onClick={handleSaveAsPdf}>
+                    Save as PDF
                   </button>
                   <button type="button" className="btn" onClick={handleEmailPdf}>
                     Email PDF
@@ -322,6 +329,12 @@ export function PlayLibraryModal({
           ))
         })}
       </div>
+
+      <SavePlaybookPdfDialog
+        open={savePdfDialogOpen}
+        onContinue={handleSavePdfContinue}
+        onCancel={() => setSavePdfDialogOpen(false)}
+      />
     </>,
     document.body,
   )
