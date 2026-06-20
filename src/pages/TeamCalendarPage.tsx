@@ -127,11 +127,13 @@ export function TeamCalendarPage() {
     setSaving(true)
     setError(null)
 
+    const payload: TeamEventDraft = { ...draft, location: null }
+
     try {
       if (editingExisting) {
-        await teamEventRepository.updateTeamEvent(activeTeamId, draft)
+        await teamEventRepository.updateTeamEvent(activeTeamId, payload)
       } else {
-        await teamEventRepository.createTeamEvent(activeTeamId, draft)
+        await teamEventRepository.createTeamEvent(activeTeamId, payload)
       }
 
       await loadEvents()
@@ -317,9 +319,9 @@ export function TeamCalendarPage() {
         ) : (
           <div className="team-calendar-editor app-shell-page-body">
             <section className="team-calendar-editor-form">
-              <div className="form-group">
+              <div className="form-group team-calendar-editor-field">
                 <label className="field-label" htmlFor="team-event-title">
-                  Title
+                  Title <span className="team-calendar-field-required">*</span>
                 </label>
                 <input
                   id="team-event-title"
@@ -328,80 +330,66 @@ export function TeamCalendarPage() {
                   readOnly={!canEdit}
                   maxLength={200}
                   placeholder="Varsity practice"
+                  required
                   onChange={(event) =>
                     setDraft((current) => ({ ...current, title: event.target.value }))
                   }
                 />
               </div>
 
-              <div className="form-group">
-                <label className="field-label" htmlFor="team-event-starts-at">
-                  Start date & time
-                </label>
-                <input
-                  id="team-event-starts-at"
-                  type="datetime-local"
-                  className="input-field"
-                  value={isoToDatetimeLocal(draft.starts_at)}
-                  readOnly={!canEdit}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      starts_at: datetimeLocalToIso(event.target.value),
-                    }))
-                  }
-                />
+              <div className="team-calendar-editor-datetime-row">
+                <div className="form-group team-calendar-editor-field">
+                  <label className="field-label" htmlFor="team-event-starts-at">
+                    Start Date &amp; Time <span className="team-calendar-field-required">*</span>
+                  </label>
+                  <input
+                    id="team-event-starts-at"
+                    type="datetime-local"
+                    className="input-field"
+                    value={isoToDatetimeLocal(draft.starts_at)}
+                    readOnly={!canEdit}
+                    required
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        starts_at: datetimeLocalToIso(event.target.value),
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="form-group team-calendar-editor-field">
+                  <label className="field-label" htmlFor="team-event-ends-at">
+                    End Date &amp; Time <span className="team-calendar-field-required">*</span>
+                  </label>
+                  <input
+                    id="team-event-ends-at"
+                    type="datetime-local"
+                    className="input-field"
+                    value={isoToDatetimeLocal(draft.ends_at)}
+                    readOnly={!canEdit}
+                    required
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        ends_at: datetimeLocalToIso(event.target.value),
+                      }))
+                    }
+                  />
+                </div>
               </div>
 
-              <div className="form-group">
-                <label className="field-label" htmlFor="team-event-ends-at">
-                  End date & time
-                </label>
-                <input
-                  id="team-event-ends-at"
-                  type="datetime-local"
-                  className="input-field"
-                  value={isoToDatetimeLocal(draft.ends_at)}
-                  readOnly={!canEdit}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      ends_at: datetimeLocalToIso(event.target.value),
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="field-label" htmlFor="team-event-location">
-                  Location
-                </label>
-                <input
-                  id="team-event-location"
-                  className="input-field"
-                  value={draft.location ?? ''}
-                  readOnly={!canEdit}
-                  maxLength={200}
-                  placeholder="Home field"
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      location: event.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="form-group">
+              <div className="form-group team-calendar-editor-field">
                 <label className="field-label" htmlFor="team-event-description">
-                  Description
+                  Description{' '}
+                  <span className="team-calendar-field-optional">optional</span>
                 </label>
                 <textarea
                   id="team-event-description"
                   className="input-field team-calendar-editor-description"
                   value={draft.description ?? ''}
                   readOnly={!canEdit}
-                  rows={6}
+                  rows={3}
                   placeholder="Arrive 15 minutes early. Bring cleats and water."
                   onChange={(event) =>
                     setDraft((current) => ({

@@ -4,6 +4,7 @@ import {
   type TeamUpdate,
   type TeamUpdateDraft,
 } from '../types/teamUpdate'
+import { generateUpdateTitle, normalizeTeamUpdateBody } from '../utils/teamUpdateUtils'
 
 type TeamUpdateRow = {
   id: string
@@ -37,20 +38,22 @@ function rowToUpdate(row: TeamUpdateRow): TeamUpdate {
 }
 
 function draftToInsertPayload(draft: TeamUpdateDraft, teamId: string) {
+  const body = normalizeTeamUpdateBody(draft.body)
   return {
     id: draft.id,
     team_id: teamId,
-    title: draft.title.trim(),
-    body: draft.body.trim(),
+    title: generateUpdateTitle(body),
+    body,
     update_type: DEFAULT_TEAM_UPDATE_TYPE,
     is_pinned: draft.is_pinned,
   }
 }
 
 function draftToUpdatePayload(draft: TeamUpdateDraft) {
+  const body = normalizeTeamUpdateBody(draft.body)
   return {
-    title: draft.title.trim(),
-    body: draft.body.trim(),
+    title: generateUpdateTitle(body),
+    body,
     update_type: DEFAULT_TEAM_UPDATE_TYPE,
     is_pinned: draft.is_pinned,
     updated_at: new Date().toISOString(),

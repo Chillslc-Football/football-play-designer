@@ -18,7 +18,7 @@ import type { TeamEvent } from '../types/teamEvent'
 import type { TeamMessage } from '../types/teamMessage'
 import type { TeamUpdate } from '../types/teamUpdate'
 import { formatTeamEventDateTimeRange } from '../utils/teamEventUtils'
-import { formatTeamUpdateTimestamp } from '../utils/teamUpdateUtils'
+import { formatTeamUpdateTimestamp, teamUpdateBodyMatchesTitle } from '../utils/teamUpdateUtils'
 import './TeamHubPage.css'
 
 function truncatePreview(text: string, maxLength = 140): string {
@@ -231,7 +231,11 @@ export function TeamHubPage() {
                           <p className="team-hub-card-meta">
                             {formatTeamUpdateTimestamp(update.created_at)}
                           </p>
-                          <p className="team-hub-update-preview">{truncatePreview(update.body, 100)}</p>
+                          {!teamUpdateBodyMatchesTitle(update) && (
+                            <p className="team-hub-update-preview">
+                              {truncatePreview(update.body, 100)}
+                            </p>
+                          )}
                         </li>
                       ))}
                     </ul>

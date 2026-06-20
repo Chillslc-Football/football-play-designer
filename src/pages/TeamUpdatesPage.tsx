@@ -13,14 +13,15 @@ import {
   type TeamUpdate,
   type TeamUpdateDraft,
 } from '../types/teamUpdate'
-import { formatTeamUpdateTimestamp, wasTeamUpdateEdited } from '../utils/teamUpdateUtils'
+import {
+  formatTeamUpdateTimestamp,
+  isTeamUpdateBodyValid,
+  teamUpdateBodyMatchesTitle,
+  wasTeamUpdateEdited,
+} from '../utils/teamUpdateUtils'
 import './TeamUpdatesPage.css'
 
 type ViewMode = 'list' | 'edit'
-
-function isDraftValid(draft: TeamUpdateDraft): boolean {
-  return draft.title.trim().length > 0 && draft.body.trim().length > 0
-}
 
 export function TeamUpdatesPage() {
   const { user } = useAuth()
@@ -90,8 +91,8 @@ export function TeamUpdatesPage() {
   async function handleSave() {
     if (!activeTeamId || !canEdit) return
 
-    if (!isDraftValid(draft)) {
-      setError('Title and message are required.')
+    if (!isTeamUpdateBodyValid(draft.body)) {
+      setError('Update message is required.')
       return
     }
 
@@ -233,7 +234,9 @@ export function TeamUpdatesPage() {
                         {edited && ' · Edited'}
                         {author && ` · ${author}`}
                       </p>
-                      <p className="team-updates-list-body">{update.body}</p>
+                      {!teamUpdateBodyMatchesTitle(update) && (
+                        <p className="team-updates-list-body">{update.body}</p>
+                      )}
                     </div>
                     <div className="team-updates-list-actions">
                       <button type="button" className="btn" onClick={() => openEdit(update)}>
@@ -258,25 +261,8 @@ export function TeamUpdatesPage() {
           <div className="team-updates-editor app-shell-page-body">
             <section className="team-updates-editor-form">
               <div className="form-group">
-                <label className="field-label" htmlFor="team-update-title">
-                  Title
-                </label>
-                <input
-                  id="team-update-title"
-                  className="input-field"
-                  value={draft.title}
-                  readOnly={!canEdit}
-                  maxLength={200}
-                  placeholder="Practice moved to 6 PM"
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, title: event.target.value }))
-                  }
-                />
-              </div>
-
-              <div className="form-group">
                 <label className="field-label" htmlFor="team-update-body">
-                  Message
+                  Update
                 </label>
                 <textarea
                   id="team-update-body"
@@ -324,7 +310,7 @@ export function TeamUpdatesPage() {
                   <button
                     type="button"
                     className="btn btn-primary"
-                    disabled={saving || !isDraftValid(draft)}
+                    disabled={saving || !isTeamUpdateBodyValid(draft.body)}
                     onClick={() => void handleSave()}
                   >
                     {saving ? 'Saving…' : editingExisting ? 'Save Changes' : 'Post Update'}

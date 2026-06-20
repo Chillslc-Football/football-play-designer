@@ -116,11 +116,38 @@
 .team-calendar-editor-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: 12px;
+}
+
+.team-calendar-editor-field {
+  margin: 0;
+}
+
+.team-calendar-editor-field .field-label {
+  margin-bottom: 4px;
+}
+
+.team-calendar-field-required {
+  color: var(--danger, #a83232);
+  font-weight: 700;
+}
+
+.team-calendar-field-optional {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-muted, #666);
+}
+
+.team-calendar-editor-datetime-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .team-calendar-editor-description {
-  min-height: 120px;
+  min-height: 72px;
   resize: vertical;
   font-family: inherit;
   line-height: 1.5;
@@ -130,6 +157,26 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  margin-top: 0;
+  padding-top: 2px;
+}
+
+.team-calendar-editor-actions .btn {
+  min-height: 44px;
+}
+
+@media (max-width: 767px) {
+  .team-calendar-editor-datetime-row {
+    grid-template-columns: 1fr;
+  }
+
+  .team-calendar-editor-actions {
+    flex-direction: column;
+  }
+
+  .team-calendar-editor-actions .btn {
+    width: 100%;
+  }
 }
 
 @media (max-width: 768px) {
