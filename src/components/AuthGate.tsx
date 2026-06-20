@@ -5,11 +5,13 @@ import { AcceptInvitePage } from '../pages/AcceptInvitePage'
 import { LoginPage } from '../pages/LoginPage'
 import { SignupPage } from '../pages/SignupPage'
 import {
-  buildAcceptInviteUrl,
   getInviteTokenFromUrl,
   getPendingInviteUrl,
   isAcceptInvitePath,
-  savePendingInviteUrl,
+  isInviteTokenCompleted,
+  clearAcceptInviteUrl,
+  redirectToAppHome,
+  shouldResumePendingInvite,
 } from '../utils/inviteToken'
 import { capturePlaybookDeepLinkFromUrl } from '../utils/playbookLink'
 import { TeamGate } from './TeamGate'
@@ -33,18 +35,6 @@ function AcceptInviteFlow() {
   return <AcceptInvitePage />
 }
 
-function shouldResumePendingInvite(): boolean {
-  const pending = getPendingInviteUrl()
-  if (!pending) return false
-
-  try {
-    const path = new URL(pending).pathname.replace(/\/+$/, '') || '/'
-    return path === '/accept-invite'
-  } catch {
-    return false
-  }
-}
-
 export function AuthGate() {
   const { session, loading } = useAuth()
   const [authView, setAuthView] = useState<'login' | 'signup'>('login')
@@ -57,16 +47,16 @@ export function AuthGate() {
   }, [])
 
   useEffect(() => {
-    if (!isAcceptInvitePath()) return
+    if (loading || !isAcceptInvitePath()) return
 
     const token = getInviteTokenFromUrl()
-    if (token) {
-      savePendingInviteUrl(buildAcceptInviteUrl(token))
-      return
-    }
+    if (!token || !isInviteTokenCompleted(token)) return
 
-    savePendingInviteUrl()
-  }, [])
+    clearAcceptInviteUrl()
+    if (session) {
+      redirectToAppHome()
+    }
+  }, [loading, session])
 
   useEffect(() => {
     if (loading || isAcceptInvitePath() || !session || !shouldResumePendingInvite()) {

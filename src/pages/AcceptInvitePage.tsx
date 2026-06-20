@@ -6,7 +6,7 @@ import { LoginPage } from './LoginPage'
 import { SignupPage } from './SignupPage'
 import * as inviteRepository from '../repositories/inviteRepository'
 import { INVITE_ROLE_LABELS, type InvitePreview, type InvitePreviewStatus, type InviteRole } from '../types/invite'
-import { clearAcceptInviteUrl, buildAcceptInviteUrl, savePendingInviteUrl } from '../utils/inviteToken'
+import { clearAcceptInviteUrl, buildAcceptInviteUrl, savePendingInviteUrl, markInviteTokenCompleted, isInviteTokenCompleted, redirectToAppHome } from '../utils/inviteToken'
 import './AuthPages.css'
 import './AcceptInvitePage.css'
 
@@ -107,6 +107,28 @@ function AcceptInviteLoggedOut({
   )
 }
 
+function InviteUnavailablePage({
+  message,
+  isSignedIn,
+}: {
+  message: string
+  isSignedIn: boolean
+}) {
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <h1>Invite unavailable</h1>
+        <p className="auth-card-subtitle">{message}</p>
+        <div className="accept-invite-actions">
+          <button type="button" className="btn btn-primary" onClick={() => redirectToAppHome()}>
+            {isSignedIn ? 'Go to Team Hub' : 'Sign in'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AcceptInviteLoggedIn({
   token,
   teamName,
@@ -150,9 +172,9 @@ function AcceptInviteLoggedIn({
 
     try {
       await inviteRepository.acceptTeamInvite(token)
-      clearAcceptInviteUrl()
+      markInviteTokenCompleted(token)
       await refreshTeam()
-      window.location.replace('/')
+      redirectToAppHome()
     } catch (error) {
       setAcceptError(error instanceof Error ? error.message : 'Could not accept invite')
     } finally {
@@ -196,10 +218,6 @@ export function AcceptInvitePage() {
     async function loadPreview() {
       const urlToken = new URLSearchParams(window.location.search).get('token')
 
-      if (urlToken) {
-        savePendingInviteUrl(buildAcceptInviteUrl(urlToken))
-      }
-
       if (!cancelled) {
         setToken(urlToken)
       }
@@ -209,6 +227,20 @@ export function AcceptInvitePage() {
           setPreview(null)
           setPreviewLoading(false)
         }
+        return
+      }
+
+      if (isInviteTokenCompleted(urlToken)) {
+        if (!cancelled) {
+          setPreview({
+            teamName: null,
+            role: null,
+            email: null,
+            status: 'accepted',
+          })
+          setPreviewLoading(false)
+        }
+        clearAcceptInviteUrl()
         return
       }
 
@@ -232,7 +264,17 @@ export function AcceptInvitePage() {
       if (!parsed) {
         setPreview(null)
         setPreviewLoading(false)
+        clearAcceptInviteUrl()
         return
+      }
+
+      if (parsed.status === 'pending') {
+        savePendingInviteUrl(buildAcceptInviteUrl(urlToken))
+      } else {
+        clearAcceptInviteUrl()
+        if (parsed.status === 'accepted') {
+          markInviteTokenCompleted(urlToken)
+        }
       }
 
       setPreview(parsed)
@@ -244,6 +286,14 @@ export function AcceptInvitePage() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (authLoading || previewLoading || !user || !token) return
+    if (preview?.status !== 'accepted') return
+    markInviteTokenCompleted(token)
+    clearAcceptInviteUrl()
+    redirectToAppHome()
+  }, [authLoading, previewLoading, user, token, preview?.status])
 
   if (authLoading || previewLoading) {
     return <div className="auth-loading">Loading invite…</div>
@@ -297,14 +347,7 @@ export function AcceptInvitePage() {
             ? 'This invite was revoked.'
             : 'This invite link is not valid.'
 
-    return (
-      <div className="auth-page">
-        <div className="auth-card">
-          <h1>Invite unavailable</h1>
-          <p className="auth-card-subtitle">{message}</p>
-        </div>
-      </div>
-    )
+    return <InviteUnavailablePage message={message} isSignedIn={Boolean(user)} />
   }
 
   if (!user) {
