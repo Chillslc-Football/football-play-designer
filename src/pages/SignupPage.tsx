@@ -18,7 +18,7 @@ export function SignupPage({
   lockedEmail = false,
   emailRedirectTo,
   title = 'Create account',
-  subtitle = 'Football Play Designer',
+  subtitle = "Winner's Choice",
   onBack,
 }: SignupPageProps) {
   const { signUp } = useAuth()

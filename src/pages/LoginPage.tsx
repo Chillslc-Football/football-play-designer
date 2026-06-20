@@ -16,7 +16,7 @@ export function LoginPage({
   defaultEmail = '',
   lockedEmail = false,
   title = 'Sign in',
-  subtitle = 'Football Play Designer',
+  subtitle = "Winner's Choice",
   onBack,
 }: LoginPageProps) {
   const { signIn } = useAuth()

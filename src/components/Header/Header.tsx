@@ -126,7 +126,7 @@ export function Header({ onTeamChange, onLogout }: HeaderProps) {
 
       <div className="header-inner">
         <div className="header-brand">
-          <h1 className="header-title">Football Play Designer MVP</h1>
+          <h1 className="header-title">Winner&apos;s Choice</h1>
         </div>
 
         <AppShellNav />
