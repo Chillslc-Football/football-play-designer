@@ -15,11 +15,11 @@ import {
 } from '../../utils/schemeTemplateStore'
 import {
   downloadPlaybookPdf,
-  emailPlaybookPdf,
   printPlaybook,
 } from '../../utils/playbookPrint'
 import { PlayTypeSelector } from '../PlayTypeSelector/PlayTypeSelector'
 import { SavePlaybookPdfDialog } from '../SavePlaybookPdfDialog/SavePlaybookPdfDialog'
+import { SharePlaybookDialog } from '../SharePlaybookDialog/SharePlaybookDialog'
 import type { DrawingMode } from '../DrawingModeSelector/DrawingModeSelector'
 import './RibbonBar.css'
 
@@ -108,6 +108,7 @@ export function RibbonBar({
   onNavigate,
 }: RibbonBarProps) {
   const [shareOpen, setShareOpen] = useState(false)
+  const [sharePlaybookOpen, setSharePlaybookOpen] = useState(false)
   const [savePdfDialogOpen, setSavePdfDialogOpen] = useState(false)
   const shareRef = useRef<HTMLDivElement>(null)
 
@@ -307,7 +308,7 @@ export function RibbonBar({
               aria-expanded={shareOpen}
               aria-haspopup="menu"
               disabled={!canSharePdf}
-              title={canSharePdf ? 'Share playbook PDF' : 'View only — contact your coach to share'}
+              title={canSharePdf ? 'Share playbook' : 'View only — contact your coach to share'}
             >
               Share
             </button>
@@ -317,20 +318,20 @@ export function RibbonBar({
                   type="button"
                   className="btn"
                   role="menuitem"
-                  onClick={handleSaveAsPdf}
+                  onClick={() => {
+                    setShareOpen(false)
+                    setSharePlaybookOpen(true)
+                  }}
                 >
-                  Save as PDF
+                  Email Playbook
                 </button>
                 <button
                   type="button"
                   className="btn"
                   role="menuitem"
-                  onClick={() => {
-                    emailPlaybookPdf()
-                    setShareOpen(false)
-                  }}
+                  onClick={handleSaveAsPdf}
                 >
-                  Email PDF
+                  Download PDF
                 </button>
               </div>
             )}
@@ -454,6 +455,11 @@ export function RibbonBar({
         open={savePdfDialogOpen}
         onContinue={handleSavePdfContinue}
         onCancel={() => setSavePdfDialogOpen(false)}
+      />
+
+      <SharePlaybookDialog
+        open={sharePlaybookOpen}
+        onClose={() => setSharePlaybookOpen(false)}
       />
     </>
   )

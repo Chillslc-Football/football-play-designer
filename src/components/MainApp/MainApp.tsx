@@ -17,9 +17,15 @@ import { TeamManagementPage } from '../../pages/TeamManagementPage'
 import { TeamUpdatesPage } from '../../pages/TeamUpdatesPage'
 import { WristbandCardsPage } from '../../pages/WristbandCardsPage'
 import { useAppAdmin } from '../../hooks/useAppAdmin'
+import { useTeam } from '../../hooks/useTeam'
 import type { AdminTemplateEditSession } from '../../types/adminTemplateEdit'
 import { APP_DISPLAY_THEME } from '../../constants/appDisplayTheme'
 import { readStoredAppShellView, writeStoredAppShellView } from '../../utils/appShellViewStorage'
+import {
+  clearPlaybookDeepLinkFromUrl,
+  markOpenPlayLibraryPending,
+  parsePlaybookDeepLinkFromUrl,
+} from '../../utils/playbookLink'
 import './MainApp.css'
 
 export type AppView = AppShellView
@@ -31,6 +37,8 @@ function MainAppViews() {
   const [pageToolbar, setPageToolbar] = useState<ReactNode | null>(null)
   const designerHeaderHandlersRef = useRef<DesignerHeaderHandlers | null>(null)
   const isAppAdmin = useAppAdmin()
+  const { profileLoaded, switchTeam } = useTeam()
+  const playbookDeepLinkHandledRef = useRef(false)
 
   const setViewAndClearLaunch = (nextView: AppShellView) => {
     setLaunchMode(null)
@@ -55,6 +63,28 @@ function MainAppViews() {
       setViewAndClearLaunch('team-hub')
     }
   }, [view, isAppAdmin])
+
+  useEffect(() => {
+    if (!profileLoaded || playbookDeepLinkHandledRef.current) return
+
+    const deepLink = parsePlaybookDeepLinkFromUrl()
+    if (!deepLink) return
+
+    playbookDeepLinkHandledRef.current = true
+    clearPlaybookDeepLinkFromUrl()
+
+    void (async () => {
+      const result = await switchTeam(deepLink.teamId)
+      if (result.error) {
+        console.warn('[MainApp] playbook deep link team switch failed', result.error)
+        return
+      }
+
+      markOpenPlayLibraryPending()
+      setLaunchMode(null)
+      setView('designer')
+    })()
+  }, [profileLoaded, switchTeam])
 
   return (
     <AppShellProvider

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Play } from '../../types/play'
 import type { PlayType } from '../../types/playType'
@@ -14,13 +14,13 @@ import {
 } from '../../utils/playLibraryLayout'
 import {
   downloadPlaybookPdf,
-  emailPlaybookPdf,
   endPlaybookPrint,
   handlePlaybookAfterPrint,
   printPlaybook,
 } from '../../utils/playbookPrint'
 import { PlayThumbnail } from '../PlayThumbnail/PlayThumbnail'
 import { SavePlaybookPdfDialog } from '../SavePlaybookPdfDialog/SavePlaybookPdfDialog'
+import { SharePlaybookDialog } from '../SharePlaybookDialog/SharePlaybookDialog'
 import '../ConfirmDialog/ConfirmDialog.css'
 import './PlayLibraryModal.css'
 
@@ -53,6 +53,9 @@ export function PlayLibraryModal({
   const [playFilter, setPlayFilter] = useState<PlayLibraryFilter>(DEFAULT_PLAY_LIBRARY_FILTER)
   const [pageIndex, setPageIndex] = useState(0)
   const [savePdfDialogOpen, setSavePdfDialogOpen] = useState(false)
+  const [sharePlaybookOpen, setSharePlaybookOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
+  const shareRef = useRef<HTMLDivElement>(null)
 
   const filteredPlays = useMemo(
     () => filterLibraryPlays(plays, playFilter),
@@ -74,13 +77,16 @@ export function PlayLibraryModal({
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
+        if (sharePlaybookOpen || savePdfDialogOpen) {
+          return
+        }
         onClose()
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose])
+  }, [open, onClose, sharePlaybookOpen, savePdfDialogOpen])
 
   useEffect(() => {
     setPageIndex(0)
@@ -104,6 +110,25 @@ export function PlayLibraryModal({
     }
   }, [])
 
+  useEffect(() => {
+    if (!shareOpen) return
+
+    function handlePointerDown(event: MouseEvent) {
+      if (shareRef.current && !shareRef.current.contains(event.target as Node)) {
+        setShareOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [shareOpen])
+
+  useEffect(() => {
+    if (!open) {
+      setShareOpen(false)
+    }
+  }, [open])
+
   if (!open) return null
 
   function handleLayoutChange(nextLayout: PlayLibraryLayout) {
@@ -123,7 +148,8 @@ export function PlayLibraryModal({
     printPlaybook()
   }
 
-  function handleSaveAsPdf() {
+  function handleDownloadPdf() {
+    setShareOpen(false)
     setSavePdfDialogOpen(true)
   }
 
@@ -132,8 +158,9 @@ export function PlayLibraryModal({
     downloadPlaybookPdf()
   }
 
-  function handleEmailPdf() {
-    emailPlaybookPdf()
+  function handleEmailPlaybook() {
+    setShareOpen(false)
+    setSharePlaybookOpen(true)
   }
 
   function renderPageGrid(pagePlays: Play[]) {
@@ -237,21 +264,46 @@ export function PlayLibraryModal({
                 ))}
               </select>
 
-              <button type="button" className="btn" onClick={handlePrint}>
-                Print Playbook
-              </button>
+              <div className="play-library-export-actions">
+                <button type="button" className="btn" onClick={handlePrint}>
+                  Print
+                </button>
 
-              {canSharePdf && (
-                <div className="play-library-share" aria-label="Share PDF">
-                  <span className="play-library-share-label">Share PDF</span>
-                  <button type="button" className="btn" onClick={handleSaveAsPdf}>
-                    Save as PDF
-                  </button>
-                  <button type="button" className="btn" onClick={handleEmailPdf}>
-                    Email PDF
-                  </button>
-                </div>
-              )}
+                {canSharePdf && (
+                  <div className="play-library-share" ref={shareRef}>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => setShareOpen((open) => !open)}
+                      aria-expanded={shareOpen}
+                      aria-haspopup="menu"
+                      title="Share playbook"
+                    >
+                      Share
+                    </button>
+                    {shareOpen && (
+                      <div className="play-library-share-menu" role="menu">
+                        <button
+                          type="button"
+                          className="btn"
+                          role="menuitem"
+                          onClick={handleEmailPlaybook}
+                        >
+                          Email Playbook
+                        </button>
+                        <button
+                          type="button"
+                          className="btn"
+                          role="menuitem"
+                          onClick={handleDownloadPdf}
+                        >
+                          Download PDF
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <button
                 type="button"
@@ -334,6 +386,11 @@ export function PlayLibraryModal({
         open={savePdfDialogOpen}
         onContinue={handleSavePdfContinue}
         onCancel={() => setSavePdfDialogOpen(false)}
+      />
+
+      <SharePlaybookDialog
+        open={sharePlaybookOpen}
+        onClose={() => setSharePlaybookOpen(false)}
       />
     </>,
     document.body,

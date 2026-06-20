@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { CategorySelector } from '../CategorySelector/CategorySelector'
 import { ManageCategoriesDialog } from '../ManageCategoriesDialog/ManageCategoriesDialog'
 import { PlayLibraryModal } from '../PlayLibraryModal/PlayLibraryModal'
@@ -6,6 +6,7 @@ import type { Play } from '../../types/play'
 import type { PlayType } from '../../types/playType'
 import type { CategoryFilterId } from '../../utils/categoryUtils'
 import type { PlayFilterId } from '../../utils/formationUtils'
+import { consumeOpenPlayLibraryPending } from '../../utils/playbookLink'
 import './PlayControls.css'
 
 type FormationFilterOption = {
@@ -67,6 +68,12 @@ export function PlayControlsRoot({
 }: PlayControlsProps & { children: ReactNode }) {
   const [manageOpen, setManageOpen] = useState(false)
   const [libraryOpen, setLibraryOpen] = useState(false)
+
+  useEffect(() => {
+    if (consumeOpenPlayLibraryPending()) {
+      setLibraryOpen(true)
+    }
+  }, [])
 
   const sortedPlays = useMemo(
     () => [...props.filteredPlays].sort((a, b) => a.name.localeCompare(b.name)),
