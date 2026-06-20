@@ -72,7 +72,10 @@ function getSupabaseUrl(): string | undefined {
 }
 
 export function getServiceRoleKey(): string | undefined {
-  return normalizeSecret(Deno.env.get(SERVICE_ROLE_KEY_ENV));
+  return (
+    normalizeSecret(Deno.env.get(SERVICE_ROLE_KEY_ENV)) ??
+    normalizeSecret(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'))
+  );
 }
 
 export function getServiceClientDiagnostics(): ServiceClientDiagnostics {
@@ -93,7 +96,7 @@ export function logServiceClientDiagnostics(context: string): ServiceClientDiagn
   console.log(`[send-push-notification] ${context}`, diagnostics);
 
   if (!diagnostics.supabaseUrlPresent || !diagnostics.serviceRoleKeyPresent) {
-    throw new Error(`Missing SUPABASE_URL or ${SERVICE_ROLE_KEY_ENV}.`);
+    throw new Error(`Missing SUPABASE_URL or ${SERVICE_ROLE_KEY_ENV} / SUPABASE_SERVICE_ROLE_KEY.`);
   }
 
   return diagnostics;
@@ -158,7 +161,7 @@ function buildAdminClient(): SupabaseClient {
   const serviceRoleKey = getServiceRoleKey();
 
   if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error(`Missing SUPABASE_URL or ${SERVICE_ROLE_KEY_ENV}.`);
+    throw new Error(`Missing SUPABASE_URL or ${SERVICE_ROLE_KEY_ENV} / SUPABASE_SERVICE_ROLE_KEY.`);
   }
 
   return createClient(supabaseUrl, serviceRoleKey, {

@@ -115,106 +115,108 @@ export function NewPlaySetupDialog({
         </h2>
 
         <form className="new-play-setup-dialog-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="new-play-setup-name" className="field-label">
-              Play Name
-            </label>
-            <input
-              ref={nameInputRef}
-              id="new-play-setup-name"
-              type="text"
-              className={`input-field${nameError ? ' input-field-invalid' : ''}`}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              autoComplete="off"
-              aria-invalid={nameError ? true : undefined}
-              aria-describedby={nameError ? 'new-play-setup-name-error' : undefined}
-            />
-            {nameError && (
-              <p
-                id="new-play-setup-name-error"
-                className="new-play-setup-dialog-field-error"
-                role="alert"
-              >
-                {nameError}
-              </p>
-            )}
-          </div>
+          <div className="new-play-setup-dialog-body">
+            <div className="form-group">
+              <label htmlFor="new-play-setup-name" className="field-label">
+                Play Name
+              </label>
+              <input
+                ref={nameInputRef}
+                id="new-play-setup-name"
+                type="text"
+                className={`input-field${nameError ? ' input-field-invalid' : ''}`}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                autoComplete="off"
+                aria-invalid={nameError ? true : undefined}
+                aria-describedby={nameError ? 'new-play-setup-name-error' : undefined}
+              />
+              {nameError && (
+                <p
+                  id="new-play-setup-name-error"
+                  className="new-play-setup-dialog-field-error"
+                  role="alert"
+                >
+                  {nameError}
+                </p>
+              )}
+            </div>
 
-          <div className="form-group">
-            <label htmlFor="new-play-setup-formation" className="field-label">
-              {isDefensive ? 'Offensive Formation (optional)' : 'Offensive Formation'}
-            </label>
-            <select
-              id="new-play-setup-formation"
-              className="select-field"
-              value={formationId}
-              onChange={(event) => setFormationId(event.target.value)}
-            >
-              {isDefensive && <option value="">None</option>}
-              <optgroup label="Built-in Formations">
-                {getResolvedFormationTemplates().map((formation) => (
-                  <option key={formation.id} value={formation.id}>
-                    {formation.label}
-                  </option>
-                ))}
-              </optgroup>
-              {customFormations.length > 0 && (
-                <optgroup label="Custom Formations">
-                  {customFormations.map((formation) => (
+            <div className="form-group">
+              <label htmlFor="new-play-setup-formation" className="field-label">
+                {isDefensive ? 'Offensive Formation (optional)' : 'Offensive Formation'}
+              </label>
+              <select
+                id="new-play-setup-formation"
+                className="select-field"
+                value={formationId}
+                onChange={(event) => setFormationId(event.target.value)}
+              >
+                {isDefensive && <option value="">None</option>}
+                <optgroup label="Built-in Formations">
+                  {getResolvedFormationTemplates().map((formation) => (
                     <option key={formation.id} value={formation.id}>
                       {formation.label}
                     </option>
                   ))}
                 </optgroup>
-              )}
-            </select>
-          </div>
+                {customFormations.length > 0 && (
+                  <optgroup label="Custom Formations">
+                    {customFormations.map((formation) => (
+                      <option key={formation.id} value={formation.id}>
+                        {formation.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </div>
 
-          <div className="form-group">
-            <label htmlFor="new-play-setup-front" className="field-label">
-              {isDefensive ? 'Defensive Front' : 'Defensive Front (optional)'}
-            </label>
-            <select
-              id="new-play-setup-front"
-              className="select-field"
-              value={frontId}
-              onChange={(event) => setFrontId(event.target.value)}
-            >
-              {!isDefensive && <option value="">None</option>}
-              <optgroup label="Built-in Fronts">
-                {getResolvedFrontTemplates().map((front) => (
-                  <option key={front.id} value={front.id}>
-                    {front.label}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          </div>
+            <div className="form-group">
+              <label htmlFor="new-play-setup-front" className="field-label">
+                {isDefensive ? 'Defensive Front' : 'Defensive Front (optional)'}
+              </label>
+              <select
+                id="new-play-setup-front"
+                className="select-field"
+                value={frontId}
+                onChange={(event) => setFrontId(event.target.value)}
+              >
+                {!isDefensive && <option value="">None</option>}
+                <optgroup label="Built-in Fronts">
+                  {getResolvedFrontTemplates().map((front) => (
+                    <option key={front.id} value={front.id}>
+                      {front.label}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
 
-          <div className="form-group new-play-setup-dialog-category">
-            <CategorySelector
-              playType={playType}
-              canEdit
-              selectedCategories={categories}
-              availableCategories={availableCategories}
-              onChange={setCategories}
-              displayMode="inline"
-              triggerId="new-play-setup-category-trigger"
-            />
-          </div>
+            <div className="form-group new-play-setup-dialog-category">
+              <CategorySelector
+                playType={playType}
+                canEdit
+                selectedCategories={categories}
+                availableCategories={availableCategories}
+                onChange={setCategories}
+                displayMode="inline"
+                triggerId="new-play-setup-category-trigger"
+              />
+            </div>
 
-          <div className="form-group">
-            <label htmlFor="new-play-setup-notes" className="field-label">
-              Notes (optional)
-            </label>
-            <textarea
-              id="new-play-setup-notes"
-              className="input-field new-play-setup-dialog-notes"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              rows={3}
-            />
+            <div className="form-group">
+              <label htmlFor="new-play-setup-notes" className="field-label">
+                Notes (optional)
+              </label>
+              <textarea
+                id="new-play-setup-notes"
+                className="input-field new-play-setup-dialog-notes"
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                rows={2}
+              />
+            </div>
           </div>
 
           <div className="new-play-setup-dialog-actions">

@@ -18,6 +18,7 @@ export function InviteMemberDialog({ open, teamId, onClose }: InviteMemberDialog
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [inviteLink, setInviteLink] = useState<string | null>(null)
+  const [emailSent, setEmailSent] = useState(false)
   const [copied, setCopied] = useState(false)
   const emailRef = useRef<HTMLInputElement>(null)
 
@@ -28,6 +29,7 @@ export function InviteMemberDialog({ open, teamId, onClose }: InviteMemberDialog
       setError(null)
       setSubmitting(false)
       setInviteLink(null)
+      setEmailSent(false)
       setCopied(false)
       return
     }
@@ -55,15 +57,26 @@ export function InviteMemberDialog({ open, teamId, onClose }: InviteMemberDialog
     event.preventDefault()
     setError(null)
     setCopied(false)
+    setEmailSent(false)
     setSubmitting(true)
 
     try {
       const invite = await inviteRepository.createTeamInvite(teamId, email, role)
       const inviteUrl = `${window.location.origin}/accept-invite?token=${invite.token}`
       setInviteLink(inviteUrl)
+
+      try {
+        await inviteRepository.sendTeamInviteEmail(invite.token)
+        setEmailSent(true)
+      } catch (emailError) {
+        const message =
+          emailError instanceof Error ? emailError.message : 'Could not send invite email'
+        setError(message)
+      }
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : 'Could not create invite'
       setError(message)
+      setInviteLink(null)
     } finally {
       setSubmitting(false)
     }
@@ -102,8 +115,20 @@ export function InviteMemberDialog({ open, teamId, onClose }: InviteMemberDialog
 
         {inviteLink ? (
           <div className="invite-member-success">
+            {emailSent && <p className="invite-member-success-message">Invite email sent.</p>}
             <p className="invite-member-message">
-              Share this link with <strong>{email.trim()}</strong>. It expires in 14 days.
+              {emailSent ? (
+                <>
+                  An invite was sent to <strong>{email.trim()}</strong>. It expires in 14 days.
+                </>
+              ) : (
+                <>
+                  Invite created for <strong>{email.trim()}</strong>. It expires in 14 days.
+                </>
+              )}
+            </p>
+            <p className="invite-member-message">
+              You can also copy and send this invite link manually.
             </p>
             <label className="field-label" htmlFor="invite-link-output">
               Invite link
@@ -121,7 +146,7 @@ export function InviteMemberDialog({ open, teamId, onClose }: InviteMemberDialog
                 Done
               </button>
               <button type="button" className="btn btn-primary" onClick={() => void handleCopyLink()}>
-                {copied ? 'Copied' : 'Copy link'}
+                {copied ? 'Copied' : 'Copy invite link'}
               </button>
             </div>
           </div>
@@ -144,6 +169,7 @@ export function InviteMemberDialog({ open, teamId, onClose }: InviteMemberDialog
                 type="email"
                 autoComplete="email"
                 required
+                disabled={submitting}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
               />
@@ -157,6 +183,7 @@ export function InviteMemberDialog({ open, teamId, onClose }: InviteMemberDialog
                 id="invite-role"
                 className="select-field"
                 value={role}
+                disabled={submitting}
                 onChange={(event) => setRole(event.target.value as InviteRole)}
               >
                 {inviteRoles.map((inviteRole) => (
@@ -172,7 +199,7 @@ export function InviteMemberDialog({ open, teamId, onClose }: InviteMemberDialog
                 Cancel
               </button>
               <button type="submit" className="btn btn-primary" disabled={submitting}>
-                {submitting ? 'Creating…' : 'Create invite link'}
+                {submitting ? 'Sending…' : 'Send invite'}
               </button>
             </div>
           </form>

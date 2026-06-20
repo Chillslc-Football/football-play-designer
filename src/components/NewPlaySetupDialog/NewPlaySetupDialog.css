@@ -1,43 +1,75 @@
 .new-play-setup-dialog {
+  display: flex;
+  flex-direction: column;
   width: min(100%, 520px);
+  max-height: 90vh;
+  padding: var(--space-md);
+  overflow: hidden;
 }
 
 .new-play-setup-dialog-title {
-  margin: 0 0 var(--space-md);
+  margin: 0 0 var(--space-sm);
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--text-on-surface);
+  flex-shrink: 0;
 }
 
 .new-play-setup-dialog-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 0;
+}
+
+.new-play-setup-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .new-play-setup-dialog-form .form-group {
   margin: 0;
 }
 
+.new-play-setup-dialog-body .field-label {
+  margin-bottom: 4px;
+}
+
+.new-play-setup-dialog-body .input-field,
+.new-play-setup-dialog-body .select-field {
+  min-height: 34px;
+  padding: 6px 10px;
+}
+
 .new-play-setup-dialog-category .category-multiselect-panel-inline {
-  max-height: 180px;
+  max-height: 160px;
 }
 
 .new-play-setup-dialog-notes {
   resize: vertical;
-  min-height: 72px;
+  min-height: 56px;
 }
 
 .new-play-setup-dialog-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   justify-content: flex-end;
-  margin-top: var(--space-xs);
+  flex-shrink: 0;
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .new-play-setup-dialog-field-error {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: #b42318;
   font-size: 0.85rem;
 }

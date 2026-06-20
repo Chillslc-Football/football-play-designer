@@ -69,6 +69,56 @@ export async function createTeamInvite(
   return { token: data.token }
 }
 
+type SendInviteEmailResponse = {
+  ok?: boolean
+  error?: string
+}
+
+async function getInvokeErrorMessage(error: unknown): Promise<string> {
+  if (!error || typeof error !== 'object') {
+    return 'Could not send invite email'
+  }
+
+  const invokeError = error as { name?: string; message?: string; context?: Response }
+
+  if (invokeError.name === 'FunctionsHttpError' && invokeError.context instanceof Response) {
+    try {
+      const body = (await invokeError.context.json()) as SendInviteEmailResponse
+      if (body.error) {
+        return body.error
+      }
+    } catch {
+      // Fall through to generic message below.
+    }
+  }
+
+  if (typeof invokeError.message === 'string' && invokeError.message.length > 0) {
+    return invokeError.message
+  }
+
+  return 'Could not send invite email'
+}
+
+export async function sendTeamInviteEmail(token: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('send-team-invite-email', {
+    body: { token },
+  })
+
+  if (error) {
+    throw new Error(await getInvokeErrorMessage(error))
+  }
+
+  const response = data as SendInviteEmailResponse | null
+
+  if (response?.error) {
+    throw new Error(response.error)
+  }
+
+  if (!response?.ok) {
+    throw new Error('Failed to send invite email')
+  }
+}
+
 export async function previewTeamInvite(token: string): Promise<InvitePreview> {
   const { data, error } = await supabase.rpc('preview_team_invite', {
     p_token: token,

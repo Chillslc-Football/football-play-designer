@@ -24,3 +24,10 @@
 .invite-member-link-input {
   font-size: 12px;
 }
+
+.invite-member-success-message {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--success-text, #1f6b3a);
+}
