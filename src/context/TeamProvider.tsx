@@ -134,12 +134,19 @@ export function TeamProvider({ children }: TeamProviderProps) {
         return { error: null }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Could not create team'
-        setActiveTeamId(null)
-        setTeam(null)
-        setRole(null)
-        setDisplayName(null)
-        setMemberships([])
-        setNeedsOnboarding(true)
+        try {
+          const result = await teamRepository.loadActiveTeamForUser(user.id)
+          applyLoadResult(result, {
+            setActiveTeamId,
+            setTeam,
+            setRole,
+            setDisplayName,
+            setMemberships,
+            setNeedsOnboarding,
+          })
+        } catch (reloadError) {
+          console.error('[TeamProvider] failed to reload after createTeam error', reloadError)
+        }
         return { error: message }
       } finally {
         setProfileLoaded(true)

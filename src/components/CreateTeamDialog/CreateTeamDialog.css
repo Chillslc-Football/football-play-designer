@@ -1,0 +1,35 @@
+.create-team-dialog {
+  max-width: 440px;
+}
+
+.create-team-dialog-title {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+
+.create-team-dialog-message {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted, #4a5f4a);
+}
+
+.create-team-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .create-team-dialog {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - var(--space-md) * 2);
+    overflow-y: auto;
+  }
+
+  .create-team-form .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog/ConfirmDialog'
+import { CreateTeamDialog } from '../components/CreateTeamDialog/CreateTeamDialog'
 import { DeleteTeamDialog } from '../components/DeleteTeamDialog/DeleteTeamDialog'
 import { InviteMemberDialog } from '../components/InviteMemberDialog/InviteMemberDialog'
 import { PageToolbarLayout } from '../components/PageToolbarLayout/PageToolbarLayout'
@@ -77,6 +78,7 @@ export function TeamManagementPage() {
   const [deleteTeamOpen, setDeleteTeamOpen] = useState(false)
   const [deleteTeamError, setDeleteTeamError] = useState<string | null>(null)
   const [deletingTeam, setDeletingTeam] = useState(false)
+  const [createTeamOpen, setCreateTeamOpen] = useState(false)
 
   const loadRoster = useCallback(async () => {
     if (!activeTeamId) return
@@ -108,11 +110,20 @@ export function TeamManagementPage() {
     setPageToolbar(
       <PageToolbarLayout
         actions={
-          canEdit ? (
-            <button type="button" className="btn btn-primary" onClick={() => setInviteOpen(true)}>
-              Invite Member
+          <>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setCreateTeamOpen(true)}
+            >
+              Create New Team
             </button>
-          ) : null
+            {canEdit ? (
+              <button type="button" className="btn btn-primary" onClick={() => setInviteOpen(true)}>
+                Invite Member
+              </button>
+            ) : null}
+          </>
         }
       />,
     )
@@ -255,6 +266,8 @@ export function TeamManagementPage() {
 
   return (
     <div className={`team-management-page app-shell-page app-theme-${APP_DISPLAY_THEME}`}>
+      <CreateTeamDialog open={createTeamOpen} onClose={() => setCreateTeamOpen(false)} />
+
       {canEdit && activeTeamId && (
         <InviteMemberDialog
           open={inviteOpen}
@@ -322,7 +335,8 @@ export function TeamManagementPage() {
 
         {!canEdit && !loading && (
           <p className="team-management-page-readonly app-shell-page-readonly">
-            View only — contact your coach to invite or manage members.
+            View only for this team — contact your coach to invite or manage members. You can
+            still create your own team below.
           </p>
         )}
 
@@ -467,6 +481,23 @@ export function TeamManagementPage() {
               </table>
             </div>
           )}
+          </section>
+
+          <section
+            className="team-management-create-team app-shell-card"
+            aria-labelledby="team-create-heading"
+          >
+            <h2 id="team-create-heading">Your Teams</h2>
+            <p className="team-management-create-team-description">
+              Create a team you own without leaving your current membership on other teams.
+            </p>
+            <button
+              type="button"
+              className="btn btn-primary team-management-create-team-btn"
+              onClick={() => setCreateTeamOpen(true)}
+            >
+              Create New Team
+            </button>
           </section>
 
           {isTeamOwner && team && (
