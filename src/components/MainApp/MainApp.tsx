@@ -27,6 +27,7 @@ import {
   clearPendingMessageDeepLink,
   MESSAGE_ACCESS_DENIED_MESSAGE,
   readPendingMessageDeepLink,
+  savePendingMessageDeepLink,
 } from '../../utils/messageLink'
 import {
   clearPendingPlaybookDeepLink,
@@ -35,6 +36,10 @@ import {
   readPendingPlaybookDeepLink,
 } from '../../utils/playbookLink'
 import './MainApp.css'
+import {
+  setTeamMessageNotificationClickHandler,
+  showTeamMessageBrowserNotification,
+} from '../../notifications/browserMessageNotification'
 
 export type AppView = AppShellView
 
@@ -94,6 +99,18 @@ function MainAppViews() {
     setLaunchMode(null)
   }
 
+  const notificationNavigationRef = useRef({
+    navigateTo,
+    switchTeam,
+    activeTeamId,
+  })
+
+  notificationNavigationRef.current = {
+    navigateTo,
+    switchTeam,
+    activeTeamId,
+  }
+
   const refreshMessageUnreadCount = useCallback(async () => {
     if (!activeTeamId) {
       setMessageUnreadCount(0)
@@ -111,6 +128,40 @@ function MainAppViews() {
   useEffect(() => {
     void refreshMessageUnreadCount()
   }, [refreshMessageUnreadCount])
+
+  useEffect(() => {
+    setTeamMessageNotificationClickHandler(async (payload) => {
+      const { navigateTo: goToView, switchTeam: changeTeam, activeTeamId: currentTeamId } =
+        notificationNavigationRef.current
+
+      try {
+        window.focus()
+      } catch {
+        // ignore focus failures
+      }
+
+      savePendingMessageDeepLink({
+        teamId: payload.teamId,
+        threadId: payload.threadId,
+        messageId: payload.messageId,
+      })
+
+      if (currentTeamId !== payload.teamId) {
+        const result = await changeTeam(payload.teamId)
+        if (result.error) {
+          clearPendingMessageDeepLink()
+          return
+        }
+      }
+
+      clearPendingMessageDeepLink()
+      goToView('messages')
+    })
+
+    return () => {
+      setTeamMessageNotificationClickHandler(null)
+    }
+  }, [])
 
   useEffect(() => {
     if (!activeTeamId || !user?.id || view === 'messages') {
@@ -131,6 +182,12 @@ function MainAppViews() {
           (message) => {
             if (message.sender_id !== user.id) {
               void refreshMessageUnreadCount()
+              showTeamMessageBrowserNotification({
+                teamId: message.team_id,
+                threadId: message.thread_id,
+                messageId: message.id,
+                body: message.body,
+              })
             }
           },
         )

@@ -1,0 +1,17 @@
+.desktop-notification-control {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.desktop-notification-control--enabled {
+  color: var(--text-muted, #666);
+}
+
+.desktop-notification-control--denied {
+  color: var(--text-muted, #666);
+}
+
+.desktop-notification-control__button {
+  width: 100%;
+}

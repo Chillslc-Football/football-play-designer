@@ -6,6 +6,7 @@ import {
   TeamHubMessageIcon,
 } from '../components/TeamHub/TeamHubIcons'
 import { TeamHubCard } from '../components/TeamHub/TeamHubCard'
+import { DesktopNotificationControl } from '../components/DesktopNotificationControl/DesktopNotificationControl'
 import { APP_DISPLAY_THEME } from '../constants/appDisplayTheme'
 import { useAppShell } from '../context/AppShellContext'
 import { useAuth } from '../hooks/useAuth'
@@ -208,6 +209,7 @@ export function TeamHubPage() {
                         Create Wristband Card
                       </button>
                     )}
+                    <DesktopNotificationControl />
                   </div>
                 </TeamHubCard>
               </div>
