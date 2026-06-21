@@ -6,6 +6,11 @@ export type TeamResult = {
   error: string | null
 }
 
+export type PendingArchiveImport = {
+  teamId: string
+  teamFormat: TeamFormat
+}
+
 export type TeamContextValue = {
   activeTeamId: string | null
   team: Team | null
@@ -16,10 +21,16 @@ export type TeamContextValue = {
   profileLoaded: boolean
   isAppAdmin: boolean
   needsOnboarding: boolean
+  pendingArchiveImport: PendingArchiveImport | null
+  archiveImportTick: number
+  openTeamHubAfterCreate: boolean
   createTeam: (name: string, format?: TeamFormat) => Promise<TeamResult>
   switchTeam: (teamId: string) => Promise<TeamResult>
   deleteTeam: (teamId: string) => Promise<TeamResult>
   refreshTeam: () => Promise<void>
+  clearPendingArchiveImport: () => void
+  bumpArchiveImportTick: () => void
+  clearOpenTeamHubAfterCreate: () => void
 }
 
 export const TeamContext = createContext<TeamContextValue | null>(null)

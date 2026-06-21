@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import * as archivedAssetRepository from '../repositories/archivedAssetRepository'
 import * as teamRepository from '../repositories/teamRepository'
 import type { Team, TeamMembership, TeamRole } from '../types/team'
 import type { TeamFormat } from '../types/teamFormat'
-import { TeamContext, type TeamResult } from './teamContext'
+import { writeStoredAppShellView } from '../utils/appShellViewStorage'
+import { TeamContext, type PendingArchiveImport, type TeamResult } from './teamContext'
 
 type TeamProviderProps = {
   children: ReactNode
@@ -41,6 +43,21 @@ export function TeamProvider({ children }: TeamProviderProps) {
   const [profileLoaded, setProfileLoaded] = useState(false)
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
   const [isAppAdmin, setIsAppAdmin] = useState(false)
+  const [pendingArchiveImport, setPendingArchiveImport] = useState<PendingArchiveImport | null>(null)
+  const [archiveImportTick, setArchiveImportTick] = useState(0)
+  const [openTeamHubAfterCreate, setOpenTeamHubAfterCreate] = useState(false)
+
+  const clearPendingArchiveImport = useCallback(() => {
+    setPendingArchiveImport(null)
+  }, [])
+
+  const bumpArchiveImportTick = useCallback(() => {
+    setArchiveImportTick((current) => current + 1)
+  }, [])
+
+  const clearOpenTeamHubAfterCreate = useCallback(() => {
+    setOpenTeamHubAfterCreate(false)
+  }, [])
 
   const refreshTeam = useCallback(async () => {
     if (!userId) {
@@ -53,6 +70,8 @@ export function TeamProvider({ children }: TeamProviderProps) {
       setProfileLoaded(false)
       setIsAppAdmin(false)
       setNeedsOnboarding(false)
+      setPendingArchiveImport(null)
+      setOpenTeamHubAfterCreate(false)
       setLoading(false)
       return
     }
@@ -131,6 +150,28 @@ export function TeamProvider({ children }: TeamProviderProps) {
           setMemberships,
           setNeedsOnboarding,
         })
+        writeStoredAppShellView('team-hub')
+        setOpenTeamHubAfterCreate(true)
+
+        try {
+          const diagnostics = await archivedAssetRepository.getArchivedAssetImportDiagnostics(format)
+          console.log('[TeamProvider] post-create archived asset import check', {
+            newTeamId: teamId,
+            newTeamFormat: format,
+            archivedPlaysCount: diagnostics.archivedPlaysCount,
+            archivedFormationsCount: diagnostics.archivedFormationsCount,
+            compatibleArchivedPlaysCount: diagnostics.compatiblePlaysCount,
+            compatibleArchivedFormationsCount: diagnostics.compatibleFormationsCount,
+            shouldShowWizard: diagnostics.shouldShowWizard,
+          })
+          if (diagnostics.shouldShowWizard) {
+            setPendingArchiveImport({ teamId, teamFormat: format })
+            console.log('[TeamProvider] pendingArchiveImport set', { teamId, teamFormat: format })
+          }
+        } catch (archiveCheckError) {
+          console.warn('[TeamProvider] archived asset check failed after createTeam', archiveCheckError)
+        }
+
         return { error: null }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Could not create team'
@@ -257,10 +298,16 @@ export function TeamProvider({ children }: TeamProviderProps) {
       profileLoaded,
       isAppAdmin,
       needsOnboarding,
+      pendingArchiveImport,
+      archiveImportTick,
+      openTeamHubAfterCreate,
       createTeam,
       switchTeam,
       deleteTeam,
       refreshTeam,
+      clearPendingArchiveImport,
+      bumpArchiveImportTick,
+      clearOpenTeamHubAfterCreate,
     }),
     [
       activeTeamId,
@@ -272,10 +319,16 @@ export function TeamProvider({ children }: TeamProviderProps) {
       profileLoaded,
       isAppAdmin,
       needsOnboarding,
+      pendingArchiveImport,
+      archiveImportTick,
+      openTeamHubAfterCreate,
       createTeam,
       switchTeam,
       deleteTeam,
       refreshTeam,
+      clearPendingArchiveImport,
+      bumpArchiveImportTick,
+      clearOpenTeamHubAfterCreate,
     ],
   )
 

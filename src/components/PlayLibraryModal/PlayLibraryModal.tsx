@@ -18,6 +18,8 @@ import {
   handlePlaybookAfterPrint,
   printPlaybook,
 } from '../../utils/playbookPrint'
+import type { TeamFormat } from '../../types/teamFormat'
+import { ArchivedAssetsModal } from '../ArchivedAssetsModal/ArchivedAssetsModal'
 import { PlayThumbnail } from '../PlayThumbnail/PlayThumbnail'
 import { SavePlaybookPdfDialog } from '../SavePlaybookPdfDialog/SavePlaybookPdfDialog'
 import { SharePlaybookDialog } from '../SharePlaybookDialog/SharePlaybookDialog'
@@ -28,6 +30,10 @@ type PlayLibraryModalProps = {
   open: boolean
   plays: Play[]
   canSharePdf?: boolean
+  canImportArchived?: boolean
+  activeTeamId?: string | null
+  teamFormat?: TeamFormat
+  onArchivedImportComplete?: () => void
   onLoadPlay: (playId: string) => void
   onClose: () => void
 }
@@ -46,6 +52,10 @@ export function PlayLibraryModal({
   open,
   plays,
   canSharePdf = false,
+  canImportArchived = false,
+  activeTeamId = null,
+  teamFormat = '11v11',
+  onArchivedImportComplete,
   onLoadPlay,
   onClose,
 }: PlayLibraryModalProps) {
@@ -55,7 +65,9 @@ export function PlayLibraryModal({
   const [savePdfDialogOpen, setSavePdfDialogOpen] = useState(false)
   const [sharePlaybookOpen, setSharePlaybookOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [archivedAssetsOpen, setArchivedAssetsOpen] = useState(false)
   const shareRef = useRef<HTMLDivElement>(null)
+  const showArchivedAssets = canImportArchived && Boolean(activeTeamId)
 
   const filteredPlays = useMemo(
     () => filterLibraryPlays(plays, playFilter),
@@ -77,7 +89,7 @@ export function PlayLibraryModal({
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        if (sharePlaybookOpen || savePdfDialogOpen) {
+        if (archivedAssetsOpen || sharePlaybookOpen || savePdfDialogOpen) {
           return
         }
         onClose()
@@ -86,7 +98,7 @@ export function PlayLibraryModal({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose, sharePlaybookOpen, savePdfDialogOpen])
+  }, [open, onClose, sharePlaybookOpen, savePdfDialogOpen, archivedAssetsOpen])
 
   useEffect(() => {
     setPageIndex(0)
@@ -202,6 +214,18 @@ export function PlayLibraryModal({
 
   return createPortal(
     <>
+      {showArchivedAssets && activeTeamId && (
+        <ArchivedAssetsModal
+          open={archivedAssetsOpen}
+          teamId={activeTeamId}
+          teamFormat={teamFormat}
+          onClose={() => setArchivedAssetsOpen(false)}
+          onImportComplete={() => {
+            onArchivedImportComplete?.()
+          }}
+        />
+      )}
+
       <div
         className="play-library-overlay no-print"
         role="presentation"
@@ -265,6 +289,16 @@ export function PlayLibraryModal({
               </select>
 
               <div className="play-library-export-actions">
+                {showArchivedAssets && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => setArchivedAssetsOpen(true)}
+                  >
+                    Archived Assets
+                  </button>
+                )}
+
                 <button type="button" className="btn" onClick={handlePrint}>
                   Print
                 </button>

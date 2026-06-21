@@ -48,7 +48,8 @@ function MainAppViews() {
   const [pageToolbar, setPageToolbar] = useState<ReactNode | null>(null)
   const designerHeaderHandlersRef = useRef<DesignerHeaderHandlers | null>(null)
   const isAppAdmin = useAppAdmin()
-  const { profileLoaded, team, switchTeam } = useTeam()
+  const { profileLoaded, team, switchTeam, openTeamHubAfterCreate, clearOpenTeamHubAfterCreate } =
+    useTeam()
   const playbookDeepLinkHandledRef = useRef(false)
   const [playbookDeepLinkError, setPlaybookDeepLinkError] = useState<string | null>(null)
   const [playbookDeepLinkProcessing, setPlaybookDeepLinkProcessing] = useState(() =>
@@ -68,6 +69,12 @@ function MainAppViews() {
   const clearLaunchMode = () => {
     setLaunchMode(null)
   }
+
+  useEffect(() => {
+    if (!openTeamHubAfterCreate) return
+    setViewAndClearLaunch('team-hub')
+    clearOpenTeamHubAfterCreate()
+  }, [openTeamHubAfterCreate, clearOpenTeamHubAfterCreate])
 
   useEffect(() => {
     writeStoredAppShellView(view)

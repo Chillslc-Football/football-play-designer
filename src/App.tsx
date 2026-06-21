@@ -182,7 +182,7 @@ function App() {
   const shell = useAppShell()
   const adminTemplateEdit = shell?.adminTemplateEdit ?? null
   const { loading: schemeTemplatesLoading, refreshTemplates } = useSchemeTemplates()
-  const { activeTeamId, switchTeam, team } = useTeam()
+  const { activeTeamId, switchTeam, team, archiveImportTick } = useTeam()
   const teamFormat = useTeamFormat()
   const enforceBackfieldLimit = enforcesBackfieldLimit(teamFormat)
   const teamFormatReady = Boolean(team && activeTeamId && team.id === activeTeamId)
@@ -352,6 +352,11 @@ function App() {
   useEffect(() => {
     void loadTeamData()
   }, [activeTeamId, userId])
+
+  useEffect(() => {
+    if (archiveImportTick === 0) return
+    void loadTeamData()
+  }, [archiveImportTick, loadTeamData])
 
   useEffect(() => {
     if (userId && prevActiveTeamIdRef.current && prevActiveTeamIdRef.current !== activeTeamId) {
@@ -1815,6 +1820,12 @@ function App() {
         open={playLibraryOpen}
         plays={savedPlays}
         canSharePdf={canEdit}
+        canImportArchived={canEdit}
+        activeTeamId={activeTeamId}
+        teamFormat={teamFormat}
+        onArchivedImportComplete={() => {
+          void loadTeamData()
+        }}
         onLoadPlay={handleLoadPlayFromLibrary}
         onClose={handlePlayLibraryClose}
       />

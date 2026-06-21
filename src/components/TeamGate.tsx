@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { ImportArchivedAssetsWizard } from './ImportArchivedAssetsWizard/ImportArchivedAssetsWizard'
 import { MainApp } from './MainApp/MainApp'
 import { useAuth } from '../hooks/useAuth'
 import { useTeam } from '../hooks/useTeam'
@@ -14,6 +15,9 @@ export function TeamGate() {
     memberships,
     profileLoaded,
     needsOnboarding,
+    pendingArchiveImport,
+    clearPendingArchiveImport,
+    bumpArchiveImportTick,
   } = useTeam()
 
   useEffect(() => {
@@ -50,6 +54,17 @@ export function TeamGate() {
     user?.id,
   ])
 
+  useEffect(() => {
+    if (!profileLoaded || needsOnboarding || !team) return
+
+    console.log('[TeamGate] archive import wizard state', {
+      pendingArchiveImport,
+      activeTeamId,
+      teamFormat: team.format ?? null,
+      needsOnboarding,
+    })
+  }, [profileLoaded, needsOnboarding, team, pendingArchiveImport, activeTeamId])
+
   if (!profileLoaded) {
     return <div className="auth-loading">Loading team…</div>
   }
@@ -66,5 +81,21 @@ export function TeamGate() {
     )
   }
 
-  return <MainApp />
+  return (
+    <>
+      <MainApp />
+      {pendingArchiveImport && (
+        <ImportArchivedAssetsWizard
+          open
+          teamId={pendingArchiveImport.teamId}
+          teamFormat={pendingArchiveImport.teamFormat}
+          onSkip={clearPendingArchiveImport}
+          onImportComplete={() => {
+            bumpArchiveImportTick()
+            clearPendingArchiveImport()
+          }}
+        />
+      )}
+    </>
+  )
 }
