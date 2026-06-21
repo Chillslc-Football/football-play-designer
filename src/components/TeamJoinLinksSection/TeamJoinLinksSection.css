@@ -1,0 +1,94 @@
+.team-join-links {
+  padding: 16px 18px;
+}
+
+.team-join-links h2 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+}
+
+.team-join-links-description {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-muted, #666);
+}
+
+.team-join-links-loading {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted, #666);
+}
+
+.team-join-links-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.team-join-link-row {
+  padding: 12px 14px;
+  border: 1px solid var(--border, #ddd);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--surface-muted, rgba(0, 0, 0, 0.02));
+}
+
+.team-join-link-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.team-join-link-info {
+  min-width: 0;
+}
+
+.team-join-link-title {
+  margin: 0 0 2px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.team-join-link-hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-muted, #666);
+}
+
+.team-join-link-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.team-join-link-action-btn {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.team-join-link-url {
+  width: 100%;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .team-join-link-main {
+    flex-direction: column;
+  }
+
+  .team-join-link-actions {
+    width: 100%;
+  }
+
+  .team-join-link-action-btn {
+    flex: 1 1 calc(50% - 3px);
+    min-height: 40px;
+  }
+}

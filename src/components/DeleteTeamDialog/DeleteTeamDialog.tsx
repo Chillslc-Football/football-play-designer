@@ -57,19 +57,30 @@ export function DeleteTeamDialog({
       }}
     >
       <div
-        className="confirm-dialog"
+        className="confirm-dialog delete-team-dialog"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="delete-team-dialog-message"
+        aria-labelledby="delete-team-dialog-title"
       >
-        <p id="delete-team-dialog-message" className="confirm-dialog-message">
-          Delete this team and all plays/formations? This cannot be undone.
+        <h2 id="delete-team-dialog-title" className="delete-team-dialog-title">
+          Delete Team
+        </h2>
+        <p className="delete-team-dialog-body">
+          This will permanently delete the team.
         </p>
+        <p className="delete-team-dialog-body">
+          Plays and formations will be archived and can be imported into future teams.
+        </p>
+        <p className="delete-team-dialog-note">Archived assets include:</p>
+        <ul className="delete-team-dialog-assets">
+          <li>Plays</li>
+          <li>Custom Formations</li>
+        </ul>
 
         {isLastTeam && (
           <p className="delete-team-dialog-warning">
-            This is your only team. Deleting it removes all plays, formations, members, and
-            invites. You will need to create a new team to continue.
+            This is your only team. Deleting it removes members and invites. You will need to
+            create a new team to continue.
           </p>
         )}
 

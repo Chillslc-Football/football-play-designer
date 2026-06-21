@@ -121,6 +121,10 @@ export function TeamHubPage() {
     navigateTo?.('designer')
   }
 
+  function viewPlaybook() {
+    navigateTo?.('designer', 'play-library')
+  }
+
   const eventDescription = nextEvent ? descriptionPreview(nextEvent.description) : null
 
   return (
@@ -179,6 +183,9 @@ export function TeamHubPage() {
                 >
                   <p className="team-hub-quick-actions-hint">Jump to common tasks for your team.</p>
                   <div className="team-hub-quick-actions-buttons">
+                    <button type="button" className="btn" onClick={viewPlaybook}>
+                      View Playbook
+                    </button>
                     <button type="button" className="btn" onClick={openPlayDesigner}>
                       Open Play Designer
                     </button>

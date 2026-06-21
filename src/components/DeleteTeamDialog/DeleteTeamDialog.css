@@ -1,3 +1,30 @@
+.delete-team-dialog-title {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+
+.delete-team-dialog-body {
+  margin: 0 0 10px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-on-surface);
+}
+
+.delete-team-dialog-note {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted, #666);
+}
+
+.delete-team-dialog-assets {
+  margin: 0 0 var(--space-md);
+  padding-left: 1.25rem;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted, #666);
+}
+
 .delete-team-dialog-warning {
   margin: 0 0 var(--space-md);
   padding: 10px 12px;

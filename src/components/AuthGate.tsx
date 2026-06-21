@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { TeamProvider } from '../context/TeamProvider'
 import { useAuth } from '../hooks/useAuth'
 import { AcceptInvitePage } from '../pages/AcceptInvitePage'
+import { JoinTeamPage } from '../pages/JoinTeamPage'
 import { LoginPage } from '../pages/LoginPage'
 import { SignupPage } from '../pages/SignupPage'
 import {
@@ -13,6 +14,15 @@ import {
   redirectToAppHome,
   shouldResumePendingInvite,
 } from '../utils/inviteToken'
+import {
+  clearJoinTeamUrl,
+  getJoinLinkTokenFromUrl,
+  getPendingJoinLinkUrl,
+  isJoinLinkTokenCompleted,
+  isJoinTeamPath,
+  redirectToAppHomeFromJoinLink,
+  shouldResumePendingJoinLink,
+} from '../utils/joinLinkToken'
 import { capturePlaybookDeepLinkFromUrl } from '../utils/playbookLink'
 import { TeamGate } from './TeamGate'
 import '../pages/AuthPages.css'
@@ -35,13 +45,32 @@ function AcceptInviteFlow() {
   return <AcceptInvitePage />
 }
 
+function JoinTeamFlow() {
+  const { session, loading } = useAuth()
+
+  if (loading) {
+    return <div className="auth-loading">Loading…</div>
+  }
+
+  if (session) {
+    return (
+      <TeamProvider>
+        <JoinTeamPage />
+      </TeamProvider>
+    )
+  }
+
+  return <JoinTeamPage />
+}
+
 export function AuthGate() {
   const { session, loading } = useAuth()
   const [authView, setAuthView] = useState<'login' | 'signup'>('login')
   const [resumingInvite, setResumingInvite] = useState(false)
+  const [resumingJoinLink, setResumingJoinLink] = useState(false)
 
   useEffect(() => {
-    if (!isAcceptInvitePath()) {
+    if (!isAcceptInvitePath() && !isJoinTeamPath()) {
       capturePlaybookDeepLinkFromUrl()
     }
   }, [])
@@ -59,7 +88,19 @@ export function AuthGate() {
   }, [loading, session])
 
   useEffect(() => {
-    if (loading || isAcceptInvitePath() || !session || !shouldResumePendingInvite()) {
+    if (loading || !isJoinTeamPath()) return
+
+    const token = getJoinLinkTokenFromUrl()
+    if (!token || !isJoinLinkTokenCompleted(token)) return
+
+    clearJoinTeamUrl()
+    if (session) {
+      redirectToAppHomeFromJoinLink()
+    }
+  }, [loading, session])
+
+  useEffect(() => {
+    if (loading || isAcceptInvitePath() || isJoinTeamPath() || !session || !shouldResumePendingInvite()) {
       setResumingInvite(false)
       return
     }
@@ -74,11 +115,31 @@ export function AuthGate() {
     window.location.replace(pending)
   }, [loading, session])
 
+  useEffect(() => {
+    if (loading || isAcceptInvitePath() || isJoinTeamPath() || !session || !shouldResumePendingJoinLink()) {
+      setResumingJoinLink(false)
+      return
+    }
+
+    const pending = getPendingJoinLinkUrl()
+    if (!pending) {
+      setResumingJoinLink(false)
+      return
+    }
+
+    setResumingJoinLink(true)
+    window.location.replace(pending)
+  }, [loading, session])
+
   if (isAcceptInvitePath()) {
     return <AcceptInviteFlow />
   }
 
-  if (loading || resumingInvite) {
+  if (isJoinTeamPath()) {
+    return <JoinTeamFlow />
+  }
+
+  if (loading || resumingInvite || resumingJoinLink) {
     return <div className="auth-loading">Loading…</div>
   }
 

@@ -3,6 +3,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog/ConfirmDialog'
 import { CreateTeamDialog } from '../components/CreateTeamDialog/CreateTeamDialog'
 import { DeleteTeamDialog } from '../components/DeleteTeamDialog/DeleteTeamDialog'
 import { InviteMemberDialog } from '../components/InviteMemberDialog/InviteMemberDialog'
+import { TeamJoinLinksSection } from '../components/TeamJoinLinksSection/TeamJoinLinksSection'
 import { PageToolbarLayout } from '../components/PageToolbarLayout/PageToolbarLayout'
 import { APP_DISPLAY_THEME } from '../constants/appDisplayTheme'
 import { useAppShell } from '../context/AppShellContext'
@@ -120,7 +121,7 @@ export function TeamManagementPage() {
             </button>
             {canEdit ? (
               <button type="button" className="btn btn-primary" onClick={() => setInviteOpen(true)}>
-                Invite Member
+                Invite Members
               </button>
             ) : null}
           </>
@@ -376,6 +377,14 @@ export function TeamManagementPage() {
             </dl>
           </section>
 
+          {canEdit && activeTeamId && team && (
+            <TeamJoinLinksSection
+              teamId={activeTeamId}
+              teamName={team.name}
+              onError={setActionError}
+            />
+          )}
+
           <section className="team-management-section" aria-labelledby="team-roster-heading">
           <div className="team-management-section-header">
             <h2 id="team-roster-heading">Team Members &amp; Invites</h2>
@@ -481,23 +490,6 @@ export function TeamManagementPage() {
               </table>
             </div>
           )}
-          </section>
-
-          <section
-            className="team-management-create-team app-shell-card"
-            aria-labelledby="team-create-heading"
-          >
-            <h2 id="team-create-heading">Your Teams</h2>
-            <p className="team-management-create-team-description">
-              Create a team you own without leaving your current membership on other teams.
-            </p>
-            <button
-              type="button"
-              className="btn btn-primary team-management-create-team-btn"
-              onClick={() => setCreateTeamOpen(true)}
-            >
-              Create New Team
-            </button>
           </section>
 
           {isTeamOwner && team && (

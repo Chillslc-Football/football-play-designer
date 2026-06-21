@@ -6,7 +6,6 @@ import { useTeam } from '../../hooks/useTeam'
 import { TEAM_ROLE_LABELS } from '../../utils/roleLabels'
 import { FeedbackDialog } from '../FeedbackDialog/FeedbackDialog'
 import { FeedbackReviewDialog } from '../FeedbackReviewDialog/FeedbackReviewDialog'
-import { CreateTeamDialog } from '../CreateTeamDialog/CreateTeamDialog'
 import { HelpDialog } from '../HelpDialog/HelpDialog'
 import { AppShellNav } from '../AppShellNav/AppShellNav'
 import './Header.css'
@@ -26,7 +25,6 @@ export function Header({ onTeamChange, onLogout }: HeaderProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [feedbackReviewOpen, setFeedbackReviewOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
-  const [createTeamOpen, setCreateTeamOpen] = useState(false)
 
   const isTeamManagementView = shell?.view === 'team-management'
 
@@ -65,7 +63,6 @@ export function Header({ onTeamChange, onLogout }: HeaderProps) {
         />
       )}
       <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
-      <CreateTeamDialog open={createTeamOpen} onClose={() => setCreateTeamOpen(false)} />
 
       <div className="header-inner">
         <div className="header-brand">
@@ -117,13 +114,6 @@ export function Header({ onTeamChange, onLogout }: HeaderProps) {
                   Team Management
                 </button>
               )}
-              <button
-                type="button"
-                className="btn header-action-btn"
-                onClick={() => setCreateTeamOpen(true)}
-              >
-                Create New Team
-              </button>
             </div>
 
             {isAppAdmin && (

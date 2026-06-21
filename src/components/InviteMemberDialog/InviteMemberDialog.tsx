@@ -110,7 +110,7 @@ export function InviteMemberDialog({ open, teamId, onClose }: InviteMemberDialog
         aria-labelledby="invite-member-dialog-title"
       >
         <h2 id="invite-member-dialog-title" className="invite-member-dialog-title">
-          Invite to team
+          Invite Members
         </h2>
 
         {inviteLink ? (
