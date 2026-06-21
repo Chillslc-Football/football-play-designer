@@ -1,4 +1,5 @@
 import { type KeyboardEvent, type ReactNode } from 'react'
+import { UnreadCountBadge } from '../UnreadCountBadge/UnreadCountBadge'
 
 type TeamHubCardProps = {
   id: string
@@ -6,6 +7,7 @@ type TeamHubCardProps = {
   icon: ReactNode
   onNavigate?: () => void
   actions?: ReactNode
+  unreadCount?: number
   children: ReactNode
 }
 
@@ -22,6 +24,7 @@ export function TeamHubCard({
   icon,
   onNavigate,
   actions,
+  unreadCount = 0,
   children,
 }: TeamHubCardProps) {
   const clickable = Boolean(onNavigate)
@@ -42,7 +45,9 @@ export function TeamHubCard({
       <div className="team-hub-card-heading">
         <span className="team-hub-card-icon">{icon}</span>
         <h2 id={id}>{title}</h2>
-        <span className="team-hub-card-status" aria-hidden="true" />
+        <span className="team-hub-card-status">
+          <UnreadCountBadge count={unreadCount} />
+        </span>
       </div>
       <div className="team-hub-card-body">{children}</div>
       {actions && (

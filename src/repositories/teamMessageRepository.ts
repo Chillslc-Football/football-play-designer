@@ -183,6 +183,38 @@ export async function createTeamMessage(
   return message
 }
 
+export async function markThreadRead(threadId: string, upToMessageId: string): Promise<void> {
+  const { error } = await supabase.rpc('mark_thread_read', {
+    p_thread_id: threadId,
+    p_up_to_message_id: upToMessageId,
+  })
+
+  if (error) {
+    throw new Error(`Failed to mark messages as read: ${error.message}`)
+  }
+}
+
+export async function getTeamMessageUnreadCount(teamId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('get_team_message_unread_count', {
+    p_team_id: teamId,
+  })
+
+  if (error) {
+    throw new Error(`Failed to load unread message count: ${error.message}`)
+  }
+
+  if (typeof data === 'number') {
+    return data
+  }
+
+  if (typeof data === 'string') {
+    const parsed = Number(data)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  return 0
+}
+
 export function subscribeToTeamMessages(
   teamId: string,
   threadId: string,
@@ -204,12 +236,21 @@ export function subscribeToTeamMessages(
           return
         }
 
-        void withSenderDisplayNames([rowToMessage(row)]).then(([message]) => {
-          onInsert(message)
-        })
+        const message = rowToMessage(row)
+        void withSenderDisplayNames([message])
+          .then(([withNames]) => {
+            onInsert(withNames)
+          })
+          .catch(() => {
+            onInsert(message)
+          })
       },
     )
-    .subscribe()
+    .subscribe((status, err) => {
+      if (status === 'CHANNEL_ERROR') {
+        console.error('[team_messages] realtime subscription error:', err?.message ?? status)
+      }
+    })
 
   return () => {
     void supabase.removeChannel(channel)

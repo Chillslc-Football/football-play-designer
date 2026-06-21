@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import App from '../../App'
 import { SchemeTemplateProvider } from '../../context/SchemeTemplateProvider'
 import {
@@ -17,7 +17,9 @@ import { TeamManagementPage } from '../../pages/TeamManagementPage'
 import { TeamUpdatesPage } from '../../pages/TeamUpdatesPage'
 import { WristbandCardsPage } from '../../pages/WristbandCardsPage'
 import { useAppAdmin } from '../../hooks/useAppAdmin'
+import { useAuth } from '../../hooks/useAuth'
 import { useTeam } from '../../hooks/useTeam'
+import * as teamMessageRepository from '../../repositories/teamMessageRepository'
 import type { AdminTemplateEditSession } from '../../types/adminTemplateEdit'
 import { APP_DISPLAY_THEME } from '../../constants/appDisplayTheme'
 import { readStoredAppShellView, writeStoredAppShellView } from '../../utils/appShellViewStorage'
@@ -46,10 +48,18 @@ function MainAppViews() {
   )
   const [adminTemplateEdit, setAdminTemplateEdit] = useState<AdminTemplateEditSession | null>(null)
   const [pageToolbar, setPageToolbar] = useState<ReactNode | null>(null)
+  const [messageUnreadCount, setMessageUnreadCount] = useState(0)
   const designerHeaderHandlersRef = useRef<DesignerHeaderHandlers | null>(null)
   const isAppAdmin = useAppAdmin()
-  const { profileLoaded, team, switchTeam, openTeamHubAfterCreate, clearOpenTeamHubAfterCreate } =
-    useTeam()
+  const { user } = useAuth()
+  const {
+    activeTeamId,
+    profileLoaded,
+    team,
+    switchTeam,
+    openTeamHubAfterCreate,
+    clearOpenTeamHubAfterCreate,
+  } = useTeam()
   const playbookDeepLinkHandledRef = useRef(false)
   const [playbookDeepLinkError, setPlaybookDeepLinkError] = useState<string | null>(null)
   const [playbookDeepLinkProcessing, setPlaybookDeepLinkProcessing] = useState(() =>
@@ -69,6 +79,57 @@ function MainAppViews() {
   const clearLaunchMode = () => {
     setLaunchMode(null)
   }
+
+  const refreshMessageUnreadCount = useCallback(async () => {
+    if (!activeTeamId) {
+      setMessageUnreadCount(0)
+      return
+    }
+
+    try {
+      const count = await teamMessageRepository.getTeamMessageUnreadCount(activeTeamId)
+      setMessageUnreadCount(count)
+    } catch {
+      setMessageUnreadCount(0)
+    }
+  }, [activeTeamId])
+
+  useEffect(() => {
+    void refreshMessageUnreadCount()
+  }, [refreshMessageUnreadCount])
+
+  useEffect(() => {
+    if (!activeTeamId || !user?.id || view === 'messages') {
+      return
+    }
+
+    let cancelled = false
+    let unsubscribe: (() => void) | null = null
+
+    void (async () => {
+      try {
+        const thread = await teamMessageRepository.getOrCreateTeamChatThread(activeTeamId)
+        if (cancelled) return
+
+        unsubscribe = teamMessageRepository.subscribeToTeamMessages(
+          activeTeamId,
+          thread.id,
+          (message) => {
+            if (message.sender_id !== user.id) {
+              void refreshMessageUnreadCount()
+            }
+          },
+        )
+      } catch {
+        // Ignore subscription setup failures; count still refreshes on navigation.
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      unsubscribe?.()
+    }
+  }, [activeTeamId, user?.id, view, refreshMessageUnreadCount])
 
   useEffect(() => {
     if (!openTeamHubAfterCreate) return
@@ -136,6 +197,8 @@ function MainAppViews() {
       launchMode={launchMode}
       navigateTo={navigateTo}
       clearLaunchMode={clearLaunchMode}
+      messageUnreadCount={messageUnreadCount}
+      refreshMessageUnreadCount={refreshMessageUnreadCount}
     >
       <div className={`main-app app-theme-${APP_DISPLAY_THEME}`}>
         <AppShellHeader />

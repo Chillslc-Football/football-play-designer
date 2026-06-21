@@ -22,6 +22,8 @@ CREATE POLICY feedback_app_admin_update
   USING (public.is_app_admin())
   WITH CHECK (public.is_app_admin());
 
+DROP FUNCTION IF EXISTS public.get_open_feedback_for_admin();
+
 CREATE OR REPLACE FUNCTION public.get_open_feedback_for_admin()
 RETURNS SETOF public.feedback
 LANGUAGE plpgsql
@@ -40,6 +42,8 @@ BEGIN
   ORDER BY f.created_at DESC;
 END;
 $$;
+
+DROP FUNCTION IF EXISTS public.resolve_feedback_for_admin(uuid);
 
 CREATE OR REPLACE FUNCTION public.resolve_feedback_for_admin(p_feedback_id uuid)
 RETURNS void

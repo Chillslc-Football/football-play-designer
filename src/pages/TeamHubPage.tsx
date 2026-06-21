@@ -40,6 +40,7 @@ export function TeamHubPage() {
   const shell = useAppShell()
   const setPageToolbar = shell?.setPageToolbar
   const navigateTo = shell?.navigateTo
+  const messageUnreadCount = shell?.messageUnreadCount ?? 0
   const { activeTeamId } = useTeam()
   const canEdit = useCanEdit()
 
@@ -253,6 +254,7 @@ export function TeamHubPage() {
                   id="team-hub-messages-heading"
                   title="Recent Messages"
                   icon={<TeamHubMessageIcon />}
+                  unreadCount={messageUnreadCount}
                   onNavigate={goToMessages}
                   actions={
                     <button type="button" className="btn" onClick={goToMessages}>

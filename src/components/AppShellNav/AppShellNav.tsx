@@ -1,5 +1,6 @@
 import { useAppShell } from '../../context/AppShellContext'
 import { useAppAdmin } from '../../hooks/useAppAdmin'
+import { UnreadCountBadge } from '../UnreadCountBadge/UnreadCountBadge'
 import './AppShellNav.css'
 
 export function AppShellNav() {
@@ -7,7 +8,7 @@ export function AppShellNav() {
   const isAppAdmin = useAppAdmin()
   if (!shell) return null
 
-  const { view, setView } = shell
+  const { view, setView, messageUnreadCount } = shell
 
   return (
     <nav className="app-shell-nav no-print" aria-label="Main navigation">
@@ -31,6 +32,7 @@ export function AppShellNav() {
         onClick={() => setView('messages')}
       >
         Messages
+        <UnreadCountBadge count={messageUnreadCount} />
       </button>
       <button
         type="button"

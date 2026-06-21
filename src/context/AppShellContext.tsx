@@ -29,6 +29,8 @@ type AppShellContextValue = {
   launchMode: AppShellLaunchMode | null
   navigateTo: (view: AppShellView, launchMode?: AppShellLaunchMode) => void
   clearLaunchMode: () => void
+  messageUnreadCount: number
+  refreshMessageUnreadCount: () => Promise<void>
 }
 
 const AppShellContext = createContext<AppShellContextValue | null>(null)
@@ -44,6 +46,8 @@ type AppShellProviderProps = {
   launchMode: AppShellLaunchMode | null
   navigateTo: (view: AppShellView, launchMode?: AppShellLaunchMode) => void
   clearLaunchMode: () => void
+  messageUnreadCount: number
+  refreshMessageUnreadCount: () => Promise<void>
   children: ReactNode
 }
 
@@ -58,6 +62,8 @@ export function AppShellProvider({
   launchMode,
   navigateTo,
   clearLaunchMode,
+  messageUnreadCount,
+  refreshMessageUnreadCount,
   children,
 }: AppShellProviderProps) {
   return (
@@ -73,6 +79,8 @@ export function AppShellProvider({
         launchMode,
         navigateTo,
         clearLaunchMode,
+        messageUnreadCount,
+        refreshMessageUnreadCount,
       }}
     >
       {children}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { APP_DISPLAY_THEME } from '../constants/appDisplayTheme'
+import { useAppShell } from '../context/AppShellContext'
 import { useAuth } from '../hooks/useAuth'
 import { useTeam } from '../hooks/useTeam'
 import * as teamMessageRepository from '../repositories/teamMessageRepository'
@@ -18,6 +19,8 @@ function isDraftValid(draft: TeamMessageDraft): boolean {
 
 export function TeamMessagingPage() {
   const { user } = useAuth()
+  const shell = useAppShell()
+  const refreshMessageUnreadCount = shell?.refreshMessageUnreadCount
   const { team, activeTeamId } = useTeam()
 
   const [thread, setThread] = useState<TeamMessageThread | null>(null)
@@ -28,6 +31,7 @@ export function TeamMessagingPage() {
   const [error, setError] = useState<string | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const lastMarkedReadMessageIdRef = useRef<string | null>(null)
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -49,6 +53,7 @@ export function TeamMessagingPage() {
     setError(null)
     setThread(null)
     setMessages([])
+    lastMarkedReadMessageIdRef.current = null
 
     try {
       const loadedThread = await teamMessageRepository.getOrCreateTeamChatThread(activeTeamId)
@@ -85,6 +90,30 @@ export function TeamMessagingPage() {
       scrollToBottom()
     }
   }, [loading, messages, scrollToBottom])
+
+  const markMessagesReadThroughLatest = useCallback(async () => {
+    if (!thread || messages.length === 0) return
+
+    const latestMessage = messages[messages.length - 1]
+    if (lastMarkedReadMessageIdRef.current === latestMessage.id) {
+      return
+    }
+
+    lastMarkedReadMessageIdRef.current = latestMessage.id
+
+    try {
+      await teamMessageRepository.markThreadRead(thread.id, latestMessage.id)
+      await refreshMessageUnreadCount?.()
+    } catch (markReadError) {
+      lastMarkedReadMessageIdRef.current = null
+      console.error('Failed to mark messages as read:', markReadError)
+    }
+  }, [thread, messages, refreshMessageUnreadCount])
+
+  useEffect(() => {
+    if (loading || !thread || messages.length === 0) return
+    void markMessagesReadThroughLatest()
+  }, [loading, thread, messages, markMessagesReadThroughLatest])
 
   async function handleSend() {
     if (!activeTeamId || !thread || !user) return

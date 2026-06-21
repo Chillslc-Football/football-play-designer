@@ -16,6 +16,8 @@
   color: var(--header-text);
   cursor: pointer;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
 }
 
 .app-shell-nav-btn.is-active {

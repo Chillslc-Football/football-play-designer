@@ -67,6 +67,8 @@ CREATE POLICY "team_invites_delete_owner"
   TO authenticated
   USING (public.is_team_owner(team_id));
 
+DROP FUNCTION IF EXISTS public.create_team_invite(uuid, public.team_role, text);
+
 CREATE OR REPLACE FUNCTION public.create_team_invite(
   p_team_id uuid,
   p_role public.team_role,
@@ -114,6 +116,8 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.preview_team_invite(text);
+
 CREATE OR REPLACE FUNCTION public.preview_team_invite(p_token text)
 RETURNS TABLE (
   team_name text,
@@ -159,6 +163,8 @@ BEGIN
   RETURN QUERY SELECT v_team_name, v_invite.role, v_invite.email, 'pending'::text;
 END;
 $$;
+
+DROP FUNCTION IF EXISTS public.accept_team_invite(text);
 
 CREATE OR REPLACE FUNCTION public.accept_team_invite(p_token text)
 RETURNS uuid
