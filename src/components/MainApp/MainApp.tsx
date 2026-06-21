@@ -24,6 +24,11 @@ import type { AdminTemplateEditSession } from '../../types/adminTemplateEdit'
 import { APP_DISPLAY_THEME } from '../../constants/appDisplayTheme'
 import { readStoredAppShellView, writeStoredAppShellView } from '../../utils/appShellViewStorage'
 import {
+  clearPendingMessageDeepLink,
+  MESSAGE_ACCESS_DENIED_MESSAGE,
+  readPendingMessageDeepLink,
+} from '../../utils/messageLink'
+import {
   clearPendingPlaybookDeepLink,
   markOpenPlayLibraryPending,
   PLAYBOOK_ACCESS_DENIED_MESSAGE,
@@ -34,6 +39,10 @@ import './MainApp.css'
 export type AppView = AppShellView
 
 function readInitialAppShellView(): AppShellView {
+  if (readPendingMessageDeepLink()) {
+    return 'messages'
+  }
+
   if (readPendingPlaybookDeepLink()) {
     return 'designer'
   }
@@ -60,8 +69,13 @@ function MainAppViews() {
     openTeamHubAfterCreate,
     clearOpenTeamHubAfterCreate,
   } = useTeam()
+  const messageDeepLinkHandledRef = useRef(false)
   const playbookDeepLinkHandledRef = useRef(false)
+  const [messageDeepLinkError, setMessageDeepLinkError] = useState<string | null>(null)
   const [playbookDeepLinkError, setPlaybookDeepLinkError] = useState<string | null>(null)
+  const [messageDeepLinkProcessing, setMessageDeepLinkProcessing] = useState(() =>
+    Boolean(readPendingMessageDeepLink()),
+  )
   const [playbookDeepLinkProcessing, setPlaybookDeepLinkProcessing] = useState(() =>
     Boolean(readPendingPlaybookDeepLink()),
   )
@@ -148,7 +162,47 @@ function MainAppViews() {
   }, [view, isAppAdmin])
 
   useEffect(() => {
+    if (!profileLoaded || !team || messageDeepLinkHandledRef.current) {
+      return
+    }
+
+    const pending = readPendingMessageDeepLink()
+    if (!pending) {
+      setMessageDeepLinkProcessing(false)
+      return
+    }
+
+    messageDeepLinkHandledRef.current = true
+
+    void (async () => {
+      setMessageDeepLinkProcessing(true)
+      setMessageDeepLinkError(null)
+
+      const result = await switchTeam(pending.teamId)
+      clearPendingMessageDeepLink()
+
+      if (result.error) {
+        const isAccessDenied = /not a member/i.test(result.error)
+        setMessageDeepLinkError(
+          isAccessDenied ? MESSAGE_ACCESS_DENIED_MESSAGE : result.error,
+        )
+        setView('team-hub')
+        setMessageDeepLinkProcessing(false)
+        return
+      }
+
+      setView('messages')
+      setMessageDeepLinkProcessing(false)
+    })()
+  }, [profileLoaded, team, switchTeam])
+
+  useEffect(() => {
     if (!profileLoaded || !team || playbookDeepLinkHandledRef.current) {
+      return
+    }
+
+    if (readPendingMessageDeepLink()) {
+      setPlaybookDeepLinkProcessing(false)
       return
     }
 
@@ -203,6 +257,14 @@ function MainAppViews() {
       <div className={`main-app app-theme-${APP_DISPLAY_THEME}`}>
         <AppShellHeader />
         <AppShellPageToolbar />
+        {messageDeepLinkProcessing && (
+          <p className="main-app-playbook-deep-link-status">Opening messages…</p>
+        )}
+        {messageDeepLinkError && (
+          <p className="main-app-playbook-deep-link-error" role="alert">
+            {messageDeepLinkError}
+          </p>
+        )}
         {playbookDeepLinkProcessing && (
           <p className="main-app-playbook-deep-link-status">Opening playbook…</p>
         )}

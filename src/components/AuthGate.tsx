@@ -23,6 +23,7 @@ import {
   redirectToAppHomeFromJoinLink,
   shouldResumePendingJoinLink,
 } from '../utils/joinLinkToken'
+import { captureMessageDeepLinkFromUrl, parseMessageDeepLinkFromUrl } from '../utils/messageLink'
 import { capturePlaybookDeepLinkFromUrl } from '../utils/playbookLink'
 import { TeamGate } from './TeamGate'
 import '../pages/AuthPages.css'
@@ -71,7 +72,11 @@ export function AuthGate() {
 
   useEffect(() => {
     if (!isAcceptInvitePath() && !isJoinTeamPath()) {
-      capturePlaybookDeepLinkFromUrl()
+      if (parseMessageDeepLinkFromUrl()) {
+        captureMessageDeepLinkFromUrl()
+      } else {
+        capturePlaybookDeepLinkFromUrl()
+      }
     }
   }, [])
 
