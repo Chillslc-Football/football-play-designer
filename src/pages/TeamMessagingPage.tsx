@@ -1,241 +1,72 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { TeamChatList } from '../components/TeamChatList/TeamChatList'
+import { TeamChatPanel } from '../components/TeamChatPanel/TeamChatPanel'
 import { APP_DISPLAY_THEME } from '../constants/appDisplayTheme'
-import { useAppShell } from '../context/AppShellContext'
-import { useAuth } from '../hooks/useAuth'
+import { EVERYONE_CHAT_ID, EVERYONE_CHAT_TITLE } from '../constants/teamChatConstants'
+import { PHONE_VIEWPORT_MEDIA } from '../constants/viewportBreakpoints'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTeam } from '../hooks/useTeam'
-import * as teamMessageRepository from '../repositories/teamMessageRepository'
-import {
-  createEmptyTeamMessageDraft,
-  type TeamMessage,
-  type TeamMessageDraft,
-  type TeamMessageThread,
-} from '../types/teamMessage'
-import { formatTeamUpdateTimestamp } from '../utils/teamUpdateUtils'
 import './TeamMessagingPage.css'
 
-function isDraftValid(draft: TeamMessageDraft): boolean {
-  return draft.body.trim().length > 0
-}
+type MobileMessagingScreen = 'list' | 'chat'
 
 export function TeamMessagingPage() {
-  const { user } = useAuth()
-  const shell = useAppShell()
-  const refreshMessageUnreadCount = shell?.refreshMessageUnreadCount
   const { team, activeTeamId } = useTeam()
+  const isPhone = useMediaQuery(PHONE_VIEWPORT_MEDIA)
+  const [mobileScreen, setMobileScreen] = useState<MobileMessagingScreen>('list')
+  const [activeChatId, setActiveChatId] = useState(EVERYONE_CHAT_ID)
 
-  const [thread, setThread] = useState<TeamMessageThread | null>(null)
-  const [messages, setMessages] = useState<TeamMessage[]>([])
-  const [draft, setDraft] = useState<TeamMessageDraft>(createEmptyTeamMessageDraft())
-  const [loading, setLoading] = useState(true)
-  const [sending, setSending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const messagesEndRef = useRef<HTMLDivElement | null>(null)
-  const lastMarkedReadMessageIdRef = useRef<string | null>(null)
-
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [])
-
-  const appendMessage = useCallback((message: TeamMessage) => {
-    setMessages((current) => {
-      if (current.some((existing) => existing.id === message.id)) {
-        return current
-      }
-      return [...current, message]
-    })
-  }, [])
-
-  const loadChat = useCallback(async () => {
-    if (!activeTeamId) return
-
-    setLoading(true)
-    setError(null)
-    setThread(null)
-    setMessages([])
-    lastMarkedReadMessageIdRef.current = null
-
-    try {
-      const loadedThread = await teamMessageRepository.getOrCreateTeamChatThread(activeTeamId)
-      const loadedMessages = await teamMessageRepository.getTeamMessagesByThread(
-        activeTeamId,
-        loadedThread.id,
-      )
-
-      setThread(loadedThread)
-      setMessages(loadedMessages)
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load messages')
-    } finally {
-      setLoading(false)
-    }
+  useEffect(() => {
+    setMobileScreen('list')
+    setActiveChatId(EVERYONE_CHAT_ID)
   }, [activeTeamId])
 
-  useEffect(() => {
-    void loadChat()
-  }, [loadChat])
+  const showList = !isPhone || mobileScreen === 'list'
+  const showChat = !isPhone || mobileScreen === 'chat'
 
-  useEffect(() => {
-    if (!activeTeamId || !thread) return
-
-    return teamMessageRepository.subscribeToTeamMessages(
-      activeTeamId,
-      thread.id,
-      appendMessage,
-    )
-  }, [activeTeamId, thread, appendMessage])
-
-  useEffect(() => {
-    if (!loading && messages.length > 0) {
-      scrollToBottom()
-    }
-  }, [loading, messages, scrollToBottom])
-
-  const markMessagesReadThroughLatest = useCallback(async () => {
-    if (!thread || messages.length === 0) return
-
-    const latestMessage = messages[messages.length - 1]
-    if (lastMarkedReadMessageIdRef.current === latestMessage.id) {
-      return
-    }
-
-    lastMarkedReadMessageIdRef.current = latestMessage.id
-
-    try {
-      await teamMessageRepository.markThreadRead(thread.id, latestMessage.id)
-      await refreshMessageUnreadCount?.()
-    } catch (markReadError) {
-      lastMarkedReadMessageIdRef.current = null
-      console.error('Failed to mark messages as read:', markReadError)
-    }
-  }, [thread, messages, refreshMessageUnreadCount])
-
-  useEffect(() => {
-    if (loading || !thread || messages.length === 0) return
-    void markMessagesReadThroughLatest()
-  }, [loading, thread, messages, markMessagesReadThroughLatest])
-
-  async function handleSend() {
-    if (!activeTeamId || !thread || !user) return
-
-    if (!isDraftValid(draft)) {
-      setError('Message cannot be empty.')
-      return
-    }
-
-    setSending(true)
-    setError(null)
-
-    try {
-      const created = await teamMessageRepository.createTeamMessage(
-        activeTeamId,
-        thread.id,
-        user.id,
-        draft.body,
-      )
-      appendMessage(created)
-      setDraft(createEmptyTeamMessageDraft())
-      scrollToBottom()
-    } catch (sendError) {
-      setError(sendError instanceof Error ? sendError.message : 'Failed to send message')
-    } finally {
-      setSending(false)
+  function handleSelectChat(chatId: string) {
+    setActiveChatId(chatId)
+    if (isPhone) {
+      setMobileScreen('chat')
     }
   }
 
-  function senderLabel(message: TeamMessage): string {
-    if (user?.id && message.sender_id === user.id) {
-      return 'You'
-    }
-    return message.sender_display_name ?? 'Team member'
+  function handleBackToList() {
+    setMobileScreen('list')
   }
 
   return (
     <div className={`team-messaging-page app-shell-page app-theme-${APP_DISPLAY_THEME}`}>
       <div className="team-messaging-page-screen app-shell-page-screen">
-        <header className="team-messaging-page-header app-shell-page-header">
-          <div className="team-messaging-page-header-main app-shell-page-header-main">
-            <h1>Messages</h1>
-            <p className="team-messaging-page-subtitle app-shell-page-subtitle">
-              {thread?.title ?? 'Team Chat'} · {team?.name ?? 'Team'}
-            </p>
-          </div>
-        </header>
-
-        {error && <p className="team-messaging-page-error app-shell-page-error">{error}</p>}
-
-        {loading ? (
-          <p className="team-messaging-page-loading app-shell-page-loading">Loading messages…</p>
-        ) : (
-          <div className="team-messaging-chat app-shell-page-body">
-            <div className="team-messaging-panel app-shell-card">
-              <div className="team-messaging-messages" aria-live="polite">
-                {messages.length === 0 ? (
-                  <p className="team-messaging-page-empty app-shell-page-empty">
-                    No messages yet. Send the first message to your team.
-                  </p>
-                ) : (
-                  messages.map((message) => {
-                    const isOwn = user?.id === message.sender_id
-
-                    return (
-                      <article
-                        key={message.id}
-                        className={`team-messaging-message${isOwn ? ' is-own' : ''}`}
-                      >
-                        <div className="team-messaging-message-bubble">
-                          <p className="team-messaging-message-meta">
-                            {senderLabel(message)} · {formatTeamUpdateTimestamp(message.created_at)}
-                          </p>
-                          <p className="team-messaging-message-body">{message.body}</p>
-                        </div>
-                      </article>
-                    )
-                  })
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              <form
-                className="team-messaging-compose"
-                onSubmit={(event) => {
-                  event.preventDefault()
-                  void handleSend()
-                }}
-              >
-                <label className="field-label team-messaging-compose-label" htmlFor="team-message-body">
-                  Message
-                </label>
-                <div className="team-messaging-compose-row">
-                  <textarea
-                    id="team-message-body"
-                    className="input-field team-messaging-compose-body"
-                    value={draft.body}
-                    rows={3}
-                    placeholder="Write a message to your team…"
-                    disabled={sending}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, body: event.target.value }))
-                    }
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' && !event.shiftKey) {
-                        event.preventDefault()
-                        void handleSend()
-                      }
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    className="btn btn-primary team-messaging-compose-send"
-                    disabled={sending || !isDraftValid(draft)}
-                  >
-                    {sending ? 'Sending…' : 'Send'}
-                  </button>
-                </div>
-              </form>
+        {showList && isPhone && (
+          <header className="team-messaging-page-header app-shell-page-header">
+            <div className="team-messaging-page-header-main app-shell-page-header-main">
+              <h1>Messages</h1>
             </div>
-          </div>
+          </header>
         )}
+
+        <div
+          className={`team-messaging-shell${isPhone ? ` is-mobile-${mobileScreen}` : ''}`}
+        >
+          {showList && (
+            <TeamChatList
+              activeChatId={activeChatId}
+              showSectionTitle={!isPhone}
+              showChevrons={isPhone}
+              onSelectChat={handleSelectChat}
+            />
+          )}
+
+          {showChat && (
+            <TeamChatPanel
+              chatTitle={EVERYONE_CHAT_TITLE}
+              teamName={team?.name ?? 'Team'}
+              showBackButton={isPhone}
+              onBack={handleBackToList}
+            />
+          )}
+        </div>
       </div>
     </div>
   )

@@ -3,83 +3,12 @@
   flex-direction: column;
 }
 
-.team-messaging-chat {
+.team-messaging-shell {
   flex: 1;
   min-height: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   width: 100%;
-}
-
-.team-messaging-messages {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-  background: var(--surface);
-  color: var(--text-on-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-md);
-}
-
-.team-messaging-message {
-  max-width: 85%;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  background: var(--play-type-selector-bg, var(--surface));
-  border: 1px solid var(--border);
-}
-
-.team-messaging-message.is-own {
-  align-self: flex-end;
-  background: var(--grass-mid);
-  color: #fff;
-  border-color: transparent;
-}
-
-.team-messaging-message-meta {
-  margin: 0 0 4px;
-  font-size: 11px;
-  opacity: 0.85;
-}
-
-.team-messaging-message-body {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.45;
-  white-space: pre-wrap;
-}
-
-.team-messaging-compose {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.team-messaging-compose-row {
-  display: flex;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-}
-
-.team-messaging-compose-body {
-  flex: 1;
-  min-height: 44px;
-  resize: vertical;
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.team-messaging-compose .btn,
-.team-messaging-compose-send {
-  align-self: flex-end;
 }
 
 @media (min-width: 769px) {
@@ -87,124 +16,13 @@
     overflow: hidden;
   }
 
-  .team-messaging-chat {
+  .team-messaging-shell {
     flex: 1;
     min-height: 0;
-    max-width: 620px;
-    width: 100%;
-  }
-
-  .team-messaging-chat.app-shell-page-body {
-    max-width: 620px;
-  }
-
-  .team-messaging-panel {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .team-messaging-messages {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 12px;
-    margin-bottom: 0;
-    border: none;
-    border-radius: 0;
-    background: transparent;
-  }
-
-  .team-messaging-page-empty {
-    margin: auto;
-    text-align: center;
-  }
-
-  .team-messaging-message {
-    display: flex;
-    max-width: 75%;
-    padding: 0;
-    background: none;
-    border: none;
-    color: inherit;
-  }
-
-  .team-messaging-message.is-own {
-    align-self: flex-end;
-    background: none;
-    color: inherit;
-  }
-
-  .team-messaging-message-bubble {
-    min-width: 0;
-    padding: 8px 12px;
-    border-radius: 10px;
-    background: var(--play-type-selector-bg, var(--surface));
     border: 1px solid var(--border);
-  }
-
-  .team-messaging-message.is-own .team-messaging-message-bubble {
-    background: var(--grass-mid);
-    color: #fff;
-    border-color: transparent;
-  }
-
-  .team-messaging-message-meta {
-    margin: 0 0 6px;
-    font-size: 11px;
-    line-height: 1.3;
-    opacity: 0.85;
-  }
-
-  .team-messaging-message-body {
-    font-size: 14px;
-    line-height: 1.45;
-  }
-
-  .team-messaging-compose {
-    flex-shrink: 0;
-    flex-direction: column;
-    gap: 0;
-    padding: 10px 12px;
-    border-top: 1px solid var(--border);
-    background: transparent;
-  }
-
-  .team-messaging-compose-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
+    border-radius: var(--radius-md);
     overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .team-messaging-compose-row {
-    display: flex;
-    align-items: flex-end;
-    gap: 10px;
-    width: 100%;
-  }
-
-  .team-messaging-compose-body {
-    flex: 1;
-    min-width: 0;
-    min-height: 44px;
-    max-height: 120px;
-    resize: none;
-  }
-
-  .team-messaging-compose-send {
-    flex-shrink: 0;
-    align-self: flex-end;
+    background: var(--surface, #fafcf9);
   }
 }
 
@@ -213,20 +31,7 @@
     overflow: visible;
   }
 
-  .team-messaging-messages {
-    min-height: 240px;
-    max-height: 50vh;
-  }
-
-  .team-messaging-compose-row {
+  .team-messaging-shell {
     flex-direction: column;
-    align-items: stretch;
-  }
-
-  .team-messaging-compose .btn,
-  .team-messaging-compose-send {
-    width: 100%;
-    min-height: 44px;
-    align-self: stretch;
   }
 }
