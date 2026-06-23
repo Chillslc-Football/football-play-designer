@@ -22,6 +22,7 @@ import { useTeam } from '../../hooks/useTeam'
 import * as teamMessageRepository from '../../repositories/teamMessageRepository'
 import type { AdminTemplateEditSession } from '../../types/adminTemplateEdit'
 import { APP_DISPLAY_THEME } from '../../constants/appDisplayTheme'
+import { getThreadKindLabel } from '../../constants/teamChatConstants'
 import { readStoredAppShellView, writeStoredAppShellView } from '../../utils/appShellViewStorage'
 import {
   clearPendingMessageDeepLink,
@@ -63,6 +64,7 @@ function MainAppViews() {
   const [adminTemplateEdit, setAdminTemplateEdit] = useState<AdminTemplateEditSession | null>(null)
   const [pageToolbar, setPageToolbar] = useState<ReactNode | null>(null)
   const [messageUnreadCount, setMessageUnreadCount] = useState(0)
+  const [pendingMessageThreadId, setPendingMessageThreadId] = useState<string | null>(null)
   const designerHeaderHandlersRef = useRef<DesignerHeaderHandlers | null>(null)
   const isAppAdmin = useAppAdmin()
   const { user } = useAuth()
@@ -111,6 +113,10 @@ function MainAppViews() {
     activeTeamId,
   }
 
+  const clearPendingMessageThreadId = useCallback(() => {
+    setPendingMessageThreadId(null)
+  }, [])
+
   const refreshMessageUnreadCount = useCallback(async () => {
     if (!activeTeamId) {
       setMessageUnreadCount(0)
@@ -145,6 +151,7 @@ function MainAppViews() {
         threadId: payload.threadId,
         messageId: payload.messageId,
       })
+      setPendingMessageThreadId(payload.threadId)
 
       if (currentTeamId !== payload.teamId) {
         const result = await changeTeam(payload.teamId)
@@ -173,12 +180,16 @@ function MainAppViews() {
 
     void (async () => {
       try {
-        const thread = await teamMessageRepository.getOrCreateTeamChatThread(activeTeamId)
+        const threads = await teamMessageRepository.listAccessibleTeamMessageThreads(activeTeamId)
         if (cancelled) return
 
-        unsubscribe = teamMessageRepository.subscribeToTeamMessages(
+        const threadTitles = new Map(
+          threads.map((thread) => [thread.id, getThreadKindLabel(thread.thread_kind)]),
+        )
+
+        unsubscribe = teamMessageRepository.subscribeToAccessibleTeamMessages(
           activeTeamId,
-          thread.id,
+          threads.map((thread) => thread.id),
           (message) => {
             if (message.sender_id !== user.id) {
               void refreshMessageUnreadCount()
@@ -187,6 +198,7 @@ function MainAppViews() {
                 threadId: message.thread_id,
                 messageId: message.id,
                 body: message.body,
+                channelTitle: threadTitles.get(message.thread_id) ?? 'Messages',
               })
             }
           },
@@ -249,6 +261,7 @@ function MainAppViews() {
       }
 
       setView('messages')
+      setPendingMessageThreadId(pending.threadId)
       setMessageDeepLinkProcessing(false)
     })()
   }, [profileLoaded, team, switchTeam])
@@ -310,6 +323,8 @@ function MainAppViews() {
       clearLaunchMode={clearLaunchMode}
       messageUnreadCount={messageUnreadCount}
       refreshMessageUnreadCount={refreshMessageUnreadCount}
+      pendingMessageThreadId={pendingMessageThreadId}
+      clearPendingMessageThreadId={clearPendingMessageThreadId}
     >
       <div className={`main-app app-theme-${APP_DISPLAY_THEME}`}>
         <AppShellHeader />

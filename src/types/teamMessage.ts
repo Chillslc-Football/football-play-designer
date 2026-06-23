@@ -1,11 +1,18 @@
+export type TeamMessageThreadKind = 'everyone' | 'coaches' | 'players' | 'parents'
+
 export type TeamMessageThread = {
   id: string
   team_id: string
   title: string
+  thread_kind: TeamMessageThreadKind
   created_by: string
   created_at: string
   updated_at: string
   last_message_at: string | null
+}
+
+export type TeamMessageThreadWithUnread = TeamMessageThread & {
+  unread_count: number
 }
 
 export type TeamMessage = {

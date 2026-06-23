@@ -64,6 +64,7 @@ export function showTeamMessageBrowserNotification(input: {
   threadId: string
   messageId: string
   body: string
+  channelTitle?: string
 }): void {
   if (!canShowTeamMessageBrowserNotifications()) {
     return
@@ -74,8 +75,10 @@ export function showTeamMessageBrowserNotification(input: {
     return
   }
 
+  const title = input.channelTitle?.trim() || TEAM_MESSAGE_NOTIFICATION_TITLE
+
   try {
-    const notification = new Notification(TEAM_MESSAGE_NOTIFICATION_TITLE, {
+    const notification = new Notification(title, {
       body,
       tag: `team-message-${input.messageId}`,
       data: {

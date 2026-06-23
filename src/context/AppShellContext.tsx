@@ -31,6 +31,8 @@ type AppShellContextValue = {
   clearLaunchMode: () => void
   messageUnreadCount: number
   refreshMessageUnreadCount: () => Promise<void>
+  pendingMessageThreadId: string | null
+  clearPendingMessageThreadId: () => void
 }
 
 const AppShellContext = createContext<AppShellContextValue | null>(null)
@@ -48,6 +50,8 @@ type AppShellProviderProps = {
   clearLaunchMode: () => void
   messageUnreadCount: number
   refreshMessageUnreadCount: () => Promise<void>
+  pendingMessageThreadId: string | null
+  clearPendingMessageThreadId: () => void
   children: ReactNode
 }
 
@@ -64,6 +68,8 @@ export function AppShellProvider({
   clearLaunchMode,
   messageUnreadCount,
   refreshMessageUnreadCount,
+  pendingMessageThreadId,
+  clearPendingMessageThreadId,
   children,
 }: AppShellProviderProps) {
   return (
@@ -81,6 +87,8 @@ export function AppShellProvider({
         clearLaunchMode,
         messageUnreadCount,
         refreshMessageUnreadCount,
+        pendingMessageThreadId,
+        clearPendingMessageThreadId,
       }}
     >
       {children}

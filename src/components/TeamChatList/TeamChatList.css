@@ -61,6 +61,18 @@
   white-space: nowrap;
 }
 
+.team-chat-list-item-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.team-chat-list-item-badge.unread-count-badge {
+  flex-shrink: 0;
+}
+
 .team-chat-list-item-chevron {
   flex-shrink: 0;
   font-size: 18px;

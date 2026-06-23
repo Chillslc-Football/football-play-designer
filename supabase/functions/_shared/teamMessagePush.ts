@@ -16,6 +16,19 @@ export type TeamMessageRow = {
   deleted_at?: string | null;
 };
 
+type TeamMessageThreadKind = 'everyone' | 'coaches' | 'players' | 'parents';
+
+type TeamMessageThreadRow = {
+  id: string;
+  team_id: string;
+  thread_kind: TeamMessageThreadKind;
+  title: string;
+};
+
+type TeamMemberRow = {
+  user_id: string;
+};
+
 type TeamMessagePushResult = {
   notification_type: 'team_message';
   message_id: string;
@@ -28,8 +41,14 @@ type TeamMessagePushResult = {
 };
 
 const TEAM_MESSAGE_COLUMNS = 'id,team_id,thread_id,sender_id,body,created_at,edited_at,deleted_at';
+const TEAM_MESSAGE_THREAD_COLUMNS = 'id,team_id,thread_kind,title';
 
-const TEAM_MESSAGE_TITLE = 'Team Chat';
+const THREAD_KIND_PUSH_TITLES: Record<TeamMessageThreadKind, string> = {
+  everyone: 'Everyone',
+  coaches: 'Coaches',
+  players: 'Players',
+  parents: 'Parents',
+};
 
 function truncate(text: string, maxLength: number): string {
   const trimmed = text.trim();
@@ -78,6 +97,23 @@ async function loadTeamMessage(messageId: string): Promise<TeamMessageRow> {
   return assertTeamMessageRow(data);
 }
 
+async function loadTeamMessageThread(threadId: string): Promise<TeamMessageThreadRow> {
+  const data = await adminSelectMaybeSingle<TeamMessageThreadRow>('team_message_threads', {
+    select: TEAM_MESSAGE_THREAD_COLUMNS,
+    id: `eq.${threadId}`,
+  });
+
+  if (!data) {
+    throw new Error(`Team message thread not found: ${threadId}`);
+  }
+
+  if (!data.thread_kind) {
+    throw new Error(`Team message thread missing thread_kind: ${threadId}`);
+  }
+
+  return data;
+}
+
 export function isTeamMessageRecord(record: unknown): record is TeamMessageRow {
   if (!record || typeof record !== 'object') {
     return false;
@@ -102,7 +138,9 @@ export async function sendTeamMessagePushNotifications(input: {
     ? assertTeamMessageRow(input.record)
     : await loadTeamMessage(input.messageId ?? '');
 
-  const members = await adminSelect<{ user_id: string }>('team_members', {
+  const thread = await loadTeamMessageThread(teamMessage.thread_id);
+
+  const members = await adminSelect<TeamMemberRow>('team_members', {
     select: 'user_id',
     team_id: `eq.${teamMessage.team_id}`,
   });
@@ -133,9 +171,11 @@ export async function sendTeamMessagePushNotifications(input: {
     user_id: `in.(${recipientUserIds.join(',')})`,
   });
 
+  const pushTitle = THREAD_KIND_PUSH_TITLES[thread.thread_kind];
+
   const pushMessages: ExpoPushMessage[] = tokens.map((tokenRow) => ({
     to: tokenRow.expo_push_token,
-    title: TEAM_MESSAGE_TITLE,
+    title: pushTitle,
     body: truncate(teamMessage.body, 180),
     sound: 'default',
     channelId: 'default',
@@ -145,6 +185,7 @@ export async function sendTeamMessagePushNotifications(input: {
       thread_id: teamMessage.thread_id,
       message_id: teamMessage.id,
       sender_id: teamMessage.sender_id,
+      thread_kind: thread.thread_kind,
     },
   }));
 

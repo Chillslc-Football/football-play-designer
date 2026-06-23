@@ -7,16 +7,17 @@ import {
   createEmptyTeamMessageDraft,
   type TeamMessage,
   type TeamMessageDraft,
-  type TeamMessageThread,
 } from '../../types/teamMessage'
 import { formatTeamUpdateTimestamp } from '../../utils/teamUpdateUtils'
 import './TeamChatPanel.css'
 
 type TeamChatPanelProps = {
+  threadId: string | null
   chatTitle: string
   teamName: string
   showBackButton: boolean
   onBack?: () => void
+  onChannelActivity?: () => void
 }
 
 function isDraftValid(draft: TeamMessageDraft): boolean {
@@ -24,17 +25,18 @@ function isDraftValid(draft: TeamMessageDraft): boolean {
 }
 
 export function TeamChatPanel({
+  threadId,
   chatTitle,
   teamName,
   showBackButton,
   onBack,
+  onChannelActivity,
 }: TeamChatPanelProps) {
   const { user } = useAuth()
   const shell = useAppShell()
   const refreshMessageUnreadCount = shell?.refreshMessageUnreadCount
   const { activeTeamId } = useTeam()
 
-  const [thread, setThread] = useState<TeamMessageThread | null>(null)
   const [messages, setMessages] = useState<TeamMessage[]>([])
   const [draft, setDraft] = useState<TeamMessageDraft>(createEmptyTeamMessageDraft())
   const [loading, setLoading] = useState(true)
@@ -58,43 +60,40 @@ export function TeamChatPanel({
   }, [])
 
   const loadChat = useCallback(async () => {
-    if (!activeTeamId) return
+    if (!activeTeamId || !threadId) return
 
     setLoading(true)
     setError(null)
-    setThread(null)
     setMessages([])
     lastMarkedReadMessageIdRef.current = null
 
     try {
-      const loadedThread = await teamMessageRepository.getOrCreateTeamChatThread(activeTeamId)
       const loadedMessages = await teamMessageRepository.getTeamMessagesByThread(
         activeTeamId,
-        loadedThread.id,
+        threadId,
       )
 
-      setThread(loadedThread)
       setMessages(loadedMessages)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load messages')
     } finally {
       setLoading(false)
     }
-  }, [activeTeamId])
+  }, [activeTeamId, threadId])
 
   useEffect(() => {
     void loadChat()
   }, [loadChat])
 
   useEffect(() => {
-    if (!activeTeamId || !thread) return
+    if (!activeTeamId || !threadId) return
 
     return teamMessageRepository.subscribeToTeamMessages(
       activeTeamId,
-      thread.id,
+      threadId,
       appendMessage,
     )
-  }, [activeTeamId, thread, appendMessage])
+  }, [activeTeamId, threadId, appendMessage])
 
   useEffect(() => {
     if (!loading && messages.length > 0) {
@@ -103,7 +102,7 @@ export function TeamChatPanel({
   }, [loading, messages, scrollToBottom])
 
   const markMessagesReadThroughLatest = useCallback(async () => {
-    if (!thread || messages.length === 0) return
+    if (!threadId || messages.length === 0) return
 
     const latestMessage = messages[messages.length - 1]
     if (lastMarkedReadMessageIdRef.current === latestMessage.id) {
@@ -113,21 +112,22 @@ export function TeamChatPanel({
     lastMarkedReadMessageIdRef.current = latestMessage.id
 
     try {
-      await teamMessageRepository.markThreadRead(thread.id, latestMessage.id)
+      await teamMessageRepository.markThreadRead(threadId, latestMessage.id)
       await refreshMessageUnreadCount?.()
+      onChannelActivity?.()
     } catch (markReadError) {
       lastMarkedReadMessageIdRef.current = null
       console.error('Failed to mark messages as read:', markReadError)
     }
-  }, [thread, messages, refreshMessageUnreadCount])
+  }, [threadId, messages, refreshMessageUnreadCount, onChannelActivity])
 
   useEffect(() => {
-    if (loading || !thread || messages.length === 0) return
+    if (loading || !threadId || messages.length === 0) return
     void markMessagesReadThroughLatest()
-  }, [loading, thread, messages, markMessagesReadThroughLatest])
+  }, [loading, threadId, messages, markMessagesReadThroughLatest])
 
   async function handleSend() {
-    if (!activeTeamId || !thread || !user) return
+    if (!activeTeamId || !threadId || !user) return
 
     if (!isDraftValid(draft)) {
       setError('Message cannot be empty.')
@@ -140,13 +140,14 @@ export function TeamChatPanel({
     try {
       const created = await teamMessageRepository.createTeamMessage(
         activeTeamId,
-        thread.id,
+        threadId,
         user.id,
         draft.body,
       )
       appendMessage(created)
       setDraft(createEmptyTeamMessageDraft())
       scrollToBottom()
+      onChannelActivity?.()
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : 'Failed to send message')
     } finally {
@@ -160,6 +161,8 @@ export function TeamChatPanel({
     }
     return message.sender_display_name ?? 'Team member'
   }
+
+  const composeFieldId = threadId ? `team-message-body-${threadId}` : 'team-message-body'
 
   return (
     <section className="team-chat-panel" aria-label={`${chatTitle} chat`}>
@@ -182,7 +185,9 @@ export function TeamChatPanel({
 
       {error && <p className="team-chat-panel-error app-shell-page-error">{error}</p>}
 
-      {loading ? (
+      {!threadId ? (
+        <p className="team-chat-panel-loading app-shell-page-loading">Loading channel…</p>
+      ) : loading ? (
         <p className="team-chat-panel-loading app-shell-page-loading">Loading messages…</p>
       ) : (
         <div className="team-chat-panel-body">
@@ -221,12 +226,12 @@ export function TeamChatPanel({
                 void handleSend()
               }}
             >
-              <label className="field-label team-messaging-compose-label" htmlFor="team-message-body">
+              <label className="field-label team-messaging-compose-label" htmlFor={composeFieldId}>
                 Message
               </label>
               <div className="team-messaging-compose-row">
                 <textarea
-                  id="team-message-body"
+                  id={composeFieldId}
                   className="input-field team-messaging-compose-body"
                   value={draft.body}
                   rows={3}

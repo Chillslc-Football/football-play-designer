@@ -1,14 +1,24 @@
 import { supabase } from '../lib/supabaseClient'
-import type { TeamMessage, TeamMessageThread } from '../types/teamMessage'
+import type {
+  TeamMessage,
+  TeamMessageThread,
+  TeamMessageThreadKind,
+  TeamMessageThreadWithUnread,
+} from '../types/teamMessage'
 
 type TeamMessageThreadRow = {
   id: string
   team_id: string
   title: string
+  thread_kind: TeamMessageThreadKind
   created_by: string
   created_at: string
   updated_at: string
   last_message_at: string | null
+}
+
+type TeamMessageThreadWithUnreadRow = TeamMessageThreadRow & {
+  unread_count: number | string
 }
 
 type TeamMessageRow = {
@@ -30,15 +40,39 @@ type ProfileNameRow = {
 const MESSAGE_COLUMNS =
   'id, thread_id, team_id, sender_id, body, created_at, edited_at, deleted_at'
 
+const THREAD_COLUMNS =
+  'id, team_id, title, thread_kind, created_by, created_at, updated_at, last_message_at'
+
+function parseUnreadCount(value: number | string | null | undefined): number {
+  if (typeof value === 'number') {
+    return value
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  return 0
+}
+
 function rowToThread(row: TeamMessageThreadRow): TeamMessageThread {
   return {
     id: row.id,
     team_id: row.team_id,
     title: row.title,
+    thread_kind: row.thread_kind ?? 'everyone',
     created_by: row.created_by,
     created_at: row.created_at,
     updated_at: row.updated_at,
     last_message_at: row.last_message_at,
+  }
+}
+
+function rowToThreadWithUnread(row: TeamMessageThreadWithUnreadRow): TeamMessageThreadWithUnread {
+  return {
+    ...rowToThread(row),
+    unread_count: parseUnreadCount(row.unread_count),
   }
 }
 
@@ -93,6 +127,20 @@ async function withSenderDisplayNames(messages: TeamMessage[]): Promise<TeamMess
     ...message,
     sender_display_name: names.get(message.sender_id) ?? null,
   }))
+}
+
+export async function listAccessibleTeamMessageThreads(
+  teamId: string,
+): Promise<TeamMessageThreadWithUnread[]> {
+  const { data, error } = await supabase.rpc('list_accessible_team_message_threads', {
+    p_team_id: teamId,
+  })
+
+  if (error) {
+    throw new Error(`Failed to load message channels: ${error.message}`)
+  }
+
+  return ((data ?? []) as TeamMessageThreadWithUnreadRow[]).map(rowToThreadWithUnread)
 }
 
 export async function getOrCreateTeamChatThread(teamId: string): Promise<TeamMessageThread> {
@@ -203,16 +251,7 @@ export async function getTeamMessageUnreadCount(teamId: string): Promise<number>
     throw new Error(`Failed to load unread message count: ${error.message}`)
   }
 
-  if (typeof data === 'number') {
-    return data
-  }
-
-  if (typeof data === 'string') {
-    const parsed = Number(data)
-    return Number.isFinite(parsed) ? parsed : 0
-  }
-
-  return 0
+  return parseUnreadCount(data)
 }
 
 export function subscribeToTeamMessages(
@@ -255,4 +294,47 @@ export function subscribeToTeamMessages(
   return () => {
     void supabase.removeChannel(channel)
   }
+}
+
+export function subscribeToAccessibleTeamMessages(
+  teamId: string,
+  threadIds: string[],
+  onInsert: (message: TeamMessage) => void,
+): () => void {
+  const uniqueThreadIds = [...new Set(threadIds.filter((id) => id.length > 0))]
+  if (uniqueThreadIds.length === 0) {
+    return () => {}
+  }
+
+  const unsubscribers = uniqueThreadIds.map((threadId) =>
+    subscribeToTeamMessages(teamId, threadId, onInsert),
+  )
+
+  return () => {
+    for (const unsubscribe of unsubscribers) {
+      unsubscribe()
+    }
+  }
+}
+
+export async function getTeamMessageThreadById(
+  teamId: string,
+  threadId: string,
+): Promise<TeamMessageThread | null> {
+  const { data, error } = await supabase
+    .from('team_message_threads')
+    .select(THREAD_COLUMNS)
+    .eq('team_id', teamId)
+    .eq('id', threadId)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(`Failed to load message channel: ${error.message}`)
+  }
+
+  if (!data) {
+    return null
+  }
+
+  return rowToThread(data as TeamMessageThreadRow)
 }
