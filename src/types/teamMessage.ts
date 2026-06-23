@@ -41,13 +41,21 @@ export type TeamMessage = {
   sender_display_name: string | null
   body: string
   mention_audiences: TeamMessageMentionAudience[]
+  mentioned_user_ids: string[]
   created_at: string
   edited_at: string | null
   deleted_at: string | null
 }
 
+export type PickedUserMention = {
+  userId: string
+  displayName: string
+  insertText: string
+}
+
 export type TeamMessageDraft = {
   body: string
+  pickedUserMentions: PickedUserMention[]
 }
 
 export type MessageReadSummary = {
@@ -56,5 +64,5 @@ export type MessageReadSummary = {
 }
 
 export function createEmptyTeamMessageDraft(): TeamMessageDraft {
-  return { body: '' }
+  return { body: '', pickedUserMentions: [] }
 }

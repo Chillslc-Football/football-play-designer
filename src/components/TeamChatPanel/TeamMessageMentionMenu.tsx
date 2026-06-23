@@ -1,11 +1,15 @@
-import type { AudienceMentionOption } from '../../utils/teamMessageMentionAutocomplete'
+import type { MentionSuggestion } from '../../utils/teamMessageMentionAutocomplete'
 
 type TeamMessageMentionMenuProps = {
-  options: AudienceMentionOption[]
+  options: MentionSuggestion[]
   highlightedIndex: number
   listboxId: string
   onHighlight: (index: number) => void
-  onSelect: (option: AudienceMentionOption) => void
+  onSelect: (option: MentionSuggestion) => void
+}
+
+function getOptionKey(option: MentionSuggestion): string {
+  return option.kind === 'audience' ? option.audience : option.userId
 }
 
 export function TeamMessageMentionMenu({
@@ -24,13 +28,13 @@ export function TeamMessageMentionMenu({
       id={listboxId}
       className="team-messaging-mention-menu"
       role="listbox"
-      aria-label="Audience mentions"
+      aria-label="Mentions"
     >
       {options.map((option, index) => {
         const isHighlighted = index === highlightedIndex
 
         return (
-          <li key={option.audience} role="presentation">
+          <li key={getOptionKey(option)} role="presentation">
             <button
               type="button"
               className={`team-messaging-mention-menu-item${isHighlighted ? ' is-highlighted' : ''}`}

@@ -43,6 +43,7 @@ type TeamMessageRow = {
   sender_id: string
   body: string
   mention_audiences?: TeamMessageMentionAudience[] | null
+  mentioned_user_ids?: string[] | null
   created_at: string
   edited_at: string | null
   deleted_at: string | null
@@ -54,7 +55,7 @@ type ProfileNameRow = {
 }
 
 const MESSAGE_COLUMNS =
-  'id, thread_id, team_id, sender_id, body, mention_audiences, created_at, edited_at, deleted_at'
+  'id, thread_id, team_id, sender_id, body, mention_audiences, mentioned_user_ids, created_at, edited_at, deleted_at'
 
 const THREAD_COLUMNS =
   'id, team_id, title, thread_kind, created_by, created_at, updated_at, last_message_at'
@@ -111,6 +112,7 @@ function rowToMessage(row: TeamMessageRow): TeamMessage {
     sender_display_name: null,
     body: row.body,
     mention_audiences: row.mention_audiences ?? [],
+    mentioned_user_ids: row.mentioned_user_ids ?? [],
     created_at: row.created_at,
     edited_at: row.edited_at,
     deleted_at: row.deleted_at,

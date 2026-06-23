@@ -5,8 +5,9 @@ import {
 } from './supabaseAdmin.ts';
 import { sendExpoPushMessages, type ExpoPushMessage } from './expoPush.ts';
 import {
-  getNotificationTargetRoles,
+  getNotificationTargetUserIds,
   normalizeMentionAudiences,
+  normalizeMentionedUserIds,
   type TeamMessageMentionAudience,
 } from './teamMessageMention.ts';
 
@@ -17,6 +18,7 @@ export type TeamMessageRow = {
   sender_id: string;
   body: string;
   mention_audiences?: TeamMessageMentionAudience[] | null;
+  mentioned_user_ids?: string[] | null;
   created_at?: string;
   edited_at?: string | null;
   deleted_at?: string | null;
@@ -56,7 +58,7 @@ type TeamMessagePushResult = {
 };
 
 const TEAM_MESSAGE_COLUMNS =
-  'id,team_id,thread_id,sender_id,body,mention_audiences,created_at,edited_at,deleted_at';
+  'id,team_id,thread_id,sender_id,body,mention_audiences,mentioned_user_ids,created_at,edited_at,deleted_at';
 const TEAM_MESSAGE_THREAD_COLUMNS = 'id,team_id,thread_kind,title';
 
 const THREAD_KIND_PUSH_TITLES: Record<Exclude<TeamMessageThreadKind, 'direct'>, string> = {
@@ -66,6 +68,9 @@ const THREAD_KIND_PUSH_TITLES: Record<Exclude<TeamMessageThreadKind, 'direct'>, 
   parents: 'Parents',
 };
 
+const USER_MENTION_BODY_PATTERN =
+  /@\[([^\]]+)\]\(mention:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\)/gi;
+
 function truncate(text: string, maxLength: number): string {
   const trimmed = text.trim();
 
@@ -74,6 +79,10 @@ function truncate(text: string, maxLength: number): string {
   }
 
   return `${trimmed.slice(0, maxLength - 1)}…`;
+}
+
+function formatMessageBodyForDisplay(body: string): string {
+  return body.replace(USER_MENTION_BODY_PATTERN, '@$1');
 }
 
 function assertTeamMessageRow(record: TeamMessageRow): TeamMessageRow {
@@ -173,39 +182,26 @@ export async function sendTeamMessagePushNotifications(input: {
 
   const thread = await loadTeamMessageThread(teamMessage.thread_id);
   const mentionAudiences = normalizeMentionAudiences(teamMessage.mention_audiences);
-  const targetRoles = getNotificationTargetRoles({
-    threadKind: thread.thread_kind,
-    mentionAudiences,
+  const mentionedUserIds = normalizeMentionedUserIds(teamMessage.mentioned_user_ids);
+
+  const members = await adminSelect<TeamMemberRow>('team_members', {
+    select: 'user_id,role',
+    team_id: `eq.${teamMessage.team_id}`,
   });
 
-  let recipientUserIds: string[] = [];
+  const threadParticipantUserIds =
+    thread.thread_kind === 'direct'
+      ? (await loadThreadParticipants(thread.id)).map((participant) => participant.user_id)
+      : undefined;
 
-  if (thread.thread_kind === 'direct') {
-    const participants = await loadThreadParticipants(thread.id);
-    const members = await adminSelect<TeamMemberRow>('team_members', {
-      select: 'user_id,role',
-      team_id: `eq.${teamMessage.team_id}`,
-    });
-    const roleByUserId = new Map(members.map((member) => [member.user_id, member.role]));
-
-    recipientUserIds = participants
-      .filter((participant) => participant.user_id && participant.user_id !== teamMessage.sender_id)
-      .filter((participant) => {
-        const role = roleByUserId.get(participant.user_id);
-        return role !== undefined && targetRoles.has(role);
-      })
-      .map((participant) => participant.user_id);
-  } else {
-    const members = await adminSelect<TeamMemberRow>('team_members', {
-      select: 'user_id,role',
-      team_id: `eq.${teamMessage.team_id}`,
-    });
-
-    recipientUserIds = members
-      .filter((member) => member.user_id && member.user_id !== teamMessage.sender_id)
-      .filter((member) => targetRoles.has(member.role))
-      .map((member) => member.user_id);
-  }
+  const recipientUserIds = [...getNotificationTargetUserIds({
+    threadKind: thread.thread_kind,
+    mentionAudiences,
+    mentionedUserIds,
+    senderId: teamMessage.sender_id,
+    members,
+    threadParticipantUserIds,
+  })];
 
   if (recipientUserIds.length === 0) {
     return {
@@ -237,7 +233,7 @@ export async function sendTeamMessagePushNotifications(input: {
   const pushMessages: ExpoPushMessage[] = tokens.map((tokenRow) => ({
     to: tokenRow.expo_push_token,
     title: pushTitle,
-    body: truncate(teamMessage.body, 180),
+    body: truncate(formatMessageBodyForDisplay(teamMessage.body), 180),
     sound: 'default',
     channelId: 'default',
     data: {
@@ -248,6 +244,7 @@ export async function sendTeamMessagePushNotifications(input: {
       sender_id: teamMessage.sender_id,
       thread_kind: thread.thread_kind,
       mention_audiences: mentionAudiences,
+      mentioned_user_ids: mentionedUserIds,
     },
   }));
 

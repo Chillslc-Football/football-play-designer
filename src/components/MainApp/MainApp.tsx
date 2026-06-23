@@ -23,7 +23,10 @@ import * as teamMessageRepository from '../../repositories/teamMessageRepository
 import type { AdminTemplateEditSession } from '../../types/adminTemplateEdit'
 import { APP_DISPLAY_THEME } from '../../constants/appDisplayTheme'
 import { getConversationTitle } from '../../constants/teamChatConstants'
-import { shouldNotifyForTeamMessage } from '../../utils/teamMessageMentionUtils'
+import {
+  formatMessageBodyForDisplay,
+  shouldNotifyForTeamMessage,
+} from '../../utils/teamMessageMentionUtils'
 import { readStoredAppShellView, writeStoredAppShellView } from '../../utils/appShellViewStorage'
 import {
   clearPendingMessageDeepLink,
@@ -207,6 +210,7 @@ function MainAppViews() {
                   userRole: role,
                   threadKind,
                   mentionAudiences: message.mention_audiences,
+                  mentionedUserIds: message.mentioned_user_ids,
                   senderId: message.sender_id,
                   userId: user.id,
                 })
@@ -218,7 +222,7 @@ function MainAppViews() {
                 teamId: message.team_id,
                 threadId: message.thread_id,
                 messageId: message.id,
-                body: message.body,
+                body: formatMessageBodyForDisplay(message.body),
                 channelTitle: threadTitles.get(message.thread_id) ?? 'Messages',
               })
             }

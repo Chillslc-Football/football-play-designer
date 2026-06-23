@@ -13,6 +13,7 @@ import { useTeam } from '../../hooks/useTeam'
 import * as teamMessageRepository from '../../repositories/teamMessageRepository'
 import {
   createEmptyTeamMessageDraft,
+  type DirectMessageEligibleMember,
   type MessageReadSummary,
   type TeamMessage,
   type TeamMessageDraft,
@@ -23,11 +24,13 @@ import {
 } from '../../utils/messageReadReceiptUtils'
 import { formatTeamUpdateTimestamp } from '../../utils/teamUpdateUtils'
 import {
-  filterAudienceMentionOptions,
+  filterMentionSuggestions,
   getActiveMentionQuery,
-  insertAudienceMention,
-  type AudienceMentionOption,
+  insertMentionToken,
+  buildPickedUserMention,
+  type MentionSuggestion,
 } from '../../utils/teamMessageMentionAutocomplete'
+import { encodeMessageBodyForStorage } from '../../utils/teamMessageMentionUtils'
 import { TeamMessageBody } from '../TeamMessageBody/TeamMessageBody'
 import { TeamMessageMentionMenu } from './TeamMessageMentionMenu'
 import './TeamChatPanel.css'
@@ -76,6 +79,7 @@ export function TeamChatPanel({
   const [composeCursorPosition, setComposeCursorPosition] = useState(0)
   const [mentionHighlightIndex, setMentionHighlightIndex] = useState(0)
   const [mentionMenuForceHidden, setMentionMenuForceHidden] = useState(false)
+  const [mentionMembers, setMentionMembers] = useState<DirectMessageEligibleMember[]>([])
 
   const READ_SUMMARY_DEBOUNCE_MS = 1500
 
@@ -260,6 +264,32 @@ export function TeamChatPanel({
     void markMessagesReadThroughLatest()
   }, [loading, threadId, messages, markMessagesReadThroughLatest])
 
+  useEffect(() => {
+    if (!activeTeamId) {
+      setMentionMembers([])
+      return
+    }
+
+    let cancelled = false
+
+    void (async () => {
+      try {
+        const members = await teamMessageRepository.listDmEligibleMembers(activeTeamId)
+        if (!cancelled) {
+          setMentionMembers(members)
+        }
+      } catch {
+        if (!cancelled) {
+          setMentionMembers([])
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [activeTeamId])
+
   const activeMentionQuery = useMemo(
     () => getActiveMentionQuery(draft.body, composeCursorPosition),
     [draft.body, composeCursorPosition],
@@ -270,8 +300,8 @@ export function TeamChatPanel({
       return []
     }
 
-    return filterAudienceMentionOptions(activeMentionQuery.query)
-  }, [activeMentionQuery, mentionMenuForceHidden])
+    return filterMentionSuggestions(activeMentionQuery.query, mentionMembers)
+  }, [activeMentionQuery, mentionMenuForceHidden, mentionMembers])
 
   const showMentionMenu = mentionSuggestions.length > 0 && activeMentionQuery !== null
 
@@ -288,19 +318,25 @@ export function TeamChatPanel({
   }, [])
 
   const applyMentionSelection = useCallback(
-    (option: AudienceMentionOption) => {
+    (option: MentionSuggestion) => {
       if (!activeMentionQuery) {
         return
       }
 
-      const { nextBody, nextCursor } = insertAudienceMention(
+      const { nextBody, nextCursor } = insertMentionToken(
         draft.body,
         activeMentionQuery.startIndex,
         activeMentionQuery.endIndex,
         option.token,
       )
 
-      setDraft({ body: nextBody })
+      setDraft((current) => ({
+        body: nextBody,
+        pickedUserMentions:
+          option.kind === 'member'
+            ? [...current.pickedUserMentions, buildPickedUserMention(option)]
+            : current.pickedUserMentions,
+      }))
       setComposeCursorPosition(nextCursor)
 
       requestAnimationFrame(() => {
@@ -328,11 +364,15 @@ export function TeamChatPanel({
     setError(null)
 
     try {
+      const bodyForStorage = encodeMessageBodyForStorage(
+        draft.body,
+        draft.pickedUserMentions,
+      )
       const created = await teamMessageRepository.createTeamMessage(
         activeTeamId,
         threadId,
         user.id,
-        draft.body,
+        bodyForStorage,
       )
       appendMessage(created)
       setDraft(createEmptyTeamMessageDraft())
@@ -520,7 +560,8 @@ export function TeamChatPanel({
                 </button>
               </div>
               <p id={`${composeFieldId}-hint`} className="team-messaging-compose-hint">
-                Use @parents, @players, @coaches, or @everyone to target notifications.
+                Use @everyone, @coaches, @players, @parents, or @ a team member to target
+                notifications.
               </p>
             </form>
           </div>
