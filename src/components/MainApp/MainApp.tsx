@@ -22,7 +22,8 @@ import { useTeam } from '../../hooks/useTeam'
 import * as teamMessageRepository from '../../repositories/teamMessageRepository'
 import type { AdminTemplateEditSession } from '../../types/adminTemplateEdit'
 import { APP_DISPLAY_THEME } from '../../constants/appDisplayTheme'
-import { getThreadKindLabel } from '../../constants/teamChatConstants'
+import { getConversationTitle } from '../../constants/teamChatConstants'
+import { shouldNotifyForTeamMessage } from '../../utils/teamMessageMentionUtils'
 import { readStoredAppShellView, writeStoredAppShellView } from '../../utils/appShellViewStorage'
 import {
   clearPendingMessageDeepLink,
@@ -72,6 +73,7 @@ function MainAppViews() {
     activeTeamId,
     profileLoaded,
     team,
+    role,
     switchTeam,
     openTeamHubAfterCreate,
     clearOpenTeamHubAfterCreate,
@@ -180,19 +182,38 @@ function MainAppViews() {
 
     void (async () => {
       try {
-        const threads = await teamMessageRepository.listAccessibleTeamMessageThreads(activeTeamId)
+        const [channels, directMessages] = await Promise.all([
+          teamMessageRepository.listAccessibleTeamMessageThreads(activeTeamId),
+          teamMessageRepository.listDirectMessageThreads(activeTeamId),
+        ])
         if (cancelled) return
 
+        const allThreads = [...channels, ...directMessages]
         const threadTitles = new Map(
-          threads.map((thread) => [thread.id, getThreadKindLabel(thread.thread_kind)]),
+          allThreads.map((thread) => [thread.id, getConversationTitle(thread)]),
         )
+        const threadKinds = new Map(allThreads.map((thread) => [thread.id, thread.thread_kind]))
 
         unsubscribe = teamMessageRepository.subscribeToAccessibleTeamMessages(
           activeTeamId,
-          threads.map((thread) => thread.id),
+          allThreads.map((thread) => thread.id),
           (message) => {
             if (message.sender_id !== user.id) {
               void refreshMessageUnreadCount()
+
+              const threadKind = threadKinds.get(message.thread_id) ?? 'everyone'
+              if (
+                !shouldNotifyForTeamMessage({
+                  userRole: role,
+                  threadKind,
+                  mentionAudiences: message.mention_audiences,
+                  senderId: message.sender_id,
+                  userId: user.id,
+                })
+              ) {
+                return
+              }
+
               showTeamMessageBrowserNotification({
                 teamId: message.team_id,
                 threadId: message.thread_id,
@@ -212,7 +233,7 @@ function MainAppViews() {
       cancelled = true
       unsubscribe?.()
     }
-  }, [activeTeamId, user?.id, view, refreshMessageUnreadCount])
+  }, [activeTeamId, user?.id, role, view, refreshMessageUnreadCount])
 
   useEffect(() => {
     if (!openTeamHubAfterCreate) return

@@ -2,28 +2,41 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TeamChatList } from '../components/TeamChatList/TeamChatList'
 import { TeamChatPanel } from '../components/TeamChatPanel/TeamChatPanel'
 import { APP_DISPLAY_THEME } from '../constants/appDisplayTheme'
-import {
-  DEFAULT_THREAD_KIND,
-  getThreadKindLabel,
-} from '../constants/teamChatConstants'
+import { DEFAULT_THREAD_KIND, getConversationTitle } from '../constants/teamChatConstants'
 import { PHONE_VIEWPORT_MEDIA } from '../constants/viewportBreakpoints'
 import { useAppShell } from '../context/AppShellContext'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTeam } from '../hooks/useTeam'
 import * as teamMessageRepository from '../repositories/teamMessageRepository'
-import type { TeamMessageThreadKind, TeamMessageThreadWithUnread } from '../types/teamMessage'
+import type {
+  DirectMessageThreadWithUnread,
+  TeamMessageThreadWithUnread,
+} from '../types/teamMessage'
 import './TeamMessagingPage.css'
 
 type MobileMessagingScreen = 'list' | 'chat'
 
-function channelListSnapshot(channels: TeamMessageThreadWithUnread[]): string {
-  return [...channels]
+function conversationListSnapshot(
+  channels: TeamMessageThreadWithUnread[],
+  directMessages: DirectMessageThreadWithUnread[],
+): string {
+  const channelPart = [...channels]
     .sort((a, b) => a.id.localeCompare(b.id))
     .map(
       (channel) =>
-        `${channel.id}:${channel.thread_kind}:${channel.unread_count}:${channel.last_message_at ?? ''}`,
+        `c:${channel.id}:${channel.thread_kind}:${channel.unread_count}:${channel.last_message_at ?? ''}`,
     )
     .join('|')
+
+  const directPart = [...directMessages]
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map(
+      (thread) =>
+        `d:${thread.id}:${thread.other_user_id}:${thread.unread_count}:${thread.last_message_at ?? ''}`,
+    )
+    .join('|')
+
+  return `${channelPart}||${directPart}`
 }
 
 export function TeamMessagingPage() {
@@ -33,23 +46,26 @@ export function TeamMessagingPage() {
   const { team, activeTeamId } = useTeam()
   const isPhone = useMediaQuery(PHONE_VIEWPORT_MEDIA)
   const [mobileScreen, setMobileScreen] = useState<MobileMessagingScreen>('list')
-  const [activeThreadKind, setActiveThreadKind] = useState<TeamMessageThreadKind>(DEFAULT_THREAD_KIND)
   const [channels, setChannels] = useState<TeamMessageThreadWithUnread[]>([])
-  const [channelsLoading, setChannelsLoading] = useState(true)
-  const [channelsError, setChannelsError] = useState<string | null>(null)
+  const [directMessages, setDirectMessages] = useState<DirectMessageThreadWithUnread[]>([])
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
+  const [listLoading, setListLoading] = useState(true)
+  const [listError, setListError] = useState<string | null>(null)
 
-  const channelsSnapshotRef = useRef('')
-  const channelsLoadedTeamIdRef = useRef<string | null>(null)
+  const listSnapshotRef = useRef('')
+  const listLoadedTeamIdRef = useRef<string | null>(null)
   const appliedPendingThreadIdRef = useRef<string | null>(null)
   const refreshInFlightRef = useRef(false)
 
-  const refreshChannels = useCallback(
+  const refreshConversationLists = useCallback(
     async (options?: { showLoading?: boolean }) => {
       if (!activeTeamId) {
-        channelsLoadedTeamIdRef.current = null
-        channelsSnapshotRef.current = ''
+        listLoadedTeamIdRef.current = null
+        listSnapshotRef.current = ''
         setChannels([])
-        setChannelsLoading(false)
+        setDirectMessages([])
+        setActiveThreadId(null)
+        setListLoading(false)
         return
       }
 
@@ -57,45 +73,54 @@ export function TeamMessagingPage() {
         return
       }
 
-      const isInitialLoad = channelsLoadedTeamIdRef.current !== activeTeamId
+      const isInitialLoad = listLoadedTeamIdRef.current !== activeTeamId
       const showLoading = options?.showLoading ?? isInitialLoad
 
       refreshInFlightRef.current = true
 
       if (showLoading) {
-        setChannelsLoading(true)
+        setListLoading(true)
       }
-      setChannelsError(null)
+      setListError(null)
 
       try {
-        const loadedChannels =
-          await teamMessageRepository.listAccessibleTeamMessageThreads(activeTeamId)
-        const nextSnapshot = channelListSnapshot(loadedChannels)
+        const [loadedChannels, loadedDirectMessages] = await Promise.all([
+          teamMessageRepository.listAccessibleTeamMessageThreads(activeTeamId),
+          teamMessageRepository.listDirectMessageThreads(activeTeamId),
+        ])
+        const nextSnapshot = conversationListSnapshot(loadedChannels, loadedDirectMessages)
 
-        if (nextSnapshot !== channelsSnapshotRef.current) {
-          channelsSnapshotRef.current = nextSnapshot
+        if (nextSnapshot !== listSnapshotRef.current) {
+          listSnapshotRef.current = nextSnapshot
           setChannels(loadedChannels)
+          setDirectMessages(loadedDirectMessages)
         }
 
-        setActiveThreadKind((currentKind) => {
-          if (loadedChannels.some((channel) => channel.thread_kind === currentKind)) {
-            return currentKind
+        setActiveThreadId((currentThreadId) => {
+          const allThreads = [...loadedChannels, ...loadedDirectMessages]
+          if (currentThreadId && allThreads.some((thread) => thread.id === currentThreadId)) {
+            return currentThreadId
           }
 
-          return loadedChannels[0]?.thread_kind ?? DEFAULT_THREAD_KIND
+          const everyoneChannel =
+            loadedChannels.find((channel) => channel.thread_kind === DEFAULT_THREAD_KIND) ??
+            loadedChannels[0] ??
+            null
+
+          return everyoneChannel?.id ?? null
         })
 
-        channelsLoadedTeamIdRef.current = activeTeamId
+        listLoadedTeamIdRef.current = activeTeamId
       } catch (loadError) {
-        channelsSnapshotRef.current = ''
+        listSnapshotRef.current = ''
         setChannels([])
-        setChannelsError(
-          loadError instanceof Error ? loadError.message : 'Failed to load message channels',
-        )
+        setDirectMessages([])
+        setActiveThreadId(null)
+        setListError(loadError instanceof Error ? loadError.message : 'Failed to load messages')
       } finally {
         refreshInFlightRef.current = false
         if (showLoading) {
-          setChannelsLoading(false)
+          setListLoading(false)
         }
       }
     },
@@ -103,16 +128,16 @@ export function TeamMessagingPage() {
   )
 
   useEffect(() => {
-    channelsLoadedTeamIdRef.current = null
-    channelsSnapshotRef.current = ''
+    listLoadedTeamIdRef.current = null
+    listSnapshotRef.current = ''
     appliedPendingThreadIdRef.current = null
     setMobileScreen('list')
-    setActiveThreadKind(DEFAULT_THREAD_KIND)
-    void refreshChannels({ showLoading: true })
-  }, [activeTeamId, refreshChannels])
+    setActiveThreadId(null)
+    void refreshConversationLists({ showLoading: true })
+  }, [activeTeamId, refreshConversationLists])
 
   useEffect(() => {
-    if (channelsLoading || !pendingMessageThreadId) {
+    if (listLoading || !pendingMessageThreadId) {
       return
     }
 
@@ -122,11 +147,10 @@ export function TeamMessagingPage() {
 
     appliedPendingThreadIdRef.current = pendingMessageThreadId
 
-    const matchedChannel = channels.find((channel) => channel.id === pendingMessageThreadId)
-    if (matchedChannel) {
-      setActiveThreadKind((currentKind) =>
-        currentKind === matchedChannel.thread_kind ? currentKind : matchedChannel.thread_kind,
-      )
+    const allThreads = [...channels, ...directMessages]
+    const matchedThread = allThreads.find((thread) => thread.id === pendingMessageThreadId)
+    if (matchedThread) {
+      setActiveThreadId(matchedThread.id)
       if (isPhone) {
         setMobileScreen('chat')
       }
@@ -135,7 +159,8 @@ export function TeamMessagingPage() {
     clearPendingMessageThreadId?.()
   }, [
     channels,
-    channelsLoading,
+    directMessages,
+    listLoading,
     pendingMessageThreadId,
     isPhone,
     clearPendingMessageThreadId,
@@ -145,30 +170,63 @@ export function TeamMessagingPage() {
     appliedPendingThreadIdRef.current = null
   }, [activeTeamId])
 
-  const activeChannel = useMemo(
-    () => channels.find((channel) => channel.thread_kind === activeThreadKind) ?? null,
-    [channels, activeThreadKind],
-  )
+  const activeConversation = useMemo(() => {
+    if (!activeThreadId) {
+      return null
+    }
 
-  const activeThreadId = activeChannel?.id ?? null
+    return (
+      channels.find((channel) => channel.id === activeThreadId) ??
+      directMessages.find((thread) => thread.id === activeThreadId) ??
+      null
+    )
+  }, [activeThreadId, channels, directMessages])
 
   const showList = !isPhone || mobileScreen === 'list'
   const showChat = !isPhone || mobileScreen === 'chat'
 
-  const handleSelectChannel = useCallback((threadKind: TeamMessageThreadKind) => {
-    setActiveThreadKind((currentKind) => (currentKind === threadKind ? currentKind : threadKind))
-    if (isPhone) {
-      setMobileScreen('chat')
-    }
-  }, [isPhone])
+  const handleSelectThread = useCallback(
+    (threadId: string) => {
+      setActiveThreadId(threadId)
+      if (isPhone) {
+        setMobileScreen('chat')
+      }
+    },
+    [isPhone],
+  )
+
+  const handleStartDirectMessage = useCallback(
+    async (targetUserId: string) => {
+      if (!activeTeamId) {
+        return
+      }
+
+      try {
+        const thread = await teamMessageRepository.getOrCreateDirectMessageThread(
+          activeTeamId,
+          targetUserId,
+        )
+        await refreshConversationLists({ showLoading: false })
+        setActiveThreadId(thread.id)
+        if (isPhone) {
+          setMobileScreen('chat')
+        }
+      } catch (startError) {
+        setListError(
+          startError instanceof Error ? startError.message : 'Failed to start direct message',
+        )
+      }
+    },
+    [activeTeamId, isPhone, refreshConversationLists],
+  )
 
   const handleBackToList = useCallback(() => {
     setMobileScreen('list')
   }, [])
 
   const handleChannelActivity = useCallback(() => {
-    void refreshChannels({ showLoading: false })
-  }, [refreshChannels])
+    void refreshConversationLists({ showLoading: false })
+  }, [refreshConversationLists])
 
   return (
     <div className={`team-messaging-page app-shell-page app-theme-${APP_DISPLAY_THEME}`}>
@@ -181,23 +239,28 @@ export function TeamMessagingPage() {
           </header>
         )}
 
-        {channelsError && (
-          <p className="team-messaging-page-error app-shell-page-error">{channelsError}</p>
+        {listError && (
+          <p className="team-messaging-page-error app-shell-page-error">{listError}</p>
         )}
 
-        {channelsLoading ? (
-          <p className="team-messaging-page-loading app-shell-page-loading">Loading channels…</p>
+        {listLoading ? (
+          <p className="team-messaging-page-loading app-shell-page-loading">Loading messages…</p>
         ) : (
           <div
             className={`team-messaging-shell${isPhone ? ` is-mobile-${mobileScreen}` : ''}`}
           >
-            {showList && (
+            {showList && activeTeamId && (
               <TeamChatList
+                teamId={activeTeamId}
                 channels={channels}
-                activeThreadKind={activeThreadKind}
+                directMessages={directMessages}
+                activeThreadId={activeThreadId}
                 showSectionTitle={!isPhone}
                 showChevrons={isPhone}
-                onSelectChannel={handleSelectChannel}
+                onSelectThread={handleSelectThread}
+                onStartDirectMessage={(targetUserId) => {
+                  void handleStartDirectMessage(targetUserId)
+                }}
               />
             )}
 
@@ -205,9 +268,9 @@ export function TeamMessagingPage() {
               <TeamChatPanel
                 threadId={activeThreadId}
                 chatTitle={
-                  activeChannel
-                    ? getThreadKindLabel(activeChannel.thread_kind)
-                    : getThreadKindLabel(activeThreadKind)
+                  activeConversation
+                    ? getConversationTitle(activeConversation)
+                    : 'Messages'
                 }
                 teamName={team?.name ?? 'Team'}
                 showBackButton={isPhone}

@@ -1,14 +1,35 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react'
 import { useAppShell } from '../../context/AppShellContext'
 import { useAuth } from '../../hooks/useAuth'
+import { useCanEdit } from '../../hooks/useCanEdit'
 import { useTeam } from '../../hooks/useTeam'
 import * as teamMessageRepository from '../../repositories/teamMessageRepository'
 import {
   createEmptyTeamMessageDraft,
+  type MessageReadSummary,
   type TeamMessage,
   type TeamMessageDraft,
 } from '../../types/teamMessage'
+import {
+  formatMessageReadReceipt,
+  formatThreadLatestReadReceipt,
+} from '../../utils/messageReadReceiptUtils'
 import { formatTeamUpdateTimestamp } from '../../utils/teamUpdateUtils'
+import {
+  filterAudienceMentionOptions,
+  getActiveMentionQuery,
+  insertAudienceMention,
+  type AudienceMentionOption,
+} from '../../utils/teamMessageMentionAutocomplete'
+import { TeamMessageBody } from '../TeamMessageBody/TeamMessageBody'
+import { TeamMessageMentionMenu } from './TeamMessageMentionMenu'
 import './TeamChatPanel.css'
 
 type TeamChatPanelProps = {
@@ -33,6 +54,7 @@ export function TeamChatPanel({
   onChannelActivity,
 }: TeamChatPanelProps) {
   const { user } = useAuth()
+  const canViewReadReceipts = useCanEdit()
   const shell = useAppShell()
   const refreshMessageUnreadCount = shell?.refreshMessageUnreadCount
   const { activeTeamId } = useTeam()
@@ -42,9 +64,20 @@ export function TeamChatPanel({
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [threadReadSummary, setThreadReadSummary] = useState<MessageReadSummary | null>(null)
+  const [ownMessageReadSummary, setOwnMessageReadSummary] = useState<MessageReadSummary | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const composeTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const lastMarkedReadMessageIdRef = useRef<string | null>(null)
+  const readSummaryRequestRef = useRef(0)
+  const readSummaryDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const [composeCursorPosition, setComposeCursorPosition] = useState(0)
+  const [mentionHighlightIndex, setMentionHighlightIndex] = useState(0)
+  const [mentionMenuForceHidden, setMentionMenuForceHidden] = useState(false)
+
+  const READ_SUMMARY_DEBOUNCE_MS = 1500
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -59,12 +92,84 @@ export function TeamChatPanel({
     })
   }, [])
 
+  const latestOwnMessageId = useMemo(() => {
+    if (!user?.id) {
+      return null
+    }
+
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (messages[index].sender_id === user.id) {
+        return messages[index].id
+      }
+    }
+
+    return null
+  }, [messages, user?.id])
+
+  const messagesFingerprint = useMemo(() => {
+    if (messages.length === 0) {
+      return 'empty'
+    }
+
+    const latestMessage = messages[messages.length - 1]
+    return `${messages.length}:${latestMessage.id}`
+  }, [messages])
+
+  const refreshReadSummaries = useCallback(async () => {
+    if (!canViewReadReceipts || !threadId) {
+      return
+    }
+
+    const requestId = ++readSummaryRequestRef.current
+
+    try {
+      const [threadSummary, ownSummary] = await Promise.all([
+        teamMessageRepository.getThreadLatestReadSummary(threadId),
+        latestOwnMessageId
+          ? teamMessageRepository.getMessageReadSummary(latestOwnMessageId)
+          : Promise.resolve(null),
+      ])
+
+      if (requestId !== readSummaryRequestRef.current) {
+        return
+      }
+
+      setThreadReadSummary(threadSummary)
+      setOwnMessageReadSummary(ownSummary)
+    } catch (summaryError) {
+      if (requestId !== readSummaryRequestRef.current) {
+        return
+      }
+
+      console.error('Failed to load read summaries:', summaryError)
+    }
+  }, [canViewReadReceipts, threadId, latestOwnMessageId])
+
+  const scheduleReadSummaryRefresh = useCallback(() => {
+    if (readSummaryDebounceRef.current) {
+      clearTimeout(readSummaryDebounceRef.current)
+    }
+
+    readSummaryDebounceRef.current = setTimeout(() => {
+      readSummaryDebounceRef.current = null
+      void refreshReadSummaries()
+    }, READ_SUMMARY_DEBOUNCE_MS)
+  }, [refreshReadSummaries])
+
   const loadChat = useCallback(async () => {
     if (!activeTeamId || !threadId) return
 
+    if (readSummaryDebounceRef.current) {
+      clearTimeout(readSummaryDebounceRef.current)
+      readSummaryDebounceRef.current = null
+    }
+
+    readSummaryRequestRef.current += 1
     setLoading(true)
     setError(null)
     setMessages([])
+    setThreadReadSummary(null)
+    setOwnMessageReadSummary(null)
     lastMarkedReadMessageIdRef.current = null
 
     try {
@@ -101,6 +206,35 @@ export function TeamChatPanel({
     }
   }, [loading, messages, scrollToBottom])
 
+  useEffect(() => {
+    if (!canViewReadReceipts || loading || !threadId || messages.length === 0) {
+      return
+    }
+
+    void refreshReadSummaries()
+  }, [canViewReadReceipts, loading, threadId, messagesFingerprint, refreshReadSummaries])
+
+  useEffect(() => {
+    if (!canViewReadReceipts || !activeTeamId || !threadId || loading) {
+      return
+    }
+
+    return teamMessageRepository.subscribeToTeamMessageReads(
+      activeTeamId,
+      threadId,
+      scheduleReadSummaryRefresh,
+    )
+  }, [canViewReadReceipts, activeTeamId, threadId, loading, scheduleReadSummaryRefresh])
+
+  useEffect(() => {
+    return () => {
+      if (readSummaryDebounceRef.current) {
+        clearTimeout(readSummaryDebounceRef.current)
+        readSummaryDebounceRef.current = null
+      }
+    }
+  }, [])
+
   const markMessagesReadThroughLatest = useCallback(async () => {
     if (!threadId || messages.length === 0) return
 
@@ -126,6 +260,62 @@ export function TeamChatPanel({
     void markMessagesReadThroughLatest()
   }, [loading, threadId, messages, markMessagesReadThroughLatest])
 
+  const activeMentionQuery = useMemo(
+    () => getActiveMentionQuery(draft.body, composeCursorPosition),
+    [draft.body, composeCursorPosition],
+  )
+
+  const mentionSuggestions = useMemo(() => {
+    if (!activeMentionQuery || mentionMenuForceHidden) {
+      return []
+    }
+
+    return filterAudienceMentionOptions(activeMentionQuery.query)
+  }, [activeMentionQuery, mentionMenuForceHidden])
+
+  const showMentionMenu = mentionSuggestions.length > 0 && activeMentionQuery !== null
+
+  useEffect(() => {
+    setMentionHighlightIndex(0)
+  }, [activeMentionQuery?.startIndex, activeMentionQuery?.query, mentionSuggestions.length])
+
+  useEffect(() => {
+    setMentionMenuForceHidden(false)
+  }, [activeMentionQuery?.startIndex, activeMentionQuery?.query])
+
+  const syncComposeCursor = useCallback((textarea: HTMLTextAreaElement) => {
+    setComposeCursorPosition(textarea.selectionStart ?? 0)
+  }, [])
+
+  const applyMentionSelection = useCallback(
+    (option: AudienceMentionOption) => {
+      if (!activeMentionQuery) {
+        return
+      }
+
+      const { nextBody, nextCursor } = insertAudienceMention(
+        draft.body,
+        activeMentionQuery.startIndex,
+        activeMentionQuery.endIndex,
+        option.token,
+      )
+
+      setDraft({ body: nextBody })
+      setComposeCursorPosition(nextCursor)
+
+      requestAnimationFrame(() => {
+        const textarea = composeTextareaRef.current
+        if (!textarea) {
+          return
+        }
+
+        textarea.focus()
+        textarea.setSelectionRange(nextCursor, nextCursor)
+      })
+    },
+    [activeMentionQuery, draft.body],
+  )
+
   async function handleSend() {
     if (!activeTeamId || !threadId || !user) return
 
@@ -146,6 +336,8 @@ export function TeamChatPanel({
       )
       appendMessage(created)
       setDraft(createEmptyTeamMessageDraft())
+      setComposeCursorPosition(0)
+      setMentionMenuForceHidden(false)
       scrollToBottom()
       onChannelActivity?.()
     } catch (sendError) {
@@ -163,6 +355,47 @@ export function TeamChatPanel({
   }
 
   const composeFieldId = threadId ? `team-message-body-${threadId}` : 'team-message-body'
+  const mentionMenuId = `${composeFieldId}-mention-menu`
+  const threadReadReceiptLabel = formatThreadLatestReadReceipt(threadReadSummary)
+  const ownMessageReadReceiptLabel = formatMessageReadReceipt(ownMessageReadSummary)
+
+  function handleComposeKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (showMentionMenu) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        setMentionHighlightIndex((current) =>
+          Math.min(current + 1, mentionSuggestions.length - 1),
+        )
+        return
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        setMentionHighlightIndex((current) => Math.max(current - 1, 0))
+        return
+      }
+
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault()
+        const selected = mentionSuggestions[mentionHighlightIndex]
+        if (selected) {
+          applyMentionSelection(selected)
+        }
+        return
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setMentionMenuForceHidden(true)
+        return
+      }
+    }
+
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      void handleSend()
+    }
+  }
 
   return (
     <section className="team-chat-panel" aria-label={`${chatTitle} chat`}>
@@ -180,6 +413,9 @@ export function TeamChatPanel({
         <div className="team-chat-panel-header-main">
           <h2 className="team-chat-panel-title">{chatTitle}</h2>
           <p className="team-chat-panel-subtitle">{teamName}</p>
+          {canViewReadReceipts && threadReadReceiptLabel && (
+            <p className="team-chat-panel-read-summary">{threadReadReceiptLabel}</p>
+          )}
         </div>
       </header>
 
@@ -200,6 +436,11 @@ export function TeamChatPanel({
               ) : (
                 messages.map((message) => {
                   const isOwn = user?.id === message.sender_id
+                  const showOwnReadReceipt =
+                    canViewReadReceipts &&
+                    isOwn &&
+                    message.id === latestOwnMessageId &&
+                    ownMessageReadReceiptLabel
 
                   return (
                     <article
@@ -210,7 +451,15 @@ export function TeamChatPanel({
                         <p className="team-messaging-message-meta">
                           {senderLabel(message)} · {formatTeamUpdateTimestamp(message.created_at)}
                         </p>
-                        <p className="team-messaging-message-body">{message.body}</p>
+                        <TeamMessageBody
+                          body={message.body}
+                          className="team-messaging-message-body"
+                        />
+                        {showOwnReadReceipt && (
+                          <p className="team-messaging-message-read-receipt">
+                            {ownMessageReadReceiptLabel}
+                          </p>
+                        )}
                       </div>
                     </article>
                   )
@@ -230,23 +479,38 @@ export function TeamChatPanel({
                 Message
               </label>
               <div className="team-messaging-compose-row">
-                <textarea
-                  id={composeFieldId}
-                  className="input-field team-messaging-compose-body"
-                  value={draft.body}
-                  rows={3}
-                  placeholder="Write a message to your team…"
-                  disabled={sending}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, body: event.target.value }))
-                  }
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && !event.shiftKey) {
-                      event.preventDefault()
-                      void handleSend()
-                    }
-                  }}
-                />
+                <div className="team-messaging-compose-field">
+                  {showMentionMenu && (
+                    <TeamMessageMentionMenu
+                      options={mentionSuggestions}
+                      highlightedIndex={mentionHighlightIndex}
+                      listboxId={mentionMenuId}
+                      onHighlight={setMentionHighlightIndex}
+                      onSelect={applyMentionSelection}
+                    />
+                  )}
+                  <textarea
+                    ref={composeTextareaRef}
+                    id={composeFieldId}
+                    className="input-field team-messaging-compose-body"
+                    value={draft.body}
+                    rows={3}
+                    placeholder="Write a message to your team…"
+                    disabled={sending}
+                    aria-describedby={`${composeFieldId}-hint`}
+                    aria-expanded={showMentionMenu}
+                    aria-controls={showMentionMenu ? mentionMenuId : undefined}
+                    aria-autocomplete="list"
+                    onChange={(event) => {
+                      setDraft((current) => ({ ...current, body: event.target.value }))
+                      syncComposeCursor(event.target)
+                    }}
+                    onClick={(event) => syncComposeCursor(event.currentTarget)}
+                    onKeyUp={(event) => syncComposeCursor(event.currentTarget)}
+                    onSelect={(event) => syncComposeCursor(event.currentTarget)}
+                    onKeyDown={handleComposeKeyDown}
+                  />
+                </div>
                 <button
                   type="submit"
                   className="btn btn-primary team-messaging-compose-send"
@@ -255,6 +519,9 @@ export function TeamChatPanel({
                   {sending ? 'Sending…' : 'Send'}
                 </button>
               </div>
+              <p id={`${composeFieldId}-hint`} className="team-messaging-compose-hint">
+                Use @parents, @players, @coaches, or @everyone to target notifications.
+              </p>
             </form>
           </div>
         </div>

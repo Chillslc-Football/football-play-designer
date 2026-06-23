@@ -1,4 +1,11 @@
-export type TeamMessageThreadKind = 'everyone' | 'coaches' | 'players' | 'parents'
+export type TeamMessageThreadKind =
+  | 'everyone'
+  | 'coaches'
+  | 'players'
+  | 'parents'
+  | 'direct'
+
+export type TeamMessageMentionAudience = 'everyone' | 'coaches' | 'players' | 'parents'
 
 export type TeamMessageThread = {
   id: string
@@ -15,6 +22,17 @@ export type TeamMessageThreadWithUnread = TeamMessageThread & {
   unread_count: number
 }
 
+export type DirectMessageThreadWithUnread = TeamMessageThreadWithUnread & {
+  other_user_id: string
+  other_display_name: string | null
+}
+
+export type DirectMessageEligibleMember = {
+  user_id: string
+  role: string
+  display_name: string | null
+}
+
 export type TeamMessage = {
   id: string
   thread_id: string
@@ -22,6 +40,7 @@ export type TeamMessage = {
   sender_id: string
   sender_display_name: string | null
   body: string
+  mention_audiences: TeamMessageMentionAudience[]
   created_at: string
   edited_at: string | null
   deleted_at: string | null
@@ -29,6 +48,11 @@ export type TeamMessage = {
 
 export type TeamMessageDraft = {
   body: string
+}
+
+export type MessageReadSummary = {
+  read_count: number
+  eligible_count: number
 }
 
 export function createEmptyTeamMessageDraft(): TeamMessageDraft {

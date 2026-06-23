@@ -4,6 +4,11 @@ import {
   adminSelectMaybeSingle,
 } from './supabaseAdmin.ts';
 import { sendExpoPushMessages, type ExpoPushMessage } from './expoPush.ts';
+import {
+  getNotificationTargetRoles,
+  normalizeMentionAudiences,
+  type TeamMessageMentionAudience,
+} from './teamMessageMention.ts';
 
 export type TeamMessageRow = {
   id: string;
@@ -11,12 +16,13 @@ export type TeamMessageRow = {
   thread_id: string;
   sender_id: string;
   body: string;
+  mention_audiences?: TeamMessageMentionAudience[] | null;
   created_at?: string;
   edited_at?: string | null;
   deleted_at?: string | null;
 };
 
-type TeamMessageThreadKind = 'everyone' | 'coaches' | 'players' | 'parents';
+type TeamMessageThreadKind = 'everyone' | 'coaches' | 'players' | 'parents' | 'direct';
 
 type TeamMessageThreadRow = {
   id: string;
@@ -27,6 +33,15 @@ type TeamMessageThreadRow = {
 
 type TeamMemberRow = {
   user_id: string;
+  role: 'team_owner' | 'coach' | 'player' | 'parent';
+};
+
+type ThreadParticipantRow = {
+  user_id: string;
+};
+
+type ProfileNameRow = {
+  display_name: string | null;
 };
 
 type TeamMessagePushResult = {
@@ -40,10 +55,11 @@ type TeamMessagePushResult = {
   removed_invalid_tokens: number;
 };
 
-const TEAM_MESSAGE_COLUMNS = 'id,team_id,thread_id,sender_id,body,created_at,edited_at,deleted_at';
+const TEAM_MESSAGE_COLUMNS =
+  'id,team_id,thread_id,sender_id,body,mention_audiences,created_at,edited_at,deleted_at';
 const TEAM_MESSAGE_THREAD_COLUMNS = 'id,team_id,thread_kind,title';
 
-const THREAD_KIND_PUSH_TITLES: Record<TeamMessageThreadKind, string> = {
+const THREAD_KIND_PUSH_TITLES: Record<Exclude<TeamMessageThreadKind, 'direct'>, string> = {
   everyone: 'Everyone',
   coaches: 'Coaches',
   players: 'Players',
@@ -114,6 +130,23 @@ async function loadTeamMessageThread(threadId: string): Promise<TeamMessageThrea
   return data;
 }
 
+async function loadThreadParticipants(threadId: string): Promise<ThreadParticipantRow[]> {
+  return adminSelect<ThreadParticipantRow>('team_message_thread_participants', {
+    select: 'user_id',
+    thread_id: `eq.${threadId}`,
+  });
+}
+
+async function loadSenderDisplayName(senderId: string): Promise<string | null> {
+  const data = await adminSelectMaybeSingle<ProfileNameRow>('profiles', {
+    select: 'display_name',
+    id: `eq.${senderId}`,
+  });
+
+  const trimmed = data?.display_name?.trim();
+  return trimmed ? trimmed : null;
+}
+
 export function isTeamMessageRecord(record: unknown): record is TeamMessageRow {
   if (!record || typeof record !== 'object') {
     return false;
@@ -139,15 +172,40 @@ export async function sendTeamMessagePushNotifications(input: {
     : await loadTeamMessage(input.messageId ?? '');
 
   const thread = await loadTeamMessageThread(teamMessage.thread_id);
-
-  const members = await adminSelect<TeamMemberRow>('team_members', {
-    select: 'user_id',
-    team_id: `eq.${teamMessage.team_id}`,
+  const mentionAudiences = normalizeMentionAudiences(teamMessage.mention_audiences);
+  const targetRoles = getNotificationTargetRoles({
+    threadKind: thread.thread_kind,
+    mentionAudiences,
   });
 
-  const recipientUserIds = members
-    .map((member) => member.user_id)
-    .filter((userId) => userId && userId !== teamMessage.sender_id);
+  let recipientUserIds: string[] = [];
+
+  if (thread.thread_kind === 'direct') {
+    const participants = await loadThreadParticipants(thread.id);
+    const members = await adminSelect<TeamMemberRow>('team_members', {
+      select: 'user_id,role',
+      team_id: `eq.${teamMessage.team_id}`,
+    });
+    const roleByUserId = new Map(members.map((member) => [member.user_id, member.role]));
+
+    recipientUserIds = participants
+      .filter((participant) => participant.user_id && participant.user_id !== teamMessage.sender_id)
+      .filter((participant) => {
+        const role = roleByUserId.get(participant.user_id);
+        return role !== undefined && targetRoles.has(role);
+      })
+      .map((participant) => participant.user_id);
+  } else {
+    const members = await adminSelect<TeamMemberRow>('team_members', {
+      select: 'user_id,role',
+      team_id: `eq.${teamMessage.team_id}`,
+    });
+
+    recipientUserIds = members
+      .filter((member) => member.user_id && member.user_id !== teamMessage.sender_id)
+      .filter((member) => targetRoles.has(member.role))
+      .map((member) => member.user_id);
+  }
 
   if (recipientUserIds.length === 0) {
     return {
@@ -171,7 +229,10 @@ export async function sendTeamMessagePushNotifications(input: {
     user_id: `in.(${recipientUserIds.join(',')})`,
   });
 
-  const pushTitle = THREAD_KIND_PUSH_TITLES[thread.thread_kind];
+  const pushTitle =
+    thread.thread_kind === 'direct'
+      ? (await loadSenderDisplayName(teamMessage.sender_id)) ?? 'Direct Message'
+      : THREAD_KIND_PUSH_TITLES[thread.thread_kind];
 
   const pushMessages: ExpoPushMessage[] = tokens.map((tokenRow) => ({
     to: tokenRow.expo_push_token,
@@ -186,6 +247,7 @@ export async function sendTeamMessagePushNotifications(input: {
       message_id: teamMessage.id,
       sender_id: teamMessage.sender_id,
       thread_kind: thread.thread_kind,
+      mention_audiences: mentionAudiences,
     },
   }));
 

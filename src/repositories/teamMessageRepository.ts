@@ -1,9 +1,13 @@
 import { supabase } from '../lib/supabaseClient'
 import type {
   TeamMessage,
+  TeamMessageMentionAudience,
   TeamMessageThread,
   TeamMessageThreadKind,
   TeamMessageThreadWithUnread,
+  DirectMessageThreadWithUnread,
+  DirectMessageEligibleMember,
+  MessageReadSummary,
 } from '../types/teamMessage'
 
 type TeamMessageThreadRow = {
@@ -21,12 +25,24 @@ type TeamMessageThreadWithUnreadRow = TeamMessageThreadRow & {
   unread_count: number | string
 }
 
+type DirectMessageThreadWithUnreadRow = TeamMessageThreadWithUnreadRow & {
+  other_user_id: string
+  other_display_name: string | null
+}
+
+type DirectMessageEligibleMemberRow = {
+  user_id: string
+  role: string
+  display_name: string | null
+}
+
 type TeamMessageRow = {
   id: string
   thread_id: string
   team_id: string
   sender_id: string
   body: string
+  mention_audiences?: TeamMessageMentionAudience[] | null
   created_at: string
   edited_at: string | null
   deleted_at: string | null
@@ -38,7 +54,7 @@ type ProfileNameRow = {
 }
 
 const MESSAGE_COLUMNS =
-  'id, thread_id, team_id, sender_id, body, created_at, edited_at, deleted_at'
+  'id, thread_id, team_id, sender_id, body, mention_audiences, created_at, edited_at, deleted_at'
 
 const THREAD_COLUMNS =
   'id, team_id, title, thread_kind, created_by, created_at, updated_at, last_message_at'
@@ -76,6 +92,16 @@ function rowToThreadWithUnread(row: TeamMessageThreadWithUnreadRow): TeamMessage
   }
 }
 
+function rowToDirectThreadWithUnread(
+  row: DirectMessageThreadWithUnreadRow,
+): DirectMessageThreadWithUnread {
+  return {
+    ...rowToThreadWithUnread(row),
+    other_user_id: row.other_user_id,
+    other_display_name: row.other_display_name,
+  }
+}
+
 function rowToMessage(row: TeamMessageRow): TeamMessage {
   return {
     id: row.id,
@@ -84,6 +110,7 @@ function rowToMessage(row: TeamMessageRow): TeamMessage {
     sender_id: row.sender_id,
     sender_display_name: null,
     body: row.body,
+    mention_audiences: row.mention_audiences ?? [],
     created_at: row.created_at,
     edited_at: row.edited_at,
     deleted_at: row.deleted_at,
@@ -141,6 +168,58 @@ export async function listAccessibleTeamMessageThreads(
   }
 
   return ((data ?? []) as TeamMessageThreadWithUnreadRow[]).map(rowToThreadWithUnread)
+}
+
+export async function listDirectMessageThreads(
+  teamId: string,
+): Promise<DirectMessageThreadWithUnread[]> {
+  const { data, error } = await supabase.rpc('list_direct_message_threads', {
+    p_team_id: teamId,
+  })
+
+  if (error) {
+    throw new Error(`Failed to load direct messages: ${error.message}`)
+  }
+
+  return ((data ?? []) as DirectMessageThreadWithUnreadRow[]).map(rowToDirectThreadWithUnread)
+}
+
+export async function listDmEligibleMembers(
+  teamId: string,
+): Promise<DirectMessageEligibleMember[]> {
+  const { data, error } = await supabase.rpc('list_dm_eligible_members', {
+    p_team_id: teamId,
+  })
+
+  if (error) {
+    throw new Error(`Failed to load team members: ${error.message}`)
+  }
+
+  return ((data ?? []) as DirectMessageEligibleMemberRow[]).map((row) => ({
+    user_id: row.user_id,
+    role: row.role,
+    display_name: row.display_name,
+  }))
+}
+
+export async function getOrCreateDirectMessageThread(
+  teamId: string,
+  targetUserId: string,
+): Promise<TeamMessageThread> {
+  const { data, error } = await supabase.rpc('get_or_create_direct_message_thread', {
+    p_team_id: teamId,
+    p_target_user_id: targetUserId,
+  })
+
+  if (error) {
+    throw new Error(`Failed to start direct message: ${error.message}`)
+  }
+
+  if (!data || typeof data !== 'object') {
+    throw new Error('Failed to start direct message: no thread returned')
+  }
+
+  return rowToThread(data as TeamMessageThreadRow)
 }
 
 export async function getOrCreateTeamChatThread(teamId: string): Promise<TeamMessageThread> {
@@ -296,6 +375,48 @@ export function subscribeToTeamMessages(
   }
 }
 
+type TeamMessageReadRow = {
+  thread_id: string
+  team_id: string
+  message_id: string
+  user_id: string
+}
+
+export function subscribeToTeamMessageReads(
+  teamId: string,
+  threadId: string,
+  onReadChange: () => void,
+): () => void {
+  const channel = supabase
+    .channel(`team-message-reads-${teamId}-${threadId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'team_message_reads',
+        filter: `thread_id=eq.${threadId}`,
+      },
+      (payload) => {
+        const row = payload.new as TeamMessageReadRow
+        if (row.team_id !== teamId) {
+          return
+        }
+
+        onReadChange()
+      },
+    )
+    .subscribe((status, err) => {
+      if (status === 'CHANNEL_ERROR') {
+        console.error('[team_message_reads] realtime subscription error:', err?.message ?? status)
+      }
+    })
+
+  return () => {
+    void supabase.removeChannel(channel)
+  }
+}
+
 export function subscribeToAccessibleTeamMessages(
   teamId: string,
   threadIds: string[],
@@ -337,4 +458,56 @@ export async function getTeamMessageThreadById(
   }
 
   return rowToThread(data as TeamMessageThreadRow)
+}
+
+type MessageReadSummaryRow = {
+  read_count: number | string
+  eligible_count: number | string
+}
+
+function rowToMessageReadSummary(row: MessageReadSummaryRow): MessageReadSummary {
+  return {
+    read_count: parseUnreadCount(row.read_count),
+    eligible_count: parseUnreadCount(row.eligible_count),
+  }
+}
+
+function parseReadSummaryRpcData(data: unknown): MessageReadSummary {
+  if (Array.isArray(data)) {
+    if (data.length === 0) {
+      return { read_count: 0, eligible_count: 0 }
+    }
+
+    return rowToMessageReadSummary(data[0] as MessageReadSummaryRow)
+  }
+
+  if (data && typeof data === 'object') {
+    return rowToMessageReadSummary(data as MessageReadSummaryRow)
+  }
+
+  return { read_count: 0, eligible_count: 0 }
+}
+
+export async function getMessageReadSummary(messageId: string): Promise<MessageReadSummary> {
+  const { data, error } = await supabase.rpc('get_message_read_summary', {
+    p_message_id: messageId,
+  })
+
+  if (error) {
+    throw new Error(`Failed to load message read summary: ${error.message}`)
+  }
+
+  return parseReadSummaryRpcData(data)
+}
+
+export async function getThreadLatestReadSummary(threadId: string): Promise<MessageReadSummary> {
+  const { data, error } = await supabase.rpc('get_thread_latest_read_summary', {
+    p_thread_id: threadId,
+  })
+
+  if (error) {
+    throw new Error(`Failed to load channel read summary: ${error.message}`)
+  }
+
+  return parseReadSummaryRpcData(data)
 }
