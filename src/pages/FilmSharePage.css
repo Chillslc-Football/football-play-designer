@@ -66,15 +66,49 @@
 
 .film-share-header {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   color: var(--text-light);
 }
 
 .film-share-header h1 {
   margin: 0;
+  flex: 1;
+  min-width: 0;
   font-size: 1.125rem;
   font-weight: 600;
   line-height: 1.3;
+}
+
+.film-share-cast-button {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.film-share-cast-error {
+  margin: 0 var(--space-md) var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(168, 50, 50, 0.12);
+  border: 1px solid rgba(168, 50, 50, 0.25);
+  border-radius: var(--radius-sm);
+  color: var(--text-light);
+}
+
+.film-share-cast-error p {
+  margin: 0 0 var(--space-sm);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.film-share-cast-error .btn {
+  min-height: 44px;
 }
 
 .film-share-player {
@@ -121,6 +155,11 @@
     padding: var(--space-md) var(--space-lg);
     color: var(--text-on-surface);
     background: var(--surface);
+  }
+
+  .film-share-cast-error {
+    margin: 0 var(--space-lg) var(--space-sm);
+    color: var(--text-on-surface);
   }
 
   .film-share-header h1 {

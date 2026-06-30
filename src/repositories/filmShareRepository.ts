@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabaseClient'
 
 export type FilmPublicPlaybackResult =
-  | { kind: 'playback'; url: string }
+  | { kind: 'playback'; url: string; title?: string }
   | { kind: 'external'; url: string }
   | { kind: 'unavailable' }
 
@@ -10,6 +10,10 @@ type FilmPublicPlaybackResponse = {
   playback_url?: unknown
   externalUrl?: unknown
   external_url?: unknown
+  title?: unknown
+  filmTitle?: unknown
+  film_title?: unknown
+  name?: unknown
   error?: unknown
   ok?: unknown
   available?: unknown
@@ -22,6 +26,15 @@ function pickUrl(...values: unknown[]): string | null {
     }
   }
   return null
+}
+
+function pickTitle(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim()
+    }
+  }
+  return undefined
 }
 
 function parseFilmPublicPlaybackResponse(data: unknown): FilmPublicPlaybackResult {
@@ -41,7 +54,11 @@ function parseFilmPublicPlaybackResponse(data: unknown): FilmPublicPlaybackResul
 
   const playbackUrl = pickUrl(record.playbackUrl, record.playback_url)
   if (playbackUrl) {
-    return { kind: 'playback', url: playbackUrl }
+    return {
+      kind: 'playback',
+      url: playbackUrl,
+      title: pickTitle(record.title, record.filmTitle, record.film_title, record.name),
+    }
   }
 
   const externalUrl = pickUrl(record.externalUrl, record.external_url)
