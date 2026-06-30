@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/film/share/:path*",
+      "destination": "/"
+    },
+    {
       "source": "/:path*",
       "destination": "/"
     }

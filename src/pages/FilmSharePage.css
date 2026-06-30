@@ -1,0 +1,62 @@
+@import '../styles/shared.css';
+
+.film-share-page {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  background: linear-gradient(180deg, var(--grass-dark) 0%, #0f2f0f 100%);
+}
+
+.film-share-card {
+  width: 100%;
+  max-width: 960px;
+  padding: var(--space-lg);
+  background: var(--surface);
+  color: var(--text-on-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.film-share-card h1 {
+  margin: 0 0 var(--space-md);
+  font-size: 1.5rem;
+}
+
+.film-share-message {
+  margin: 0;
+  font-size: 15px;
+  color: #4a5f4a;
+}
+
+.film-share-video {
+  display: block;
+  width: 100%;
+  max-height: 70svh;
+  border-radius: var(--radius-sm);
+  background: #000;
+}
+
+.film-share-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-md);
+}
+
+@media (max-width: 768px) {
+  .film-share-page {
+    align-items: flex-start;
+    padding: var(--space-md);
+    padding-top: max(var(--space-lg), env(safe-area-inset-top));
+    padding-bottom: max(var(--space-lg), env(safe-area-inset-bottom));
+  }
+
+  .film-share-card {
+    padding: var(--space-md);
+  }
+
+  .film-share-actions .btn {
+    min-height: 44px;
+  }
+}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { TeamProvider } from '../context/TeamProvider'
 import { useAuth } from '../hooks/useAuth'
 import { AcceptInvitePage } from '../pages/AcceptInvitePage'
+import { FilmSharePage } from '../pages/FilmSharePage'
 import { JoinTeamPage } from '../pages/JoinTeamPage'
 import { LoginPage } from '../pages/LoginPage'
 import { SignupPage } from '../pages/SignupPage'
@@ -23,6 +24,7 @@ import {
   redirectToAppHomeFromJoinLink,
   shouldResumePendingJoinLink,
 } from '../utils/joinLinkToken'
+import { isFilmSharePath } from '../utils/filmShareToken'
 import { captureMessageDeepLinkFromUrl, parseMessageDeepLinkFromUrl } from '../utils/messageLink'
 import { capturePlaybookDeepLinkFromUrl } from '../utils/playbookLink'
 import { TeamGate } from './TeamGate'
@@ -71,7 +73,7 @@ export function AuthGate() {
   const [resumingJoinLink, setResumingJoinLink] = useState(false)
 
   useEffect(() => {
-    if (!isAcceptInvitePath() && !isJoinTeamPath()) {
+    if (!isAcceptInvitePath() && !isJoinTeamPath() && !isFilmSharePath()) {
       if (parseMessageDeepLinkFromUrl()) {
         captureMessageDeepLinkFromUrl()
       } else {
@@ -142,6 +144,10 @@ export function AuthGate() {
 
   if (isJoinTeamPath()) {
     return <JoinTeamFlow />
+  }
+
+  if (isFilmSharePath()) {
+    return <FilmSharePage />
   }
 
   if (loading || resumingInvite || resumingJoinLink) {
