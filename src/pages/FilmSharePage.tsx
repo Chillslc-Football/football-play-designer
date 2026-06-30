@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react'
 import * as filmShareRepository from '../repositories/filmShareRepository'
 import type { FilmPublicPlaybackResult } from '../repositories/filmShareRepository'
 import { getFilmShareTokenFromUrl } from '../utils/filmShareToken'
-import './AuthPages.css'
 import './FilmSharePage.css'
 
 function FilmUnavailable() {
   return (
-    <div className="film-share-page">
+    <div className="film-share-page film-share-page--centered">
       <div className="film-share-card">
         <h1>Film not available.</h1>
         <p className="film-share-message">
@@ -21,17 +20,21 @@ function FilmUnavailable() {
 function FilmPlayback({ result }: { result: Exclude<FilmPublicPlaybackResult, { kind: 'unavailable' }> }) {
   if (result.kind === 'playback') {
     return (
-      <div className="film-share-page">
-        <div className="film-share-card">
-          <h1>Shared film</h1>
-          <video className="film-share-video" controls playsInline src={result.url} />
+      <div className="film-share-page film-share-page--playback">
+        <div className="film-share-layout">
+          <header className="film-share-header">
+            <h1>Shared film</h1>
+          </header>
+          <div className="film-share-player">
+            <video className="film-share-video" controls playsInline preload="metadata" src={result.url} />
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="film-share-page">
+    <div className="film-share-page film-share-page--centered">
       <div className="film-share-card">
         <h1>Shared film</h1>
         <p className="film-share-message">This film opens on an external site.</p>
@@ -83,7 +86,7 @@ export function FilmSharePage() {
   }, [shareToken])
 
   if (loading) {
-    return <div className="auth-loading">Loading film…</div>
+    return <div className="film-share-page film-share-page--loading">Loading film…</div>
   }
 
   if (!result || result.kind === 'unavailable') {

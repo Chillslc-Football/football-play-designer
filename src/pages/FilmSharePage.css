@@ -3,15 +3,30 @@
 .film-share-page {
   min-height: 100svh;
   display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, var(--grass-dark) 0%, #0f2f0f 100%);
+}
+
+.film-share-page--centered {
   align-items: center;
   justify-content: center;
-  padding: var(--space-lg);
-  background: linear-gradient(180deg, var(--grass-dark) 0%, #0f2f0f 100%);
+  padding: var(--space-md);
+  padding-top: max(var(--space-md), env(safe-area-inset-top));
+  padding-bottom: max(var(--space-md), env(safe-area-inset-bottom));
+}
+
+.film-share-page--loading {
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 15px;
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 .film-share-card {
   width: 100%;
-  max-width: 960px;
+  max-width: 480px;
   padding: var(--space-lg);
   background: var(--surface);
   color: var(--text-on-surface);
@@ -30,33 +45,89 @@
   color: #4a5f4a;
 }
 
-.film-share-video {
-  display: block;
-  width: 100%;
-  max-height: 70svh;
-  border-radius: var(--radius-sm);
-  background: #000;
-}
-
 .film-share-actions {
   display: flex;
   justify-content: center;
   margin-top: var(--space-md);
 }
 
-@media (max-width: 768px) {
-  .film-share-page {
-    align-items: flex-start;
-    padding: var(--space-md);
-    padding-top: max(var(--space-lg), env(safe-area-inset-top));
-    padding-bottom: max(var(--space-lg), env(safe-area-inset-bottom));
-  }
+/* Playback — mobile first, full-width player */
+.film-share-page--playback {
+  padding: 0;
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
 
+.film-share-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.film-share-header {
+  flex-shrink: 0;
+  padding: var(--space-sm) var(--space-md);
+  color: var(--text-light);
+}
+
+.film-share-header h1 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.film-share-player {
+  width: 100%;
+  background: #000;
+  aspect-ratio: 16 / 9;
+}
+
+.film-share-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+@media (max-width: 768px) {
   .film-share-card {
     padding: var(--space-md);
   }
 
   .film-share-actions .btn {
     min-height: 44px;
+  }
+}
+
+@media (min-width: 769px) {
+  .film-share-page--playback {
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg);
+  }
+
+  .film-share-layout {
+    max-width: 960px;
+    margin: 0 auto;
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+
+  .film-share-header {
+    padding: var(--space-md) var(--space-lg);
+    color: var(--text-on-surface);
+    background: var(--surface);
+  }
+
+  .film-share-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .film-share-player {
+    aspect-ratio: 16 / 9;
   }
 }
